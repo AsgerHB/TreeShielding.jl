@@ -8,4 +8,6 @@ include("Trees.jl")
 export SupportingPoints
 include("SuppotingPoints.jl")
 
+export actions_to_int, int_to_actions
+include("ActionConversion.jl")
 end
