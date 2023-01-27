@@ -2,7 +2,10 @@ module TreeShielding
 
 using Plots
 
-export Tree, Node,  Leaf,  Bounds,  get_dim,  get_leaf,  get_value,  draw,  replace_subtree!,  split!,  get_bounds
+export Bounds,  get_dim
+include("Bounds.jl")
+
+export Tree, Node,  Leaf,   get_leaf,  get_value,  draw,  replace_subtree!,  split!,  get_bounds
 include("Trees.jl")
 
 export SupportingPoints
