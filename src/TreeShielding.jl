@@ -1,5 +1,8 @@
 module TreeShielding
 
-# Write your package code here.
+using Plots
+
+export Tree, Node,  Leaf,  Bounds,  get_dim,  get_leaf,  get_value,  draw,  replace_subtree!,  split!,  get_bounds
+include("Trees.jl")
 
 end
