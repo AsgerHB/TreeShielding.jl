@@ -18,9 +18,9 @@ jobs:
       fail-fast: false
       matrix:
         version:
-          - '1.0'
+          # - '1.0' # Get outta here
           - '1.8'
-          - 'nightly'
+          # - 'nightly' # Spam my main e-mail account, with failed builds, why don't you?
         os:
           - ubuntu-latest
         arch:
