@@ -1,6 +1,7 @@
 module TreeShielding
 
 using Plots
+using AbstractTrees
 
 export Bounds,  get_dim
 include("Bounds.jl")

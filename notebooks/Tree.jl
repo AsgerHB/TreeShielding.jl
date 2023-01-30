@@ -181,7 +181,7 @@ call() do
 		Leaf(-1),
 		Leaf(-2))
 	
-	replace_subtree!(tree.greater_or_equal, Leaf(0))
+	replace_subtree!(tree.geq, Leaf(0))
 	@test get_value(tree, [0.99]) == 0
 end
 
@@ -191,7 +191,7 @@ call() do
 		Leaf(-1),
 		Leaf(-2))
 	
-	split!(tree.greater_or_equal, 1, 0.75, -3, 0)
+	split!(tree.geq, 1, 0.75, -3, 0)
 	@test get_value(tree, [0.99]) == 0
 end
 

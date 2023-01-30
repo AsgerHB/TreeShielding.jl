@@ -4,18 +4,18 @@ end
 mutable struct Node <: Tree 
     axis
     threshold
-    less::Tree
-    greater_or_equal::Tree
+    lt::Tree
+    geq::Tree
     parent::Union{Nothing,Tree}
 end
 
-function Node(axis, threshold, less, greater_or_equal)
-    this = Node(axis, threshold, less, greater_or_equal, nothing)
-    if less !== nothing
-        less.parent = this
+function Node(axis, threshold, lt, geq)
+    this = Node(axis, threshold, lt, geq, nothing)
+    if lt !== nothing
+        lt.parent = this
     end 
-    if greater_or_equal !== nothing
-        greater_or_equal.parent = this
+    if geq !== nothing
+        geq.parent = this
     end
     return this
 end
@@ -29,15 +29,21 @@ function Leaf(value)
     Leaf(value, nothing)
 end
 
+AbstractTrees.children(node::Node) = [node.lt, node.geq]
+AbstractTrees.children(_::Leaf) = []
+AbstractTrees.nodevalue(node::Node) = (node.axis, node.threshold)
+AbstractTrees.nodevalue(leaf::Leaf) = leaf.value
+AbstractTrees.parent(tree::Tree) = tree.parent
+
 function get_leaf(leaf::Leaf, _)
     leaf
 end
 
 function get_leaf(node::Node, state)
     if state[node.axis] < node.threshold
-        return get_leaf(node.less, state)
+        return get_leaf(node.lt, state)
     else
-        return get_leaf(node.greater_or_equal, state)
+        return get_leaf(node.geq, state)
     end
 end
 
@@ -103,12 +109,12 @@ function replace_subtree!(tree::Tree, new_tree::Tree)
 	end
 
 	if tree.parent isa Node
-		if tree.parent.less === tree
+		if tree.parent.lt === tree
 			new_tree.parent = tree.parent
-			return tree.parent.less = new_tree
-		elseif tree.parent.greater_or_equal === tree
+			return tree.parent.lt = new_tree
+		elseif tree.parent.geq === tree
 			new_tree.parent = tree.parent
-			return tree.parent.greater_or_equal = new_tree
+			return tree.parent.geq = new_tree
 		else
 			error("Badly formed tree. Child not found in parent.")
 		end
@@ -146,12 +152,12 @@ function get_bounds(tree::Tree; _lower=Dict(), _upper=Dict())
         error("Not implemented: Parent of type $(typeof(tree.parent))")
     end
     
-    if parent.less === tree
+    if parent.lt === tree
         previous_bound = get(_upper, parent.axis, Inf)
         new_bound = parent.threshold
         _upper[parent.axis] = min(previous_bound, new_bound)
         return get_bounds(parent; _lower, _upper)
-    elseif parent.greater_or_equal === tree
+    elseif parent.geq === tree
         previous_bound = get(_lower, parent.axis, -Inf)
         new_bound = parent.threshold
         _lower[parent.axis] = max(previous_bound, new_bound)
