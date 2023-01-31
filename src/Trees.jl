@@ -93,13 +93,26 @@ function draw(policy::Function, bounds;
             params...)
 end
 
-function draw(tree::Tree, bounds;
-        G = 0.1, 
-        slice=[:,:],
-        params...)
-    
-    get_value′(s) = get_value(tree, s)
-    draw(get_value′, bounds; G, slice, params...)
+function rectangle(bounds::Bounds) 
+    l, u = bounds.lower, bounds.upper
+    xl, yl = l
+    xu, yu = u
+    Shape(
+        [xl, xl, xu, xu],
+        [yl, yu, yu, yl])
+end
+
+function draw(tree::Tree, global_bounds::Bounds; color_dict=Dict())
+	dimensionality = 2
+	rectangles = []
+	fillcolors = []
+	for leaf in Leaves(tree)
+		bounds = get_bounds(leaf, dimensionality) ∩ global_bounds
+		push!(rectangles, rectangle(bounds))
+		push!(fillcolors, get(color_dict, leaf.value, leaf.value))
+	end
+	fillcolors = permutedims(fillcolors)
+	plot([rectangles...], label=nothing, fillcolor=fillcolors)
 end
 
 function replace_subtree!(tree::Tree, new_tree::Tree)
