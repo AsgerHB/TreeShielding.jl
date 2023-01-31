@@ -9,7 +9,7 @@ include("Bounds.jl")
 export Tree, Node,  Leaf,   get_leaf,  get_value,  draw,  replace_subtree!,  split!,  get_bounds
 include("Trees.jl")
 
-export SupportingPoints
+export SupportingPoints, get_spacing_sizes
 include("SuppotingPoints.jl")
 
 export actions_to_int, int_to_actions

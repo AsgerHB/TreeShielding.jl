@@ -3,6 +3,13 @@ struct SupportingPoints
     bounds::Bounds
 end
 
+
+function get_spacing_sizes(s::SupportingPoints, dimensionality)
+    upper, lower = s.bounds.upper, s.bounds.lower
+    spacings = [upper[i] - lower[i] for i in 1:dimensionality]
+    spacings = [spacing/(s.per_axis - 1) for spacing in spacings]
+end
+
 Base.length(s::SupportingPoints) = begin
     if s.bounds.upper == s.bounds.lower
         return 1
@@ -22,12 +29,11 @@ Base.iterate(s::SupportingPoints) = begin
         return lower, :terminate
     end
     
-    spacings = [upper[i] - lower[i] for i in 1:dimensionality]
-    spacings = [spacing/(s.per_axis - 1) for spacing in spacings]
+    spacings = get_spacing_sizes(s, dimensionality)
     
     # The iterator state  is (spacings, indices).
     # First sample always in the lower-left corner. 
-    return lower, (spacings, zeros(Int, dimensionality))
+    return Tuple(lower), (spacings, zeros(Int, dimensionality))
 end
 
 Base.iterate(s::SupportingPoints, terminate::Symbol) = begin
