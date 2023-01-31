@@ -111,11 +111,16 @@ bigtree =
 
 # ╔═╡ 8c1c6675-c501-499f-bea0-16b9eae49678
 md"""
-Bounds define a hyper-rectangle. They support ∈, == and ≈
+Bounds define a hyper-rectangle.
 """
 
 # ╔═╡ 8c15e8e6-f4e9-4132-8caf-e8b878e1b8d1
-Bounds(Dict(1 => 0.5, 2 => 3), Dict(1 => 1.0, 2 => 10, 3 => 100))
+Bounds(Dict(1 => 0.5, 2 => 3), Dict(1 => 1.0, 2 => 10, 3 => 100), 3)
+
+# ╔═╡ f42ea23b-c7ce-4ccd-a643-4f58cc9bafd7
+md"""
+They support ∈, == and ≈
+"""
 
 # ╔═╡ 2fd4f72a-392a-4b41-86fa-c2899d451a76
 @test (9, 99) ∈ Bounds((-1, -1), (10, 100))
@@ -258,6 +263,7 @@ end
 # ╠═d4524e62-c515-4667-939e-2f7f90e11a94
 # ╟─8c1c6675-c501-499f-bea0-16b9eae49678
 # ╠═8c15e8e6-f4e9-4132-8caf-e8b878e1b8d1
+# ╟─f42ea23b-c7ce-4ccd-a643-4f58cc9bafd7
 # ╠═2fd4f72a-392a-4b41-86fa-c2899d451a76
 # ╠═ae5a9c0d-37ef-4c81-b596-ae09268950fe
 # ╠═74c101f9-e14e-4c80-8486-6c433ae64d94
