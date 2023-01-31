@@ -139,10 +139,12 @@ function split!(node::Node, _...)
     error("Tried to split non-leaf node. This is not allowed.")
 end
 
-function get_bounds(tree::Tree; _lower=Dict(), _upper=Dict())
+function get_bounds(tree::Tree, dimensionality; _lower=Dict(), _upper=Dict())
     parent = tree.parent
+
+    # Base case
     if parent === nothing 
-        return Bounds(_lower, _upper)
+        return Bounds(_lower, _upper, dimensionality)
     end
     
     if parent isa Leaf
@@ -152,16 +154,17 @@ function get_bounds(tree::Tree; _lower=Dict(), _upper=Dict())
         error("Not implemented: Parent of type $(typeof(tree.parent))")
     end
     
+    # Recursion
     if parent.lt === tree
         previous_bound = get(_upper, parent.axis, Inf)
         new_bound = parent.threshold
         _upper[parent.axis] = min(previous_bound, new_bound)
-        return get_bounds(parent; _lower, _upper)
+        return get_bounds(parent, dimensionality; _lower, _upper)
     elseif parent.geq === tree
         previous_bound = get(_lower, parent.axis, -Inf)
         new_bound = parent.threshold
         _lower[parent.axis] = max(previous_bound, new_bound)
-        return get_bounds(parent; _lower, _upper)
+        return get_bounds(parent, dimensionality; _lower, _upper)
     else
         error("Badly formed tree. Child not found in parent.")
     end

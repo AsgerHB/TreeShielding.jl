@@ -53,6 +53,6 @@
         #draw(tree, Bounds((-10, -10), (10, 10)))
         #scatter!([l + 1], [u - 1], m=(:+, 5, colors.WET_ASPHALT), msw=3)
         
-        @test Bounds([l, l], [u, u]) == get_bounds(get_leaf(tree, -5, -5))
+        @test Bounds([l, l], [u, u]) == get_bounds(get_leaf(tree, -5, -5), 2)
     end
 end

@@ -11,8 +11,7 @@ struct Bounds
     end
 end
 
-function Bounds(lower::Dict, upper::Dict)
-    dimensionality = max(keys(lower)..., keys(upper)...)
+function Bounds(lower::Dict, upper::Dict, dimensionality)
     lower′ = [-Inf for _ in 1:dimensionality]
     upper′ = [ Inf for _ in 1:dimensionality]
 
@@ -28,6 +27,7 @@ end
 function get_dim(bounds::Bounds)
     length(bounds.lower)
 end
+
 
 Base.in(a, b::Bounds) = begin
     dimensionality = length(b.lower)
