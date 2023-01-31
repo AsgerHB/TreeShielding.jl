@@ -14,4 +14,7 @@ include("SuppotingPoints.jl")
 
 export actions_to_int, int_to_actions
 include("ActionConversion.jl")
+
+export get_splitting_point, compute_safety, try_splitting!, grow!
+include("Grow.jl")
 end
