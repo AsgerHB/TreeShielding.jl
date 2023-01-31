@@ -83,3 +83,11 @@ function bounded(bounds::Bounds)
 	end
 	return true
 end
+
+function magnitude(bounds::Bounds)
+    bounds.upper .- bounds.lower
+end
+
+function magnitude(bounds::Bounds, axis)
+    bounds.upper[axis] - bounds.lower[axis]
+end
