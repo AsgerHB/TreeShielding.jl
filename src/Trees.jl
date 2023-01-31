@@ -34,6 +34,7 @@ AbstractTrees.children(_::Leaf) = []
 AbstractTrees.nodevalue(node::Node) = (node.axis, node.threshold)
 AbstractTrees.nodevalue(leaf::Leaf) = leaf.value
 AbstractTrees.parent(tree::Tree) = tree.parent
+AbstractTrees.ParentLinks(::Type{<:Tree}) = AbstractTrees.StoredParents()
 
 function get_leaf(leaf::Leaf, _)
     leaf
