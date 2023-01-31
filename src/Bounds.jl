@@ -69,3 +69,17 @@ Base.intersect(a::Bounds, b::Bounds) = begin
 	end
 	Bounds(lower, upper)
 end
+
+function bounded(bounds::Bounds)
+	for b in bounds.lower
+		if b == -Inf
+			return false
+		end
+	end
+	for b in bounds.upper
+		if b == Inf
+			return false
+		end
+	end
+	return true
+end
