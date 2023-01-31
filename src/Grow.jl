@@ -39,13 +39,23 @@ end
 For each point, use the `simulation_function` to check if it would end up in an unsafe place according to `tree`. 
 
 **Returns:** List of (point, bool)-tuples indicating wheter each point is safe. I.e it ends up in an unsafe place.
+
+**Args:**
+ - `tree` Defines the set of safe and unsafe states.
+ - `simulation_function` A function `f(state, action)` which returns the resulting state.
+ - `action_space` The possible actions to provide `simulation_function`. Should be an `Enum` or at least work with functions `actions_to_int` and `instances`.
+ - `points` This is the set of points.
 """
-function compute_safety(tree::Tree, simulation_function, points; unsafe_value=0)
+function compute_safety(tree::Tree, simulation_function, action_space, points)
+    unsafe_value = actions_to_int(action_space, []) # The value for states where no actions are allowed.
 	result = []
 	for p in points
-		p′ = simulation_function(p)
-		safe = get_value(tree, p′) != unsafe_value
-		push!(result, (p, safe))
+        safe = true
+        for a in instances(action_space)
+            p′ = simulation_function(p, a)
+            safe = safe && (get_value(tree, p′) != unsafe_value)
+            push!(result, (p, safe))
+        end
 	end
 	result
 end
@@ -64,13 +74,15 @@ Makes calls to `get_splitting_point` for each axis, and performs the first split
 **Args:**
  - `leaf` This leaf will be split at the first axis where a division can be made between safe and unsafe points.
  - `dimensionality` Number of axes. 
- - `simulation_function` A function `f(s, a)` which returns the resulting state.
+ - `simulation_function` A function `f(state, action)` which returns the resulting state.
+ - `action_space` The possible actions to provide `simulation_function`. Should be an `Enum` or at least work with functions `actions_to_int` and `instances`.
  - `samples_per_axis` See `SupportingPoints`.
  - `min_granularity` Splits are not made if the resulting size of the partition would be less than `min_granularity` on the given axis
 """
 function try_splitting!(leaf::Leaf, 
     dimensionality, 
     simulation_function, 
+    action_space,
     samples_per_axis,
     min_granularity)
 
@@ -82,7 +94,7 @@ function try_splitting!(leaf::Leaf,
     end
 
     supporting_points = SupportingPoints(samples_per_axis, bounds)
-    points_safe = compute_safety(root, simulation_function, supporting_points)
+    points_safe = compute_safety(root, simulation_function, action_space, supporting_points)
     spacings = get_spacing_sizes(supporting_points, dimensionality)
 
     for axis in (1:dimensionality)
@@ -118,7 +130,8 @@ Note that the number of resulting leaves is potentially exponential in the numbe
 **Args:**
  - `tree` Tree to modify.
  - `dimensionality` Number of axes. 
- - `simulation_function` A function `f(s, a)` which returns the resulting state.
+ - `simulation_function` A function `f(state, action)` which returns the resulting state.
+ - `action_space` The possible actions to provide `simulation_function`. Should be an `Enum` or at least work with functions `actions_to_int` and `instances`.
  - `samples_per_axis` See `SupportingPoints`.
  - `min_granularity` Splits are not made if the resulting size of the partition would be less than `min_granularity` on the given axis
  - `max_iterations` Function automatically terminates after this number of iterations.
@@ -126,6 +139,7 @@ Note that the number of resulting leaves is potentially exponential in the numbe
 function grow!(tree::Tree, 
                 dimensionality,
                 simulation_function, 
+                action_space,
                 samples_per_axis,
                 min_granularity;
                 max_iterations=10)
@@ -143,6 +157,7 @@ function grow!(tree::Tree,
 			changed = try_splitting!(leaf, 
 				dimensionality, 
 				simulation_function, 
+                action_space,
 				samples_per_axis,
 				min_granularity)
 			push!(changes, changed)

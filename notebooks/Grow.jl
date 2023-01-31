@@ -96,11 +96,13 @@ md"""
 Pretty simple stuff. Remember to come back and play with the values once you've read how it's used.
 """
 
-# ╔═╡ b5244181-a6fc-4537-9046-3a2bc8a050b1
-foo(s) = Tuple(s .+ [-0.9, 3])
-
 # ╔═╡ 10c53e89-6e56-4897-9d41-bb7fe8dcb9ae
 @enum Action bar baz
+
+# ╔═╡ b5244181-a6fc-4537-9046-3a2bc8a050b1
+foo(s, a::Action) = (a == bar ? 
+	Tuple(s .+ [-0.9, 3]) : 
+	Tuple(s .+ [-0.1, 5]))
 
 # ╔═╡ b5cfaea1-1420-4205-a1d5-4989347ad6c5
 md"""
@@ -233,7 +235,7 @@ Try setting a different number of samples per axis:
 call() do
 	bounds = get_bounds(get_leaf(initial_tree, 3, 5), dimensionality)
 	supporting_points = SupportingPoints(spa, bounds)
-	points_safe = compute_safety(initial_tree, foo, supporting_points)
+	points_safe = compute_safety(initial_tree, foo, Action, supporting_points)
 end
 
 # ╔═╡ 047262de-4584-4037-80da-0ee148f8e8a5
@@ -248,10 +250,10 @@ call() do
 	p1 = draw(initial_tree, tree_draw_bounds, color_dict=action_color_dict)
 	supporting_points = SupportingPoints(spa, bounds)
 	scatter_supporting_points!(supporting_points)
-	foo_points = map(foo, supporting_points)
-	scatter!(foo_points, m=(:c, 3, colors.ASBESTOS), msw=0, label="outcomes")
+	outcomes = map(p -> foo(p, bar), supporting_points)
+	scatter!(outcomes, m=(:c, 3, colors.ASBESTOS), msw=0, label="outcomes")
 
-	points_safe = compute_safety(initial_tree, foo, supporting_points)
+	points_safe = compute_safety(initial_tree, foo, Action, supporting_points)
 	unsafe_points = [p for (p, safe) in points_safe if !safe]
 	scatter!(unsafe_points, m=(:x, 5, colors.ALIZARIN), msw=3, label="unsafe")
 end
@@ -269,10 +271,10 @@ call() do
 	p1 = draw(initial_tree, tree_draw_bounds, color_dict=action_color_dict)
 	supporting_points = SupportingPoints(spa, bounds)
 	scatter_supporting_points!(supporting_points)
-	foo_points = map(foo, supporting_points)
-	scatter!(foo_points, m=(:c, 3, colors.ASBESTOS), msw=0, label="outcomes")
+	outcomes = map(p -> foo(p, bar), supporting_points)
+	scatter!(outcomes, m=(:c, 3, colors.ASBESTOS), msw=0, label="outcomes")
 
-	points_safe = compute_safety(initial_tree, foo, supporting_points)
+	points_safe = compute_safety(initial_tree, foo, Action, supporting_points)
 	unsafe_points = [p for (p, safe) in points_safe if !safe]
 	scatter!(unsafe_points, m=(:x, 5, colors.ALIZARIN), msw=3, label="unsafe")
 
@@ -293,12 +295,6 @@ call() do
 		plot!([], label="split", lw=2, c=colors.WET_ASPHALT, ls=:dash)
 	end
 	p1
-end
-
-# ╔═╡ d9887d6e-26da-4104-a89d-27ceb58a755a
-call() do
-	bounds = get_bounds(get_leaf(initial_tree, 3, 5), dimensionality)
-	points_safe = compute_safety(initial_tree, foo, SupportingPoints(3, bounds))
 end
 
 # ╔═╡ c98a1165-9c3d-40df-8dee-e6e11a4ed2b5
@@ -374,13 +370,14 @@ end
 
 # ╔═╡ 35af8e23-cdc7-498c-8bc8-c17b3e339597
 md"""
-Leaf was split:
+A split was performed: 👇
 """
 
 # ╔═╡ 48b66592-c82f-4626-8b63-475ef761ef96
 try_splitting!(leaf_to_split, 
 				dimensionality, 
 				foo, 
+				Action,
 				spa,
 				min_granularity)
 
@@ -413,17 +410,18 @@ Try messing with the number of iterations vs the `min_granularity`.
 # ╔═╡ 52fb4f65-9974-4b95-9090-e0a50a487b22
 call() do
 	tree = deepcopy(initial_tree)
-	grow!(tree, dimensionality, foo, spa, min_granularity; max_iterations)
+	grow!(tree, dimensionality, foo, Action, spa, min_granularity; max_iterations)
 	
 	draw(tree, tree_draw_bounds, color_dict=action_color_dict)
 
 	p = (3.6, 7.05)
 	bounds = get_bounds(get_leaf(tree, p), dimensionality)
-	scatter_supporting_points!(SupportingPoints(spa, bounds))
-	foo_points = map(foo, SupportingPoints(3, bounds))
-	scatter!(foo_points, m=(:c, 3, colors.CONCRETE), msw=0, label="outcomes")
+	supporting_points = SupportingPoints(spa, bounds)
+	scatter_supporting_points!(supporting_points)
+	outcomes = map(p -> foo(p, bar), supporting_points)
+	scatter!(outcomes, m=(:c, 3, colors.ASBESTOS), msw=0, label="outcomes")
 
-	points_safe = compute_safety(tree, foo, SupportingPoints(spa, bounds))
+	points_safe = compute_safety(tree, foo, Action, SupportingPoints(spa, bounds))
 	unsafe_points = [p for (p, safe) in points_safe if !safe]
 	scatter!(unsafe_points, m=(:x, 5, colors.ALIZARIN), msw=3, label="unsafe")
 	scatter!([], m=(0), msw=0, label="tree-size: $(length(PreOrderDFS(tree) |> collect))")
@@ -462,7 +460,6 @@ end
 # ╠═2b2421b7-34a5-4de0-b191-b0f9f4a914a3
 # ╟─6da5b379-ee87-42d1-8f48-5c465d4c4078
 # ╠═09a48bc2-9e8d-462c-abad-23d8ce60e058
-# ╠═d9887d6e-26da-4104-a89d-27ceb58a755a
 # ╟─c98a1165-9c3d-40df-8dee-e6e11a4ed2b5
 # ╠═d9fa8430-c474-4990-97b2-11ba77b85c7d
 # ╟─e69c7e85-b184-45b4-a3c5-ce1dc88010a1
