@@ -17,4 +17,8 @@ include("ActionConversion.jl")
 
 export get_splitting_point, compute_safety, try_splitting!, grow!
 include("Grow.jl")
-end
+
+export update!
+include("Update.jl")
+
+end#module

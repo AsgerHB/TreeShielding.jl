@@ -161,7 +161,7 @@ function draw_support_points!(tree::Tree,
 	outcomes = map(p -> simulation_function(p, action), supporting_points)
 	scatter_outcomes!(outcomes)
 
-	points_safe = compute_safety(initial_tree, 
+	points_safe = compute_safety(tree, 
 		simulation_function, 
 		Action, 
 		supporting_points)
@@ -182,6 +182,24 @@ tree_draw_bounds = Bounds((0, 0), (5, 20))
 
 # ╔═╡ 8737d5ad-5553-46cc-9975-eb908f487575
 draw(initial_tree, tree_draw_bounds, color_dict=action_color_dict)
+
+# ╔═╡ 17942d42-a1dd-4643-97a6-833c06c3a332
+call() do
+	tree = deepcopy(initial_tree)
+	update!(tree, dimensionality, foo, Action, spa)
+	draw(tree, tree_draw_bounds, color_dict=action_color_dict)
+
+	p = (3, 5)
+	draw_support_points!(tree, dimensionality, foo, spa, p, bar)
+end
+
+# ╔═╡ 05cc0a27-0c06-4f35-a812-4a1dac270cff
+call() do
+	tree = deepcopy(initial_tree)
+	grow!(tree, dimensionality, foo, Action, spa, 0.01) # TODO: Why doesn't it grow the same way as in the other notebook??
+	update!(tree, dimensionality, foo, Action, spa)
+	draw(tree, tree_draw_bounds, color_dict=action_color_dict)
+end
 
 # ╔═╡ 84eacf71-81c3-4006-aba8-ccc2f9f76170
 tree = begin
@@ -223,7 +241,7 @@ function even_split!(leaf::Leaf, dimensionality, axis)
 end
 
 # ╔═╡ 8316d660-507c-4c61-abc0-b4cfd5c822cb
-@bind number_of_splits NumberField(1:6)
+@bind number_of_splits NumberField(1:6, default=2)
 
 # ╔═╡ 9511605d-f59e-471e-92f3-cb6a44a9e12e
 grid = call() do
@@ -290,80 +308,41 @@ end
 # ╔═╡ 196964ec-7381-4068-83fd-8592d0f12ca6
 @bind update_button Button("Update")
 
-# ╔═╡ 42e58f2a-4694-48ed-b4fe-cef23eca7c8b
-function update_actions!(tree::Tree, 
-						dimensionality,
-						simulation_function, 
-						action_space, 
-						samples_per_axis)
-
-	updates = []
-	no_actions = actions_to_int(action_space, [])
-	for leaf in Leaves(tree)
-		if leaf.value == no_actions
-			continue # bad leaves stay bad
-		end
-
-		if !bounded(get_bounds(leaf, dimensionality))
-			continue # I don't actually know what to do here.
-		end
-		
-		allowed = Set(instances(action_space))
-		for p in SupportingPoints(samples_per_axis, get_bounds(leaf, dimensionality))
-			for a in instances(action_space)
-				p′ = simulation_function(p, a)
-				if get_value(tree, p′) == no_actions
-					delete!(allowed, a)
-				end
-			end
-		end
-		new_value = actions_to_int(action_space, allowed)
-		if leaf.value != new_value
-			push!(updates, (leaf, new_value))
-		end
-	end
-
-	for (leaf, new_value) in updates
-		leaf.value = new_value
-	end
-end
-
-# ╔═╡ 17942d42-a1dd-4643-97a6-833c06c3a332
-call() do
-	tree = deepcopy(initial_tree)
-	update_actions!(tree, dimensionality, foo, Action, spa)
-	draw(tree, tree_draw_bounds, color_dict=action_color_dict)
-
-	p = (3, 5)
-	draw_support_points!(tree, dimensionality, foo, spa, p, bar)
-end
-
-# ╔═╡ 05cc0a27-0c06-4f35-a812-4a1dac270cff
-call() do
-	tree = deepcopy(initial_tree)
-	grow!(tree, dimensionality, foo, Action, spa, 0.01) # TODO: Why doesn't it grow the same way as in the other notebook??
-	update_actions!(tree, dimensionality, foo, Action, spa)
-	draw(tree, tree_draw_bounds, color_dict=action_color_dict)
-end
-
 # ╔═╡ 3e9cbb29-096a-4466-86cb-a70df0b3bff1
 update_button,
 if debounce2[] == 1
 	debounce2[] += 1
 	reactivity2 = "ready"
 else
-	update_actions!(reactive_grid, dimensionality, foo, Action, spa)
+	update!(reactive_grid, dimensionality, foo, Action, spa)
 	reactivity2 = "updated"
 end
+
+# ╔═╡ 457d4517-7409-41c2-b3b5-50aa685f9f66
+md"""
+`show_supporting_points:`
+$(@bind show_supporting_points CheckBox())
+
+`a =` $(@bind a Select(instances(Action) |> collect))
+
+Position: 
+$(@bind partition_x 
+	NumberField(tree_draw_bounds.lower[1]:0.1:tree_draw_bounds.upper[1]))
+$(@bind partition_y 
+	NumberField(tree_draw_bounds.lower[2]:1:tree_draw_bounds.upper[2]))
+"""
 
 # ╔═╡ de2ae3c9-39c6-40e7-9db8-3a9c4dbdcdd2
 begin
 	reactivity1, reactivity2
-	draw(reactive_grid, tree_draw_bounds′, color_dict=action_color_dict)
+	p1 = draw(reactive_grid, tree_draw_bounds′, color_dict=action_color_dict)
 
-	p = (1, 9)
-	action = bar
-	draw_support_points!(reactive_grid, dimensionality, foo, spa, p, action)
+	if show_supporting_points
+		p = (partition_x, partition_y)
+		draw_support_points!(reactive_grid, dimensionality, foo, spa, p, a)
+		scatter!(p, m=(4, :rtriangle, :white), msw=1, label=nothing)
+	end
+	p1
 end
 
 # ╔═╡ Cell order:
@@ -405,6 +384,6 @@ end
 # ╟─c099af8b-b3a0-4c69-93cf-ed4a03d5aac3
 # ╟─c97a05c6-8c19-4d89-bece-118e97bc4d56
 # ╟─196964ec-7381-4068-83fd-8592d0f12ca6
-# ╟─3e9cbb29-096a-4466-86cb-a70df0b3bff1
-# ╠═42e58f2a-4694-48ed-b4fe-cef23eca7c8b
+# ╠═3e9cbb29-096a-4466-86cb-a70df0b3bff1
+# ╟─457d4517-7409-41c2-b3b5-50aa685f9f66
 # ╠═de2ae3c9-39c6-40e7-9db8-3a9c4dbdcdd2
