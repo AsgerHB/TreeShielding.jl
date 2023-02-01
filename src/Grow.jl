@@ -50,12 +50,12 @@ function compute_safety(tree::Tree, simulation_function, action_space, points)
     unsafe_value = actions_to_int(action_space, []) # The value for states where no actions are allowed.
 	result = []
 	for p in points
-        safe = true
+        safe = false
         for a in instances(action_space)
             p′ = simulation_function(p, a)
-            safe = safe && (get_value(tree, p′) != unsafe_value)
-            push!(result, (p, safe))
+            safe = safe || (get_value(tree, p′) != unsafe_value)
         end
+        push!(result, (p, safe))
 	end
 	result
 end
@@ -119,7 +119,7 @@ function try_splitting!(leaf::Leaf,
 end
 
 """
-    grow!(tree::Tree, dimensionality, simulation_function,  samples_per_axis, min_granularity, [max_iterations=10])
+    grow!(tree::Tree, dimensionality, simulation_function, action_space, samples_per_axis, min_granularity, [max_iterations=10])
 
 Grow the entire tree by calling `split_all!` on all leaves, until no more changes can be made, or `max_iterations` is exceeded.
 
