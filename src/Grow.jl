@@ -65,6 +65,7 @@ end
 
 Makes calls to `get_splitting_point` for each axis, and performs the first split which can be made. The split can be made if 
 
+ - The leaf has at least one safe action it can take. Splitting unsafe partitions is useless.
  - The leaf is properly bounded. That is, its bounds are finite on all axes.
  - `get_splitting_point` returns something other than `nothing`, i.e. there exists a thereshold such that all points are safe on one side of it.
  - The threshold would not create a bound whose size is smaller than `min_granularity`.
@@ -88,6 +89,11 @@ function try_splitting!(leaf::Leaf,
 
     root = getroot(leaf)
     bounds = get_bounds(leaf, dimensionality)
+    unsafe_value = actions_to_int(action_space, []) # The value for states where no actions are allowed.
+
+    if leaf.value == unsafe_value
+        return false
+    end
 
     if !bounded(bounds)
         return false
