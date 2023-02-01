@@ -102,14 +102,7 @@ Pretty simple stuff. Remember to come back and play with the values once you've 
 # ╔═╡ b5244181-a6fc-4537-9046-3a2bc8a050b1
 foo(s, a::Action) = (a == bar ? 
 	Tuple(s .+ [-0.9, 3]) : 
-	Tuple(s .+ [-0.1, 5]))
-
-# ╔═╡ b5cfaea1-1420-4205-a1d5-4989347ad6c5
-md"""
-### Example-tree
-
-This tree will be used in the future examples. It has a single fully bounded partition (in the sense that all the bounds are finite) and an unsafe partition (in the sense that no actions are allowed in it).
-"""
+	Tuple(s .+ [-1.2, 2.5]))
 
 # ╔═╡ ae19f184-d2ec-474b-abfd-2a8cd98ad191
 any_action, no_action = actions_to_int(Action, instances(Action)), actions_to_int(Action, [])
@@ -120,6 +113,13 @@ action_color_dict=Dict(
 	1 => colorant"#a1eaff", 
 	no_action => colorant"#ff9178"
 )
+
+# ╔═╡ b5cfaea1-1420-4205-a1d5-4989347ad6c5
+md"""
+### Example-tree
+
+This tree will be used in the future examples. It has a single fully bounded partition (in the sense that all the bounds are finite) and an unsafe partition (in the sense that no actions are allowed in it).
+"""
 
 # ╔═╡ 30c73092-a14c-4b83-bcac-8526c0a8780a
 initial_tree = Node(1, 3,
@@ -418,13 +418,13 @@ call() do
 	bounds = get_bounds(get_leaf(tree, p), dimensionality)
 	supporting_points = SupportingPoints(spa, bounds)
 	scatter_supporting_points!(supporting_points)
-	outcomes = map(p -> foo(p, bar), supporting_points)
+	outcomes = map(p -> foo(p, baz), supporting_points)
 	scatter!(outcomes, m=(:c, 3, colors.ASBESTOS), msw=0, label="outcomes")
 
 	points_safe = compute_safety(tree, foo, Action, SupportingPoints(spa, bounds))
 	unsafe_points = [p for (p, safe) in points_safe if !safe]
 	scatter!(unsafe_points, m=(:x, 5, colors.ALIZARIN), msw=3, label="unsafe")
-	scatter!([], m=(0), msw=0, label="tree-size: $(length(PreOrderDFS(tree) |> collect))")
+	scatter!([], m=(0, :white), msw=0, label="tree-size: $(length(PreOrderDFS(tree) |> collect))")
 end
 
 # ╔═╡ Cell order:
@@ -442,8 +442,8 @@ end
 # ╟─d5e35fb6-470b-4f30-a54d-cf82283068e8
 # ╠═b5244181-a6fc-4537-9046-3a2bc8a050b1
 # ╠═10c53e89-6e56-4897-9d41-bb7fe8dcb9ae
-# ╟─b5cfaea1-1420-4205-a1d5-4989347ad6c5
 # ╠═ae19f184-d2ec-474b-abfd-2a8cd98ad191
+# ╟─b5cfaea1-1420-4205-a1d5-4989347ad6c5
 # ╠═30c73092-a14c-4b83-bcac-8526c0a8780a
 # ╠═90b9f332-5518-409d-8bd2-3089da927e0f
 # ╠═0bd0fcf9-e65f-4443-952d-df54d423a344
