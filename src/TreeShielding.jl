@@ -21,4 +21,7 @@ include("Grow.jl")
 export update!
 include("Update.jl")
 
+export tree_from_bounds, even_split!, gridify!
+include("TreeBuilding.jl")
+
 end#module
