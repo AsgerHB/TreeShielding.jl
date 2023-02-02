@@ -102,7 +102,7 @@ function rectangle(bounds::Bounds)
         [yl, yu, yu, yl])
 end
 
-function draw(tree::Tree, global_bounds::Bounds; color_dict=Dict())
+function draw(tree::Tree, global_bounds::Bounds; color_dict=Dict(), params...)
 	dimensionality = 2
 	rectangles = []
 	fillcolors = []
@@ -112,7 +112,7 @@ function draw(tree::Tree, global_bounds::Bounds; color_dict=Dict())
 		push!(fillcolors, get(color_dict, leaf.value, leaf.value))
 	end
 	fillcolors = permutedims(fillcolors)
-	plot([rectangles...], label=nothing, fillcolor=fillcolors)
+	plot([rectangles...], label=nothing, fillcolor=fillcolors; params...)
 end
 
 function replace_subtree!(tree::Tree, new_tree::Tree)

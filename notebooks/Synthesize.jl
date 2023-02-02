@@ -205,7 +205,7 @@ begin
 end
 
 # ╔═╡ 7c4dba76-5ce9-4db7-b5d5-421c5ef981d3
-draw(initial_tree, draw_bounds, color_dict=action_color_dict); plot!(aspectratio=:equal)
+draw(initial_tree, draw_bounds, color_dict=action_color_dict, aspectratio=:equal)
 
 # ╔═╡ 777f87fd-f497-49f8-9deb-e708c990cdd1
 tree = set_safety!(deepcopy(initial_tree), 
@@ -215,7 +215,7 @@ tree = set_safety!(deepcopy(initial_tree),
 		no_action)
 
 # ╔═╡ 3b86ac41-4d87-4498-a1ca-c8c327ceb347
-draw(tree, draw_bounds, color_dict=action_color_dict); plot!(aspectratio=:equal)
+draw(tree, draw_bounds, color_dict=action_color_dict, aspectratio=:equal)
 
 # ╔═╡ 3bf43a31-1739-4b94-944c-0226cc3851cb
 md"""
@@ -355,8 +355,9 @@ call() do
 		min_granularity,
 		verbose=true)
 
-	draw(tree, draw_bounds, color_dict=action_color_dict)
-	plot!(aspectratio=:equal)
+	draw(tree, draw_bounds, 
+		color_dict=action_color_dict, 
+		aspectratio=:equal)
 end
 
 # ╔═╡ Cell order:
