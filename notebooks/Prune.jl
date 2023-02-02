@@ -166,7 +166,7 @@ end
 md"""
 ## Building the Initial Tree
 
-Building a tree with a nicely bounded state space, and some divisions that align with the safety constraints.
+Building a tree with a properly bounded state space, and some divisions that align with the safety constraints.
 """
 
 # ╔═╡ 0216683a-9096-49a9-bfbb-d34c450fcdea

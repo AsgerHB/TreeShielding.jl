@@ -183,7 +183,9 @@ end
 md"""
 ## Building the Initial Tree
 
-Building a tree with a nicely bounded state space, and some divisions that align with the safety constraints.
+Building a tree with a properly bounded state space, and some divisions that align with the safety constraints.
+
+A **bump** is introduced to make the splitting more interesting to look at.
 """
 
 # ╔═╡ a136ec18-5e84-489b-a13a-ff4ffbb1870d
@@ -204,7 +206,7 @@ begin
 	x_min, y_min = rwmechanics.x_min, rwmechanics.t_min
 	x_max, y_max = rwmechanics.x_max, rwmechanics.t_max
 	split!(get_leaf(initial_tree, x_min - 1, y_max), 2, y_max)
-	split!(get_leaf(initial_tree, x_max + 1, y_max), 2, y_max - 0.3)
+	split!(get_leaf(initial_tree, x_max + 1, y_max), 2, y_max - 0.3) # The **bump**
 end
 
 # ╔═╡ af5236ad-e88e-486d-ab43-e4d1a85a7333

@@ -152,7 +152,7 @@ initial_tree = Node(1, 3,
 	Node(2, 10,
 		Leaf(no_action),
 		Leaf(any_action)),
-	# A nicely bounded partition
+	# A properly bounded partition
 	Node(1, 4,
 		Node(2, 5,
 			Leaf(any_action),
