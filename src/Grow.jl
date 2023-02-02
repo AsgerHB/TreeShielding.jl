@@ -131,7 +131,7 @@ Grow the entire tree by calling `split_all!` on all leaves, until no more change
 
 Note that the number of resulting leaves is potentially exponential in the number of iterations. Therefore, setting a suitably high `min_granularity` and a suitably low `max_iterations` is adviced.
 
-**Returns:** The tree that has just been edited.
+**Returns:** The number of leaves in the resulting tree.
 
 **Args:**
  - `tree` Tree to modify.
@@ -148,26 +148,33 @@ function grow!(tree::Tree,
                 action_space,
                 samples_per_axis,
                 min_granularity;
-                max_iterations=10)
+                max_iterations=100)
 	
 
-	changes = [true] # Array to keep up with wether any leaf was split
-	while any(changes)
+	changes_made = 1 # just to enter loop
+    leaf_count = 0
+	while changes_made > 0
 		if (max_iterations -= 1) < 0
 			break
 		end
 		
-		changes = [] 
+		changes_made = 0
 		queue = collect(Leaves(tree))
+        leaf_count = length(queue)
 		for leaf in queue
-			changed = try_splitting!(leaf, 
+
+			split_successful = try_splitting!(leaf, 
 				dimensionality, 
 				simulation_function, 
                 action_space,
 				samples_per_axis,
 				min_granularity)
-			push!(changes, changed)
+
+			if split_successful
+                changes_made += 1
+                leaf_count += 1 # One leaf wsa removed, two leaves were added.
+            end
 		end
 	end
-	tree
+	leaf_count
 end

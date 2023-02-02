@@ -194,7 +194,10 @@ call() do
 end
 
 # ╔═╡ d1ec6edc-e46d-4a11-9383-b078a7e78bb2
-updated_tree = update!(deepcopy(initial_tree), dimensionality, foo, Action, spa)
+begin
+	updated_tree = deepcopy(initial_tree)
+	update!(updated_tree, dimensionality, foo, Action, spa)
+end
 
 # ╔═╡ eed68ed1-a733-4b17-957e-f31db727c35e
 draw(updated_tree, tree_draw_bounds, color_dict=action_color_dict)

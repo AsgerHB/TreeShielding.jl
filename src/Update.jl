@@ -3,7 +3,7 @@
 
 Updates every properly bounded partition with a new set of safe actions. An action is considered safe for a partition, if none of its supporting points can end up in an unsafe state by following that action.
 
-**Returns:** The same tree. 
+**Returns:** The number of partitons who had their set of actions changed.
 
 **Args:**
 - `Tree` The tree to update.
@@ -47,5 +47,5 @@ function update!(tree::Tree,
     for (leaf, new_value) in updates
         leaf.value = new_value
     end
-    tree
+    length(updates)
 end
