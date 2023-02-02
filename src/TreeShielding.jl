@@ -24,4 +24,7 @@ include("Update.jl")
 export tree_from_bounds, even_split!, gridify!, set_safety!
 include("TreeBuilding.jl")
 
+export prune!
+include("Prune.jl")
+
 end#module
