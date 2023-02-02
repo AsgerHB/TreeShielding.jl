@@ -283,16 +283,7 @@ md"""
 safe(b::Bounds) = b.lower[1] >= 1 || b.lower[2] >= 10
 
 # ╔═╡ 2fabab2f-3022-45bc-bfb3-11294f12c651
-function set_safety!(tree, dimensionality, safe_function, safe_value, unsafe_value)
-	for leaf in Leaves(tree)
-		if safe_function(get_bounds(leaf, dimensionality))
-			leaf.value = safe_value
-		else
-			leaf.value = unsafe_value
-		end
-	end
-	tree
-end
+
 
 # ╔═╡ 0faf0f89-d49b-4de6-b909-edcaee6290b8
 draw(set_safety!(deepcopy(grid), dimensionality, safe, any_action, no_action), tree_draw_bounds′, color_dict=action_color_dict)
