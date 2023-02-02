@@ -34,7 +34,7 @@ function get_splitting_point(points_safe, axis, margin)
 end
 
 """
-    compute_safety(tree::Tree, simulation_function, points [unsafe_value=0])
+    compute_safety(tree::Tree, simulation_function, action_space, points)
 
 For each point, use the `simulation_function` to check if it would end up in an unsafe place according to `tree`. 
 
@@ -61,7 +61,13 @@ function compute_safety(tree::Tree, simulation_function, action_space, points)
 end
 
 """
-    try_splitting!(leaf::Leaf, dimensionality, simulation_function,  samples_per_axis, min_granularity)
+    try_splitting!(leaf::Leaf, 
+    dimensionality, 
+    simulation_function, 
+    action_space,
+    samples_per_axis,
+    min_granularity)
+
 
 Makes calls to `get_splitting_point` for each axis, and performs the first split which can be made. The split can be made if 
 
@@ -125,7 +131,14 @@ function try_splitting!(leaf::Leaf,
 end
 
 """
-    grow!(tree::Tree, dimensionality, simulation_function, action_space, samples_per_axis, min_granularity, [max_iterations=10])
+    grow!(tree::Tree, 
+                dimensionality,
+                simulation_function, 
+                action_space,
+                samples_per_axis,
+                min_granularity;
+                max_iterations=100)
+
 
 Grow the entire tree by calling `split_all!` on all leaves, until no more changes can be made, or `max_iterations` is exceeded.
 

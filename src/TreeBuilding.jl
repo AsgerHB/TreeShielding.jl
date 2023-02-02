@@ -2,7 +2,7 @@
 
 
 """
-    function tree_from_bounds(bounds::Bounds, [out_of_bounds=-1, inside_bounds=1])
+    tree_from_bounds(bounds::Bounds, out_of_bounds=-1, inside_bounds=1)
 
 Create a tree consisting of a single bounded partition with value `inside_bounds` and four unbounded partitions with the value `out_of_bounds`. 
 """
@@ -26,7 +26,7 @@ function tree_from_bounds(bounds::Bounds, out_of_bounds=-1, inside_bounds=1)
 end
 
 """
-    function even_split!(leaf::Leaf, dimensionality, axis)
+    even_split!(leaf::Leaf, dimensionality, axis)
 
 Turn a leaf into a node evenly split along the given axis.
 """
@@ -37,7 +37,7 @@ function even_split!(leaf::Leaf, dimensionality, axis)
 end
 
 """
-    function gridify!(tree::Tree, dimensionality, number_of_splits)
+    gridify!(tree::Tree, dimensionality, number_of_splits)
 
 Splits all properly bounded partitions into sub-partitions of equal size along all axes.
 
