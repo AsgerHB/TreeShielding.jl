@@ -1,6 +1,6 @@
 
 # Returns an integer representing the given set of actions
-function actions_to_int(actions::Type, list)
+function actions_to_int(actions, list)
 	translation_dict = get_translation_dict(actions)
 	
 	result = 0
@@ -17,7 +17,7 @@ end
 
 prebaked_translation_dict = Dict()
 
-function get_translation_dict(actions::Type)
+function get_translation_dict(actions)
 	if haskey(prebaked_translation_dict, actions)
 		return prebaked_translation_dict[actions]
 	else
@@ -27,7 +27,7 @@ function get_translation_dict(actions::Type)
 end
 
 #Returns an integer representing the given set of actions
-function int_to_actions(actions::Type, int::Number)
+function int_to_actions(actions, int::Number)
 	translation_dict = get_translation_dict(actions)
 	
 	result = []
