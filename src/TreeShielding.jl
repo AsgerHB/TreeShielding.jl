@@ -27,4 +27,10 @@ include("TreeBuilding.jl")
 export prune!
 include("Prune.jl")
 
+
+module RW
+export rwmechanics, step, plot_with_size, plot_with_size!, draw_next_step!, draw_walk!, take_walk, evaluate, draw
+include("RWExample.jl")
+end#module
+
 end#module
