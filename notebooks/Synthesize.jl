@@ -290,15 +290,15 @@ end
 # ╔═╡ c8424961-5363-41bc-beb2-a0f54a289b5a
 md"""
 `show_supporting_points:`
-$(@bind show_supporting_points CheckBox())
+$(@bind show_supporting_points CheckBox(default=true))
 
-`a =` $(@bind a Select(instances(Pace) |> collect))
+`a =` $(@bind a Select(instances(Pace) |> collect, default=RW.fast))
 
 Position: 
 $(@bind partition_x 
-	NumberField(outer_bounds.lower[1]:0.01:outer_bounds.upper[1]))
+	NumberField(outer_bounds.lower[1]:0.01:outer_bounds.upper[1], default=0.9))
 $(@bind partition_y 
-	NumberField(outer_bounds.lower[2]:0.01:outer_bounds.upper[2]))
+	NumberField(outer_bounds.lower[2]:0.01:outer_bounds.upper[2], default=0.9))
 """
 
 # ╔═╡ c39a5cbf-37b2-4712-a935-ac0ed4a41988
@@ -366,9 +366,9 @@ end
 # ╠═6543e28a-28c3-48ac-b596-4d10144c7999
 # ╠═40e5b7be-7438-48cc-b275-a73d7e42c5a2
 # ╠═578da1ea-3e25-4baf-a10d-9c2f8d5c842f
-# ╠═9ce0412c-5023-4ce6-a6a7-5710cff08977
-# ╠═aac97ac0-dde3-4b4f-b32f-0feb87c91497
-# ╠═d49c1419-7380-4527-af3a-65aca35dfcf3
+# ╟─9ce0412c-5023-4ce6-a6a7-5710cff08977
+# ╟─aac97ac0-dde3-4b4f-b32f-0feb87c91497
+# ╟─d49c1419-7380-4527-af3a-65aca35dfcf3
 # ╟─3a2f71b6-d01b-469f-a5c8-afbc9e0f5a2c
 # ╟─ec1099e2-4d49-440b-b70f-03cf92ce0b80
 # ╟─775c46f2-c207-4de0-ae6e-f108f6d162de
