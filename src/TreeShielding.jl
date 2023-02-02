@@ -29,7 +29,9 @@ include("Prune.jl")
 
 
 module RW
-export rwmechanics, step, plot_with_size, plot_with_size!, draw_next_step!, draw_walk!, take_walk, evaluate, draw
+
+using Plots
+export rwmechanics, Pace, simulate, draw_next_step!, draw_walk!, take_walk, evaluate
 include("RWExample.jl")
 end#module
 
