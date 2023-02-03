@@ -31,7 +31,7 @@ function synthesize!(tree::Tree,
                     samples_per_axis,
                     min_granularity;
                     max_grow_iterations=100,
-                    verbose=false,)
+                    verbose=false)
 
     previous_leaf_count = 0 # value not required when loop is entered.
     updates_made = 0
@@ -64,4 +64,57 @@ function synthesize!(tree::Tree,
         change_occured = grown_to != previous_leaf_count || updates > 0
         previous_leaf_count = pruned_to
     end
+
+    verbose && @info "Safe strategy synthesised. Making more permissive."
+
+    make_permissive!(tree, 
+        dimensionality, 
+        simulation_function,
+        action_space,
+        samples_per_axis,
+        min_granularity;
+        max_grow_iterations,
+        verbose)
+end
+
+function make_permissive!(tree::Tree, 
+    dimensionality, 
+    simulation_function,
+    action_space,
+    samples_per_axis,
+    min_granularity;
+    max_grow_iterations=100,
+    verbose=false)
+
+    # For every action in turn, grow the tree assuming it is not available.
+    # This seperates the safe partitions into the ones where this action is required,
+    # and where more actions are allowed.
+    for action in instances(action_space)
+        action_space′ = filter(a -> a != action, instances(action_space))
+
+        grown_to = grow!(
+            tree,
+            dimensionality,
+            simulation_function,
+            action_space′,
+            samples_per_axis,
+            min_granularity,
+            max_iterations=max_grow_iterations)
+
+            verbose && @info "Grown to $grown_to leaves"
+    end
+        
+    # One last update
+    updates = update!(
+        tree, 
+        dimensionality, 
+        simulation_function, 
+        action_space, 
+        samples_per_axis)
+
+    verbose && @info "Updated $updates leaves"
+        
+    pruned_to = prune!(tree)
+
+    verbose && @info "Pruned to $pruned_to leaves"
 end

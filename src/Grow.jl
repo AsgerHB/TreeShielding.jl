@@ -46,12 +46,16 @@ For each point, use the `simulation_function` to check if it would end up in an 
  - `action_space` The possible actions to provide `simulation_function`. Should be an `Enum` or at least work with functions `actions_to_int` and `instances`.
  - `points` This is the set of points.
 """
+function compute_safety(tree::Tree, simulation_function, action_space::Type, points)
+    compute_safety(tree::Tree, simulation_function, instances(action_space), points)
+end
+
 function compute_safety(tree::Tree, simulation_function, action_space, points)
     unsafe_value = actions_to_int([]) # The value for states where no actions are allowed.
 	result = []
 	for p in points
         safe = false
-        for a in instances(action_space)
+        for a in action_space
             p′ = simulation_function(p, a)
             safe = safe || (get_value(tree, p′) != unsafe_value)
         end
