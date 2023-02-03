@@ -24,9 +24,9 @@ function get_splitting_point(points_safe, axis, margin)
 	glb_safe = min([p[axis] for (p, safe) in points_safe if safe]...)
 	glb_unsafe = min([p[axis] for (p, safe) in points_safe if !safe]...)
 	
-	if glb_unsafe > glb_safe
+	if glb_unsafe - margin > glb_safe
 		return glb_unsafe - margin
-	elseif lub_unsafe < lub_safe
+	elseif lub_unsafe + margin < lub_safe
 		return lub_unsafe + margin
 	else
 		return nothing
@@ -114,7 +114,7 @@ function try_splitting!(leaf::Leaf,
     spacings = get_spacing_sizes(supporting_points, dimensionality)
 
     for axis in (1:dimensionality)
-        margin = spacings[axis]/2
+        margin = spacings[axis]
         threshold = get_splitting_point(points_safe, axis, margin)
         
         if threshold === nothing 
