@@ -156,6 +156,11 @@ end
 # ╔═╡ de7fe51c-0f75-49bb-bc6f-726a21bcd064
 md"""
 The function for taking a single step needs to be wrapped up, so that it only takes the arguments `point` and `action`.
+
+The kwarg `unlucky=true` will tell the function to pick the worst-case outcome, i.e. the one where the ball preserves the least amount of power on impact. 
+
+!!! info "TODO"
+	Model random outcomes as an additional dimension, removing the need for assumptions about a "worst-case" outcome.
 """
 
 # ╔═╡ 07ed71cc-a931-4785-9707-86aad883df30
@@ -185,7 +190,7 @@ md"""
 
 Building a tree with a properly bounded state space, and some divisions that align with the safety constraints.
 
-A **bump** is introduced to make the splitting more interesting to look at.
+Note that the set of unsafe states is modified for this notebook, to make the initial split more interesting.
 """
 
 # ╔═╡ a136ec18-5e84-489b-a13a-ff4ffbb1870d
@@ -206,18 +211,23 @@ begin
 	x_min, y_min = rwmechanics.x_min, rwmechanics.t_min
 	x_max, y_max = rwmechanics.x_max, rwmechanics.t_max
 	split!(get_leaf(initial_tree, x_min - 1, y_max), 2, y_max)
-	split!(get_leaf(initial_tree, x_max + 1, y_max), 2, y_max - 0.3) # The **bump**
+	split!(get_leaf(initial_tree, x_max + 1, y_max), 2, y_max)
 end
 
 # ╔═╡ af5236ad-e88e-486d-ab43-e4d1a85a7333
 draw(initial_tree, draw_bounds, color_dict=action_color_dict, aspectratio=:equal)
 
 # ╔═╡ ee408360-8c64-4619-9810-6038738045dc
-tree = set_safety!(deepcopy(initial_tree), 
+begin
+	tree = set_safety!(deepcopy(initial_tree), 
 		dimensionality, 
 		is_safe, 
 		any_action, 
 		no_action)
+
+	# Modification to make the split more interesting
+	replace_subtree!(get_leaf(tree, 1.1, 1.1), Leaf(any_action))
+end
 
 # ╔═╡ e9c86cfa-e53f-4c1e-9102-14c821f4232a
 draw(tree, draw_bounds, color_dict=action_color_dict, aspectratio=:equal)
@@ -229,40 +239,81 @@ md"""
 The following function has the answer:
 """
 
-# ╔═╡ ccf04ab6-d3f9-4abf-ae66-0e5d9653adff
+# ╔═╡ 5ff6d2c9-6618-4938-bb05-657952651b8e
 @doc get_splitting_point
 
 # ╔═╡ 2b618fae-ca7d-412b-8edb-93305ca25353
 md"""
 ### Try it Out!
 
+Configure margin:
+
+`margin =` $(@bind margin NumberField(0:0.1:1, default=1))
+
 Check boxes to set whether points are safe: 
+
+[ $(@bind p_1_5 CheckBox(default=true)) ]
+[ $(@bind p_2_5 CheckBox(default=true)) ]
+[ $(@bind p_3_5 CheckBox(default=true)) ]
+[ $(@bind p_4_5 CheckBox(default=true)) ]
+[ $(@bind p_5_5 CheckBox(default=true)) ]
+
+[ $(@bind p_1_4 CheckBox(default=true)) ]
+[ $(@bind p_2_4 CheckBox(default=true)) ]
+[ $(@bind p_3_4 CheckBox(default=true)) ]
+[ $(@bind p_4_4 CheckBox(default=true)) ]
+[ $(@bind p_5_4 CheckBox(default=true)) ]
 
 [ $(@bind p_1_3 CheckBox(default=true)) ]
 [ $(@bind p_2_3 CheckBox(default=true)) ]
 [ $(@bind p_3_3 CheckBox(default=true)) ]
+[ $(@bind p_4_3 CheckBox(default=true)) ]
+[ $(@bind p_5_3 CheckBox(default=true)) ]
 
 [ $(@bind p_1_2 CheckBox(default=true)) ]
 [ $(@bind p_2_2 CheckBox(default=true)) ]
 [ $(@bind p_3_2 CheckBox(default=true)) ]
+[ $(@bind p_4_2 CheckBox(default=true)) ]
+[ $(@bind p_5_2 CheckBox(default=true)) ]
 
 [ $(@bind p_1_1 CheckBox(default=true)) ]
 [ $(@bind p_2_1 CheckBox(default=false)) ]
 [ $(@bind p_3_1 CheckBox(default=false)) ]
+[ $(@bind p_4_1 CheckBox(default=false)) ]
+[ $(@bind p_5_1 CheckBox(default=false)) ]
 
 """
 
 # ╔═╡ d8b0d276-6bbb-4dca-9a66-00f421316c87
-points_safe = [
-		((1, 1), p_1_1),
-		((2, 1), p_2_1),
-		((3, 1), p_3_1),
-		((1, 2), p_1_2),
-		((1, 3), p_1_3),
-		((2, 2), p_2_2),
-		((2, 3), p_2_3),
-		((3, 2), p_3_2),
-		((3, 3), p_3_3),
+points_safe = [((1, 5), p_1_5),
+((2, 5), p_2_5),
+((3, 5), p_3_5),
+((4, 5), p_4_5),
+((5, 5), p_5_5),
+
+((1, 4), p_1_4),
+((2, 4), p_2_4),
+((3, 4), p_3_4),
+((4, 4), p_4_4),
+((5, 4), p_5_4),
+
+((1, 3), p_1_3),
+((2, 3), p_2_3),
+((3, 3), p_3_3),
+((4, 3), p_4_3),
+((5, 3), p_5_3),
+
+((1, 2), p_1_2),
+((2, 2), p_2_2),
+((3, 2), p_3_2),
+((4, 2), p_4_2),
+((5, 2), p_5_2),
+
+((1, 1), p_1_1),
+((2, 1), p_2_1),
+((3, 1), p_3_1),
+((4, 1), p_4_1),
+((5, 1), p_5_1),
 	]
 
 # ╔═╡ 43dbb196-adc8-4c9f-8c1a-333d563ebec6
@@ -272,19 +323,18 @@ call() do
 		m=(:+, 7, colors.WET_ASPHALT), msw=4, 
 		label="supporting points", 
 		legend=:outerright,
-		ticks=1:3)
+		ticks=1:5)
 
 	unsafe = [p for (p, safe) in points_safe if !safe]
 	scatter!(unsafe, 
 		m=(:x, 7, colors.ALIZARIN), msw=3, 
 		label="unsafe")
-
-	margin = 0.5
 	
 	split1 = get_splitting_point(points_safe, 1, margin)
 	if split1 !== nothing
 		vline!([split1], label=nothing, lw=2, c=colors.WET_ASPHALT, ls=:dash)
 	end
+	
 	split2 = get_splitting_point(points_safe, 2, margin)
 	if split2 !== nothing
 		hline!([split2], label=nothing, lw=2, c=colors.WET_ASPHALT, ls=:dash)
@@ -324,7 +374,7 @@ call() do
 	bounds = get_bounds(get_leaf(tree, 0.5, 0.5), dimensionality)
 	p1 = draw(tree, draw_bounds, color_dict=action_color_dict,legend=:outerright)
 	supporting_points = SupportingPoints(spa, bounds)
-	scatter_supporting_points!(supporting_points)
+	draw_support_points!(tree, dimensionality, simulation_function, Pace, spa, (0.5, 0.5), RW.fast)
 end
 
 # ╔═╡ 6da5b379-ee87-42d1-8f48-5c465d4c4078
@@ -351,13 +401,13 @@ call() do
 	
 	spacings = get_spacing_sizes(supporting_points, dimensionality)
 	
-	margin1 = spacings[1]/2
+	margin1 = spacings[1]
 	split1 = get_splitting_point(points_safe, 1, margin1)
 	if split1 !== nothing
 		vline!([split1], label=nothing, lw=2, c=colors.WET_ASPHALT, ls=:dash)
 	end
 	
-	margin2 = spacings[2]/2
+	margin2 = spacings[2]
 	split2 = get_splitting_point(points_safe, 2, margin2)
 	if split2 !== nothing
 		hline!([split2], label=nothing, lw=2, c=colors.WET_ASPHALT, ls=:dash)
@@ -547,7 +597,7 @@ end
 # ╠═ee408360-8c64-4619-9810-6038738045dc
 # ╠═e9c86cfa-e53f-4c1e-9102-14c821f4232a
 # ╟─86e9b7f7-f1f5-4ba2-95d6-5e528b1c0ce6
-# ╠═ccf04ab6-d3f9-4abf-ae66-0e5d9653adff
+# ╠═5ff6d2c9-6618-4938-bb05-657952651b8e
 # ╟─2b618fae-ca7d-412b-8edb-93305ca25353
 # ╟─d8b0d276-6bbb-4dca-9a66-00f421316c87
 # ╠═43dbb196-adc8-4c9f-8c1a-333d563ebec6
