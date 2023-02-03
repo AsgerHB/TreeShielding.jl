@@ -153,6 +153,11 @@ end
 # ╔═╡ b7410cc3-d5b7-497b-88c8-1f525c646b3e
 md"""
 The function for taking a single step needs to be wrapped up, so that it only takes the arguments `point` and `action`.
+
+The kwarg `unlucky=true` will tell the function to pick the worst-case outcome, i.e. the one where the ball preserves the least amount of power on impact. 
+
+!!! info "TODO"
+	Model random outcomes as an additional dimension, removing the need for assumptions about a "worst-case" outcome.
 """
 
 # ╔═╡ f698931f-0f24-4f82-8a09-f521bb1b4d2d
@@ -231,7 +236,7 @@ Change the inputs and click the buttons to see how the parameters affect synthes
 begin
 	reactive_tree = deepcopy(initial_tree)
 	set_safety!(reactive_tree, dimensionality, is_safe, any_action, no_action)
-	debounce1, debounce2, debounce3 = Ref(1), Ref(1), Ref(1)
+	debounce1, debounce2, debounce3, debounce4 = Ref(1), Ref(1), Ref(1), Ref(1)
 	reset_button
 end
 
@@ -239,7 +244,7 @@ end
 md"""
 Try changing the number of samples per axis, to see how this affects the growth of the tree.
 
-`spa =` $(@bind spa NumberField(1:20, default=5))
+`spa =` $(@bind spa NumberField(1:20, default=15))
 
 And likewise try to adjust the minimum granularity. Defined as the number of leading zeros to the one.
 
@@ -249,7 +254,7 @@ And likewise try to adjust the minimum granularity. Defined as the number of lea
 """
 
 # ╔═╡ d020392b-ede6-4517-8e56-5ddcb1f33fea
-min_granularity = 10.0^(-min_granularity_decimals)
+min_granularity = 10.0^(-min_granularity_decimals - 1)
 
 # ╔═╡ c8248f9e-6fc2-49c4-9e69-b8387628f0fd
 @bind grow_button Button("Grow")
@@ -329,6 +334,46 @@ begin
 	plot!(aspectratio=:equal)
 end
 
+# ╔═╡ b167ada8-dc47-491c-b8f1-6b8dae176307
+md"""
+# Making the Strategy More Permissive
+
+Alright, so that ends up with just a bunch of partitions where you are only allowed to go fast. This is a safe strategy to be sure, but not very permissive. The last step is to refine the safe partitions.
+
+This is done by performing another `grow!` step, where we assume we can only go slow, followed by a normal update.
+"""
+
+# ╔═╡ 8c9d74e1-7ccb-4623-9169-69501e8af721
+@bind make_permissive_button Button("Make More Permissive")
+
+# ╔═╡ 955ef68a-5a87-43d2-96bb-5b31f2d8e92a
+call() do
+	if debounce4[] == 1
+		debounce4[] += 1
+		return
+	end
+	make_permissive_button
+	
+	tree = deepcopy(reactive_tree)
+	grown = grow!(tree, 
+		dimensionality, 
+		simulation_function, 
+		[RW.slow], 
+		spa, 
+		min_granularity, 
+		max_iterations=max_grow_iterations)
+	
+	@info "Grown to $grown leaves"
+
+	updates = update!(tree, dimensionality, simulation_function, Pace, spa)
+	@info "Updated $updates leaves"
+	
+	pruned_to = prune!(reactive_tree)
+	@info "Pruned to $pruned_to leaves"
+
+	draw(tree, draw_bounds, color_dict=action_color_dict, aspectratio=:equal)
+end
+
 # ╔═╡ 8af94312-e7f8-4b44-8190-ad0d2b5ce6d7
 md"""
 # The Full Loop
@@ -390,7 +435,7 @@ end
 # ╠═3b86ac41-4d87-4498-a1ca-c8c327ceb347
 # ╟─3bf43a31-1739-4b94-944c-0226cc3851cb
 # ╟─e21002c4-f772-4c55-9014-6551b41d7ef4
-# ╟─5cfd2617-c1d8-4228-b7ca-cde9c3d68a4c
+# ╠═5cfd2617-c1d8-4228-b7ca-cde9c3d68a4c
 # ╟─de03955c-7064-401f-b20b-14302273da8b
 # ╟─d020392b-ede6-4517-8e56-5ddcb1f33fea
 # ╟─c8248f9e-6fc2-49c4-9e69-b8387628f0fd
@@ -401,6 +446,9 @@ end
 # ╟─c39a5cbf-37b2-4712-a935-ac0ed4a41988
 # ╟─0fb4f059-135c-4713-be81-94e3acecc2ed
 # ╠═8306fbf0-c537-4f92-9e18-c2b006d7499e
+# ╟─b167ada8-dc47-491c-b8f1-6b8dae176307
+# ╟─8c9d74e1-7ccb-4623-9169-69501e8af721
+# ╟─955ef68a-5a87-43d2-96bb-5b31f2d8e92a
 # ╟─8af94312-e7f8-4b44-8190-ad0d2b5ce6d7
 # ╠═039a6f5c-2934-4345-a381-56f8c3c33483
 # ╠═0e68f636-cf63-4df8-b9ca-c597701334a9
