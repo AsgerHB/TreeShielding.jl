@@ -129,7 +129,7 @@ This notebook uses the Random Walk example, which is included in the RW module.
 
 # ╔═╡ 80c812df-9b1c-4fd8-9100-b58fdfc24ff9
 any_action, no_action = 
-	actions_to_int(Pace, instances(Pace)), actions_to_int(Pace, [])
+	actions_to_int(instances(Pace)), actions_to_int([])
 
 # ╔═╡ d49c1419-7380-4527-af3a-65aca35dfcf3
 action_color_dict=Dict(

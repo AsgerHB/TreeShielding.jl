@@ -23,7 +23,7 @@ function update!(tree::Tree,
     samples_per_axis)
 
     updates = []
-    no_actions = actions_to_int(action_space, [])
+    no_actions = actions_to_int([])
     for leaf in Leaves(tree)
         if leaf.value == no_actions
             continue # bad leaves stay bad
@@ -42,7 +42,7 @@ function update!(tree::Tree,
                 end
             end
         end
-        new_value = actions_to_int(action_space, allowed)
+        new_value = actions_to_int(allowed)
         if leaf.value != new_value
             push!(updates, (leaf, new_value))
         end

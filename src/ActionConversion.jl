@@ -1,40 +1,28 @@
+"""
+    actions_to_int(actions)
 
-# Returns an integer representing the given set of actions
-function actions_to_int(actions, list)
-	translation_dict = get_translation_dict(actions)
-	
-	result = 0
+Convert a set of actions to a single integer, using bit-encoding. Actions will be cast to `Int`, so use a type that allows this. For example ints or enums..
 
-	if actions == [] 
-		return result
-	end
-	
-	for action in list
-		result += translation_dict[action]
-	end
+**Warning:** Duplicates will lead to undefined behaviour. 
+"""
+function actions_to_int(actions)
+	init = 0
+	sum(2^(Int(action)) for action in actions; init)
+end
+
+# https://discourse.julialang.org/t/convert-integer-to-bits-array/26663/7
+function get_bit_vector(u)
+	result = BitVector(undef, sizeof(u)*8)
+	result.chunks[1] = u%UInt64 # Seems to assume a 64-bit int. Sensible enough.
 	result
 end
 
-prebaked_translation_dict = Dict()
+"""
+    int_to_actions(action_type, int::Number)
 
-function get_translation_dict(actions)
-	if haskey(prebaked_translation_dict, actions)
-		return prebaked_translation_dict[actions]
-	else
-		prebaked_translation_dict[actions] = Dict(a => 2^(i-1) for (i, a) in enumerate(instances(actions)))
-		return get_translation_dict(actions)
-	end
-end
-
-#Returns an integer representing the given set of actions
-function int_to_actions(actions, int::Number)
-	translation_dict = get_translation_dict(actions)
-	
-	result = []
-	for (k, v) in translation_dict
-		 if int & v != 0
-			 push!(result, k)
-		 end
-	end
-	result
+Convert an integer created using `actions_to_int` back into a set of actions.
+"""
+function int_to_actions(action_type, int)
+	[action_type(i-1) for (i, value) in enumerate(get_bit_vector(int))
+		if value]
 end

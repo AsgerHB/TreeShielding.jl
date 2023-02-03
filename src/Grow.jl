@@ -47,7 +47,7 @@ For each point, use the `simulation_function` to check if it would end up in an 
  - `points` This is the set of points.
 """
 function compute_safety(tree::Tree, simulation_function, action_space, points)
-    unsafe_value = actions_to_int(action_space, []) # The value for states where no actions are allowed.
+    unsafe_value = actions_to_int([]) # The value for states where no actions are allowed.
 	result = []
 	for p in points
         safe = false
@@ -95,7 +95,7 @@ function try_splitting!(leaf::Leaf,
 
     root = getroot(leaf)
     bounds = get_bounds(leaf, dimensionality)
-    unsafe_value = actions_to_int(action_space, []) # The value for states where no actions are allowed.
+    unsafe_value = actions_to_int([]) # The value for states where no actions are allowed.
 
     if leaf.value == unsafe_value
         return false
@@ -163,7 +163,6 @@ function grow!(tree::Tree,
                 min_granularity;
                 max_iterations=100)
 	
-
 	changes_made = 1 # just to enter loop
     leaf_count = 0
 	while changes_made > 0

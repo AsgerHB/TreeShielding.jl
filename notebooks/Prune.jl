@@ -130,7 +130,7 @@ function draw_support_points!(tree::Tree,
 end
 
 # ╔═╡ 0d7aca9f-460a-437e-89f8-07727adce731
-any_action, no_action = actions_to_int(Action, instances(Action)), actions_to_int(Action, [])
+any_action, no_action = actions_to_int(instances(Action)), actions_to_int([])
 
 # ╔═╡ 5cd0afd8-a518-4625-b91d-71ffa82ac3b0
 action_color_dict=Dict(

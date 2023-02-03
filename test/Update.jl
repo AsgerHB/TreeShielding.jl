@@ -1,6 +1,6 @@
 @testset "Update.jl" begin
     @enum Action fi fo
-    safe, unsafe = actions_to_int(Action, instances(Action)), actions_to_int(Action, [])
+    safe, unsafe = actions_to_int(instances(Action)), actions_to_int([])
 
     function simulation_function(p, a)
         if a == fi
@@ -39,7 +39,7 @@
     # Act #
     update!(mock_tree, dimensionality, simulation_function, Action, samples_per_axis)
 
-    @test leaf1.value == actions_to_int(Action, [fi])
-    @test leaf2.value == actions_to_int(Action, [fi, fo])
-    @test leaf3.value == actions_to_int(Action, [])
+    @test leaf1.value == actions_to_int([fi])
+    @test leaf2.value == actions_to_int([fi, fo])
+    @test leaf3.value == actions_to_int([])
 end

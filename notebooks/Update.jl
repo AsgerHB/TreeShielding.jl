@@ -130,7 +130,7 @@ foo(s, a::Action) = (a == bar ?
 	Tuple(s .+ [-1.2, 2.5]))
 
 # ╔═╡ a5b9da4a-4926-48dc-b1de-3371d3c5c830
-any_action, no_action = actions_to_int(Action, instances(Action)), actions_to_int(Action, [])
+any_action, no_action = actions_to_int(instances(Action)), actions_to_int([])
 
 # ╔═╡ 6eee73e9-8ad5-414d-a224-044c051316f3
 action_color_dict=Dict(
