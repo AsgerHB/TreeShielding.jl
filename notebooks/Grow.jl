@@ -214,9 +214,6 @@ begin
 	split!(get_leaf(initial_tree, x_max + 1, y_max), 2, y_max)
 end
 
-# ╔═╡ af5236ad-e88e-486d-ab43-e4d1a85a7333
-draw(initial_tree, draw_bounds, color_dict=action_color_dict, aspectratio=:equal)
-
 # ╔═╡ ee408360-8c64-4619-9810-6038738045dc
 begin
 	tree = set_safety!(deepcopy(initial_tree), 
@@ -236,335 +233,544 @@ draw(tree, draw_bounds, color_dict=action_color_dict, aspectratio=:equal)
 md"""
 ## Where to Split
 
-The following function has the answer:
+Get ready to read some cursed code.
 """
 
-# ╔═╡ 5ff6d2c9-6618-4938-bb05-657952651b8e
-@doc get_splitting_point
-
-# ╔═╡ 2b618fae-ca7d-412b-8edb-93305ca25353
+# ╔═╡ 0840b06f-246a-4d62-bf07-2ab9a1cc1e26
 md"""
-### Try it Out!
 
-Configure margin:
+### `safety_bounds`
+The function finds the minima and maxima for the sets of safe support ponits, and the same for the unsafe support points.
 
-`margin =` $(@bind margin NumberField(0:0.1:1, default=1))
-
-Check boxes to set whether points are safe: 
-
-[ $(@bind p_1_5 CheckBox(default=true)) ]
-[ $(@bind p_2_5 CheckBox(default=true)) ]
-[ $(@bind p_3_5 CheckBox(default=true)) ]
-[ $(@bind p_4_5 CheckBox(default=true)) ]
-[ $(@bind p_5_5 CheckBox(default=true)) ]
-
-[ $(@bind p_1_4 CheckBox(default=true)) ]
-[ $(@bind p_2_4 CheckBox(default=true)) ]
-[ $(@bind p_3_4 CheckBox(default=true)) ]
-[ $(@bind p_4_4 CheckBox(default=true)) ]
-[ $(@bind p_5_4 CheckBox(default=true)) ]
-
-[ $(@bind p_1_3 CheckBox(default=true)) ]
-[ $(@bind p_2_3 CheckBox(default=true)) ]
-[ $(@bind p_3_3 CheckBox(default=true)) ]
-[ $(@bind p_4_3 CheckBox(default=true)) ]
-[ $(@bind p_5_3 CheckBox(default=true)) ]
-
-[ $(@bind p_1_2 CheckBox(default=true)) ]
-[ $(@bind p_2_2 CheckBox(default=true)) ]
-[ $(@bind p_3_2 CheckBox(default=true)) ]
-[ $(@bind p_4_2 CheckBox(default=true)) ]
-[ $(@bind p_5_2 CheckBox(default=true)) ]
-
-[ $(@bind p_1_1 CheckBox(default=true)) ]
-[ $(@bind p_2_1 CheckBox(default=false)) ]
-[ $(@bind p_3_1 CheckBox(default=false)) ]
-[ $(@bind p_4_1 CheckBox(default=false)) ]
-[ $(@bind p_5_1 CheckBox(default=false)) ]
-
+These bounds are used to compute where a split can be made, such that there are only safe supporting points at one side of the split.
 """
 
-# ╔═╡ d8b0d276-6bbb-4dca-9a66-00f421316c87
-points_safe = [((1, 5), p_1_5),
-((2, 5), p_2_5),
-((3, 5), p_3_5),
-((4, 5), p_4_5),
-((5, 5), p_5_5),
+# ╔═╡ 4455372a-5d12-4a35-bc43-97dcc5719f6c
+function safety_bounds(tree, bounds, 
+	simulation_function, 
+    action_space,
+    samples_per_axis)
 
-((1, 4), p_1_4),
-((2, 4), p_2_4),
-((3, 4), p_3_4),
-((4, 4), p_4_4),
-((5, 4), p_5_4),
+	no_action = actions_to_int([])
+	dimensionality = get_dim(bounds)
 
-((1, 3), p_1_3),
-((2, 3), p_2_3),
-((3, 3), p_3_3),
-((4, 3), p_4_3),
-((5, 3), p_5_3),
+	min_safe = [Inf for _ in 1:dimensionality]
+	max_safe = [-Inf for _ in 1:dimensionality]
+	min_unsafe = [Inf for _ in 1:dimensionality]
+	max_unsafe = [-Inf for _ in 1:dimensionality]
 
-((1, 2), p_1_2),
-((2, 2), p_2_2),
-((3, 2), p_3_2),
-((4, 2), p_4_2),
-((5, 2), p_5_2),
+	for point in SupportingPoints(samples_per_axis, bounds)
+		safe = false
+		for action in instances(action_space)
+			point′ = simulation_function(point, action)
+			if get_value(tree, point′) != no_action
+				safe = true
+			end
+		end
 
-((1, 1), p_1_1),
-((2, 1), p_2_1),
-((3, 1), p_3_1),
-((4, 1), p_4_1),
-((5, 1), p_5_1),
-	]
+		if safe
+			for axis in 1:dimensionality
+				if min_safe[axis] > point[axis]
+					min_safe[axis] = point[axis]
+				end
+				if max_safe[axis] < point[axis]
+					max_safe[axis] = point[axis]
+				end
+			end
+		else
+			for axis in 1:dimensionality
+				if min_unsafe[axis] > point[axis]
+					min_unsafe[axis] = point[axis]
+				end
+				if max_unsafe[axis] < point[axis]
+					max_unsafe[axis] = point[axis]
+				end
+			end
+		end
+	end
 
-# ╔═╡ 43dbb196-adc8-4c9f-8c1a-333d563ebec6
-# Testing out the get_split function
+	safe, unsafe = Bounds(min_safe, max_safe), Bounds(min_unsafe, max_unsafe)
+end
+
+# ╔═╡ 2d999c21-cbdd-4ca6-9866-6f763c91feba
+md"""
+### `get_dividing_bounds`
+
+Recursively finds the best threshold, such that all points to one side of it are safe.
+
+Taking as its arguments a set of bounds and the variables required to define supporting points, it computes the safe and unsafe states from the supporting points.
+
+Then it returns the area between the last set of safe supporting points, and the unsafe ones. This is easiest to see in a notebook.
+
+However, if no such bound exists, it returns `nothing`
+"""
+
+# ╔═╡ ed0def9c-15a3-41a2-b266-849d4a382a69
+function get_dividing_bounds(tree, 
+	bounds,
+	simulation_function, 
+	action_space, 
+	samples_per_axis,
+	axis;
+	max_recursion_depth=5,
+	verbose=false)
+
+	dimensionality = get_dim(bounds)
+	
+	offset = get_spacing_sizes(SupportingPoints(samples_per_axis, bounds), 
+		dimensionality)
+	
+	safe, unsafe = safety_bounds(tree, 
+		bounds,
+		simulation_function,
+		action_space,
+		samples_per_axis)
+
+	verbose && @info "safe: $safe \nunsafe: $unsafe"
+
+	if !bounded(safe)
+		@warn "No safe points found in partition."
+		return nothing, nothing
+	elseif !bounded(unsafe)
+		verbose && @info "No unsafe points found in partition."
+		return nothing, nothing
+	end
+
+	threshold = nothing
+	safe_above = nothing
+	bounds′ = deepcopy(bounds)
+	
+	if unsafe.lower[axis]  - offset[axis] > safe.lower[axis] ||
+			unsafe.lower[axis]  - offset[axis] ≈ safe.lower[axis]
+		
+		threshold = unsafe.lower[axis] - offset[axis]
+		safe_above = false
+		
+		bounds′.lower[axis] = threshold
+		bounds′.upper[axis] = threshold + offset[axis]
+		
+	elseif unsafe.upper[axis]  + offset[axis] < safe.upper[axis] ||
+			unsafe.upper[axis]  + offset[axis] ≈ safe.upper[axis]
+		
+		threshold = unsafe.upper[axis] + offset[axis]
+		safe_above = true
+		
+		bounds′.lower[axis] = threshold - offset[axis]
+		bounds′.upper[axis] = threshold
+	else
+		return nothing, nothing
+	end
+	
+	if max_recursion_depth < 1 
+		verbose && @info "Found dividing bounds $bounds′"
+		return safe_above, bounds′
+	end
+	return something(
+		get_dividing_bounds(tree,
+					bounds′,
+					simulation_function,
+					action_space,
+					samples_per_axis,
+					axis,
+					max_recursion_depth=max_recursion_depth - 1),
+		(safe_above, bounds′)
+	)
+end
+
+# ╔═╡ 15b5d339-705e-4408-9629-2002117b8da7
+md"""
+### `get_threshold`
+
+Find a threshold along any axis, such that to one side all points are safe.
+"""
+
+# ╔═╡ 394d5768-951b-418c-ab87-367a9b9b90ad
+function get_threshold(tree, 
+	bounds,
+	simulation_function, 
+	action_space, 
+	samples_per_axis,
+	min_granularity;
+	max_recursion_depth=5,
+	verbose=false)
+
+	for axis in 1:dimensionality
+		safe_above, dividing_bounds = get_dividing_bounds(tree, 
+			bounds,
+			simulation_function, 
+			action_space, 
+			samples_per_axis,
+			axis; 
+			max_recursion_depth,
+			verbose)
+		
+	
+		if safe_above === nothing
+			continue
+		elseif safe_above
+			threshold = dividing_bounds.upper[axis]
+		else
+			threshold = dividing_bounds.lower[axis]
+		end
+
+		lower, upper = bounds.lower[axis], bounds.upper[axis]
+		if  abs(threshold - lower) < min_granularity ||
+			abs(threshold - upper) < min_granularity
+			verbose && @info "Skipped a split that went below min_granularity."
+			continue
+		end
+
+		return axis, threshold
+	end
+
+	return nothing, nothing
+end
+
+# ╔═╡ a8a02260-61d8-4698-9b61-351adaf68f78
+bounds = get_bounds(get_leaf(tree, 0.5, 0.5), dimensionality)
+
+# ╔═╡ 648fb8ab-b156-4c75-b0e0-16c8c7f151ec
+"""
+    try_splitting!(leaf::Leaf, 
+    dimensionality, 
+    simulation_function, 
+    action_space,
+    samples_per_axis,
+    min_granularity)
+
+
+Makes calls to `get_splitting_point` for each axis, and performs the first split which can be made. The split can be made if 
+
+ - The leaf has at least one safe action it can take. Splitting unsafe partitions is useless.
+ - The leaf is properly bounded. That is, its bounds are finite on all axes.
+ - `get_splitting_point` returns something other than `nothing`, i.e. there exists a thereshold such that all points are safe on one side of it.
+ - The threshold would not create a bound whose size is smaller than `min_granularity`.
+   
+**Returns:** `true` if a split is made, and `false` otherwise.
+
+**Args:**
+ - `leaf` This leaf will be split at the first axis where a division can be made between safe and unsafe points.
+ - `dimensionality` Number of axes. 
+ - `simulation_function` A function `f(state, action)` which returns the resulting state.
+ - `action_space` The possible actions to provide `simulation_function`. Should be an `Enum` or at least work with functions `actions_to_int` and `instances`.
+ - `samples_per_axis` See `SupportingPoints`.
+ - `min_granularity` Splits are not made if the resulting size of the partition would be less than `min_granularity` on the given axis
+"""
+function try_splitting!(leaf::Leaf, 
+	    dimensionality, 
+	    simulation_function, 
+	    action_space,
+	    samples_per_axis,
+	    min_granularity;
+		max_recursion_depth=5,
+		verbose=false)
+
+    root = getroot(leaf)
+    bounds = get_bounds(leaf, dimensionality)
+    unsafe_value = actions_to_int([]) # The value for states where no actions are allowed.
+
+    if leaf.value == unsafe_value
+		verbose && @info "Skipping leaf since it has no safe actions."
+        return false
+    end
+
+    if !bounded(bounds)
+		verbose && @info "Skipping leaf since one of its bounds are infinite."
+        return false
+    end
+
+	axis, threshold = get_threshold(root, 
+		bounds, 
+		simulation_function, 
+		action_space,
+		samples_per_axis,
+		min_granularity;
+		max_recursion_depth,
+		verbose)
+
+        
+	if threshold === nothing 
+		verbose && @info "Leaf cannot be split further."
+		return false
+	end
+
+	verbose && @info "Split axis $axis at $threshold"
+	
+	split!(leaf, axis, threshold)
+	return true
+end
+
+# ╔═╡ 410cb8b5-2ff3-4a5c-8956-cf748f46edf5
+md"""
+###  `grow!`
+"""
+
+# ╔═╡ 9e807328-488f-4e86-ae53-71f39b2631a7
+
+"""
+    grow!(tree::Tree, 
+                dimensionality,
+                simulation_function, 
+                action_space,
+                samples_per_axis,
+                min_granularity;
+                max_iterations=100)
+
+
+Grow the entire tree by calling `split_all!` on all leaves, until no more changes can be made, or `max_iterations` is exceeded.
+
+Note that the number of resulting leaves is potentially exponential in the number of iterations. Therefore, setting a suitably high `min_granularity` and a suitably low `max_iterations` is adviced.
+
+**Returns:** The number of leaves in the resulting tree.
+
+**Args:**
+ - `tree` Tree to modify.
+ - `dimensionality` Number of axes. 
+ - `simulation_function` A function `f(state, action)` which returns the resulting state.
+ - `action_space` The possible actions to provide `simulation_function`. Should be an `Enum` or at least work with functions `actions_to_int` and `instances`.
+ - `samples_per_axis` See `SupportingPoints`.
+ - `min_granularity` Splits are not made if the resulting size of the partition would be less than `min_granularity` on the given axis
+ - `max_iterations` Function automatically terminates after this number of iterations.
+"""
+function grow!(tree::Tree, 
+                dimensionality,
+                simulation_function, 
+                action_space,
+                samples_per_axis,
+                min_granularity;
+				max_recursion_depth=5,
+                max_iterations=10)
+
+	changes_made = 1 # just to enter loop
+    leaf_count = 0
+	while changes_made > 0
+		if (max_iterations -= 1) < 0
+			@warn "Max iterations reached while growing tree."
+			break
+		end
+		
+		changes_made = 0
+		queue = collect(Leaves(tree))
+        leaf_count = length(queue)
+		for leaf in queue
+
+			split_successful = try_splitting!(leaf, 
+				dimensionality, 
+				simulation_function, 
+                action_space,
+				samples_per_axis,
+				min_granularity;
+				max_recursion_depth)
+
+			if split_successful
+                changes_made += 1
+                leaf_count += 1 # One leaf wsa removed, two leaves were added.
+            end
+		end
+	end
+	leaf_count
+end
+
+# ╔═╡ 76f13f2a-82cb-4037-a097-394fb080bf84
+md"""
+# Try it out!
+"""
+
+# ╔═╡ 87e24687-5fc2-485a-ba01-41c10c10d395
+md"""
+!!! info "Tip"
+	This cell controls multiple figures. Move it around to gain a better view.
+
+Try setting a different number of samples per axis: 
+
+`samples_per_axis =` $(@bind samples_per_axis NumberField(3:30, default=3))
+
+And configure min granularity. The value is set as the number of leading zeros to the first digit.
+
+`min_granularity_leading_zeros =` $(@bind min_granularity_leading_zeros NumberField(0:20, default=2))
+
+And the recursion depth:
+
+`max_recursion_depth =` $(@bind max_recursion_depth NumberField(0:9, default=3))
+"""
+
+# ╔═╡ 50495f8a-e38f-4fdd-8c75-ca84fd9360c5
+bounds_safe, bounds_unsafe = 
+	safety_bounds(tree, 
+		bounds,
+		simulation_function, Pace, samples_per_axis,)
+
+# ╔═╡ e7609f1e-3d94-4e53-9620-dd62995cfc50
 call() do
-	p1 = scatter([p for (p, _) in points_safe], 
-		m=(:+, 7, colors.WET_ASPHALT), msw=4, 
-		label="supporting points", 
-		legend=:outerright,
-		ticks=1:5)
+	leaf = get_leaf(tree, 0.5, 0.5)
+	bounds = get_bounds(leaf, dimensionality)
+	p1 = draw(tree, draw_bounds, color_dict=action_color_dict,legend=:outerright)
+	plot!(size=(800,600))
+	draw_support_points!(tree, dimensionality, simulation_function, Pace, samples_per_axis, (0.5, 0.5), RW.fast)
 
-	unsafe = [p for (p, safe) in points_safe if !safe]
-	scatter!(unsafe, 
-		m=(:x, 7, colors.ALIZARIN), msw=3, 
-		label="unsafe")
-	
-	split1 = get_splitting_point(points_safe, 1, margin)
-	if split1 !== nothing
-		vline!([split1], label=nothing, lw=2, c=colors.WET_ASPHALT, ls=:dash)
+	plot!(TreeShielding.rectangle(bounds_safe), 
+		label="safe", 
+		fill=nothing, 
+		lw=4,
+		lc=colors.NEPHRITIS)
+	plot!(TreeShielding.rectangle(bounds_unsafe), 
+		label="unsafe", 
+		fill=nothing, 
+		lw=6,
+		lc=colors.ALIZARIN)
+end
+
+# ╔═╡ da493978-1444-4ec3-be36-4aa1c59170b5
+offset = get_spacing_sizes(SupportingPoints(samples_per_axis, bounds), dimensionality)
+
+# ╔═╡ 9fa8dd4a-3ffc-4c19-858e-e6188e73175e
+min_granularity = 10.0^(-min_granularity_leading_zeros)
+
+# ╔═╡ 3e6a861b-cbb9-4972-adee-46996faf68f3
+axis, threshold = get_threshold(tree,
+		get_bounds(get_leaf(tree, 0.5, 0.5), dimensionality),
+		simulation_function, Pace, samples_per_axis, min_granularity;
+		max_recursion_depth)
+
+# ╔═╡ c8d182d8-537f-43d7-ab5f-1374219964e8
+call() do
+	leaf = get_leaf(tree, 0.5, 0.5)
+	bounds = get_bounds(leaf, dimensionality)
+	p1 = draw(tree, draw_bounds, color_dict=action_color_dict,legend=:outerright)
+	plot!(size=(800,600))
+	draw_support_points!(tree, dimensionality, simulation_function, Pace, samples_per_axis, (0.5, 0.5), RW.fast)
+
+	if threshold === nothing 
+		return p1
 	end
+	for i in 0:max_recursion_depth
+		safe_above, bounds = get_dividing_bounds(tree,
+			get_bounds(get_leaf(tree, 0.5, 0.5), dimensionality),
+			simulation_function, Pace, samples_per_axis,
+			axis,
+			max_recursion_depth=i)
 	
-	split2 = get_splitting_point(points_safe, 2, margin)
-	if split2 !== nothing
-		hline!([split2], label=nothing, lw=2, c=colors.WET_ASPHALT, ls=:dash)
-	end
-	if split1 !== nothing || split2 !== nothing
-		plot!([], label="split", lw=2, c=colors.WET_ASPHALT, ls=:dash)
+		plot!(TreeShielding.rectangle(bounds), lw=0, alpha=0.3, label="$i recursoins")
 	end
 	p1
 end
 
-# ╔═╡ fe163130-24c3-4c7e-b7a0-4e162ac26b5d
-md"""
-## Computing Safety
-
-Using a simulation function, we can compute which points in a set of points might reach an unsafe state.
-"""
-
-# ╔═╡ 0dccf16d-c9ae-4d69-b6b2-3118502ef9c4
-@doc compute_safety
-
-# ╔═╡ 02baf662-4ace-47ad-bd76-72e259a4861a
-md"""
-Try setting a different number of samples per axis: 
-
-`spa =` $(@bind spa NumberField(1:10, default=3))
-"""
-
-# ╔═╡ e3c9c499-d55d-4e4b-a239-c3ccc721f0c3
-call() do
-	bounds = get_bounds(get_leaf(initial_tree, 0.5, 0.5), dimensionality)
-	supporting_points = SupportingPoints(spa, bounds)
-	points_safe = compute_safety(initial_tree, simulation_function, Pace, supporting_points)
-end
-
-# ╔═╡ 2b2421b7-34a5-4de0-b191-b0f9f4a914a3
-call() do
-	bounds = get_bounds(get_leaf(tree, 0.5, 0.5), dimensionality)
-	p1 = draw(tree, draw_bounds, color_dict=action_color_dict,legend=:outerright)
-	supporting_points = SupportingPoints(spa, bounds)
-	draw_support_points!(tree, dimensionality, simulation_function, Pace, spa, (0.5, 0.5), RW.fast)
-end
-
-# ╔═╡ 6da5b379-ee87-42d1-8f48-5c465d4c4078
-md"""
-## Splitting the Tree
-
-Trying to apply this split to actual supporting points in a tree.
-"""
-
-# ╔═╡ 09a48bc2-9e8d-462c-abad-23d8ce60e058
+# ╔═╡ c53e43e9-dc81-4b74-b6bd-41f13791f488
 call() do
 	leaf = get_leaf(tree, 0.5, 0.5)
 	bounds = get_bounds(leaf, dimensionality)
-	p1 = draw(tree, draw_bounds, color_dict=action_color_dict)
-	supporting_points = SupportingPoints(spa, bounds)
+	p1 = draw(tree, draw_bounds, color_dict=action_color_dict,legend=:outerright)
+	plot!(size=(800,600))
+	draw_support_points!(tree, dimensionality, simulation_function, Pace, samples_per_axis, (0.5, 0.5), RW.fast)
 
-	draw_support_points!(tree, dimensionality, simulation_function, Pace, spa, (0.5, 0.5), RW.fast)
-
-
-	points_safe = compute_safety(tree, 
-		simulation_function, 
-		Pace, 
-		SupportingPoints(spa, bounds))
-	
-	spacings = get_spacing_sizes(supporting_points, dimensionality)
-	
-	margin1 = spacings[1]
-	split1 = get_splitting_point(points_safe, 1, margin1)
-	if split1 !== nothing
-		vline!([split1], label=nothing, lw=2, c=colors.WET_ASPHALT, ls=:dash)
+	if threshold === nothing 
+		return p1
 	end
+	for i in 0:max_recursion_depth
+		safe_above, bounds = get_dividing_bounds(tree,
+			get_bounds(get_leaf(tree, 0.5, 0.5), dimensionality),
+			simulation_function, Pace, samples_per_axis,
+			axis,
+			max_recursion_depth=i)
 	
-	margin2 = spacings[2]
-	split2 = get_splitting_point(points_safe, 2, margin2)
-	if split2 !== nothing
-		hline!([split2], label=nothing, lw=2, c=colors.WET_ASPHALT, ls=:dash)
+		plot!(TreeShielding.rectangle(bounds), lw=0, alpha=0.3, label="$i recursions")
 	end
-	if split1 !== nothing || split2 !== nothing
-		plot!([], label="split", lw=2, c=colors.WET_ASPHALT, ls=:dash)
+	if axis == 1
+		vline!([threshold], 
+			line=(:dot, 5), 
+			label="threshold", 
+			color=colors.WET_ASPHALT)
+	else
+		hline!([threshold], 
+			line=(:dot, 5), 
+			label="threshold", 
+			color=colors.WET_ASPHALT)
 	end
-	
-	plot!(legend=:outerright)
 end
 
-# ╔═╡ c98a1165-9c3d-40df-8dee-e6e11a4ed2b5
-md"""
-## The `try_splitting!` Function
-"""
+# ╔═╡ bae11a44-67d8-4b6b-8d10-85b58e7fae63
+call() do
+	tree = deepcopy(tree)
+	leaf = get_leaf(tree, 0.5, 0.5)
+	try_splitting!(leaf, dimensionality, simulation_function, Pace, samples_per_axis, min_granularity)
+	draw(tree, draw_bounds, color_dict=action_color_dict, aspectratio=:equal)
+end
 
-# ╔═╡ d9fa8430-c474-4990-97b2-11ba77b85c7d
-@doc try_splitting!
+# ╔═╡ 46f3eefe-15c7-4bae-acdb-54e485e4b5b7
+call() do
+	tree = deepcopy(tree)
+	grow!(tree, dimensionality, simulation_function, Pace, samples_per_axis, min_granularity; max_recursion_depth)
+	leaf_count = length(Leaves(tree) |> collect)
+	draw(tree, draw_bounds, color_dict=action_color_dict, aspectratio=:equal)
+	plot!([], l=nothing, label="leaves: $leaf_count")
+end
 
-# ╔═╡ e69c7e85-b184-45b4-a3c5-ce1dc88010a1
-md"""
-### Try it Out! 
-"""
+# ╔═╡ 66af047f-a34f-484a-8608-8eaaed45b37d
+@bind reset_button Button("Reset")
 
-# ╔═╡ 843b96e7-3b4b-4389-b736-f16142133e2d
-md"""
-Set the number of zeros preceeding the one in `min_granularity`
-
-`min_granularity_zeros:` 
-
-$(@bind min_granularity_zeros Slider(0:15, default=10))
-"""
-
-# ╔═╡ b4efde7a-eaac-4070-b332-29c3f76c43a9
-min_granularity = 10.0^(-min_granularity_zeros)
-
-# ╔═╡ b37b67cf-09e3-4c3a-865f-9a8a79d43c68
-md"""
-The `reactive_tree` will be initialized as a copy of `initial_tree`. I'm using the `reactive` prefix to signify that this variable will be mutated by running the same cells multiple times. 
-
-This can be easily done with buttons, such as:
-
- $(@bind reset_tree Button("Reset Tree"))
-"""
-
-# ╔═╡ 41be8c5c-5cb9-4123-a902-9d673a5f29a9
+# ╔═╡ 447dc1e2-809a-4f71-b7f4-949ae2a0c4b6
 begin
-	reset_tree
+	reset_button
 	reactive_tree = deepcopy(tree)
 end
 
-# ╔═╡ 2a74f21d-0de7-4169-a767-ec0d4b0b1adb
-md"""
-All leaves are put into a queue...
-
-$(@bind refill_queue Button("Refill Queue"))
-"""
-
-# ╔═╡ e50b8e26-80ca-4571-9e7a-105221523df4
+# ╔═╡ 1817421e-50b0-47b2-859d-e87aaf3064b0
 begin
-	refill_queue
+	reset_button
+	@bind refill_queue_button CounterButton("Refill Queue")
+end
 
+# ╔═╡ 7fd058fa-20c2-4b7a-b32d-0a1f806b48ac
+begin
+	refill_queue_button
 	reactive_queue = collect(Leaves(reactive_tree))
 end
 
-# ╔═╡ 17d3107b-6437-4518-b32b-fdd87ad9c3a2
-md"""
-...and using reactivity, we can call `try_splitting!` on each leaf in turn. 
-
-$(@bind do_next_split Button("Do Next Split"))
-"""
-
-# ╔═╡ 568bee1c-ae0b-4892-b7ea-496002cde79d
+# ╔═╡ e21201c8-b043-4214-b8bc-9e7cc2dced6f
 begin
-	do_next_split
-	if length(reactive_queue) > 0
-		leaf_to_split = pop!(reactive_queue)
-	else
-		leaf_to_split = nothing
-		md"Time to refill the queue!"
-	end
+	reset_button
+	@bind try_splitting_button CounterButton("Try Splitting")
 end
 
-# ╔═╡ b4f6c703-b6ea-4ffa-998e-e6eba4e309b9
-leaf_to_split; ["Leaf($(leaf.value))" for leaf in reactive_queue]
-
-# ╔═╡ 35af8e23-cdc7-498c-8bc8-c17b3e339597
-md"""
-A split was performed: 👇
-"""
-
-# ╔═╡ 48b66592-c82f-4626-8b63-475ef761ef96
-if leaf_to_split !== nothing
-	try_splitting!(leaf_to_split, 
-					dimensionality, 
-					simulation_function, 
-					Pace,
-					spa,
-					min_granularity)
-else
-	md"Time to refill queue!"
-end
-
-# ╔═╡ fdb7f7d2-6923-43ca-8364-5e4cb42ef8f0
-md"""
-`show_supporting_points:`
-$(@bind show_supporting_points CheckBox(default=true))
-
-`a =` $(@bind a Select(instances(Pace) |> collect, default=RW.fast))
-
-Position: 
-$(@bind partition_x 
-	NumberField(outer_bounds.lower[1]:0.01:outer_bounds.upper[1], default=0.9))
-$(@bind partition_y 
-	NumberField(outer_bounds.lower[2]:0.01:outer_bounds.upper[2], default=0.9))
-"""
-
-# ╔═╡ c388ec0a-b850-49ad-b74f-e0744c367942
+# ╔═╡ 42d2f87e-ce8b-4928-9d00-b0aa70a18cb5
 begin
-	do_next_split
-	draw(reactive_tree, draw_bounds, color_dict=action_color_dict)
-	
-	if show_supporting_points
-		p = (partition_x, partition_y)
-		draw_support_points!(reactive_tree, dimensionality, simulation_function, Pace, spa, p, a)
-		scatter!(p, m=(4, :rtriangle, :white), msw=1, label=nothing, )
-	end
-	plot!(legend=:outerright)
+	reset_button, try_splitting_button
+	reactive_leaf = pop!(reactive_queue)
 end
 
-# ╔═╡ 0a30810f-ed03-4237-8362-a502c4470320
-md"""
-## Putting everything together in `grow!`
+# ╔═╡ 8cc5f9f3-263c-459f-ae78-f2c0e8487e86
+if try_splitting_button > 0
+	try_splitting!(reactive_leaf, 
+			dimensionality, 
+			simulation_function, 
+			Pace, 
+			samples_per_axis, 
+			min_granularity;
+			max_recursion_depth,
+			verbose=true)
+end
 
-Clicking around on those buttons was a lot of fun, but how about coding up a function to do this automatically? 
-
-This last function `grow!` will perform splits until no changes are made.
-"""
-
-# ╔═╡ d1630c4c-c185-4f6c-9f25-45f63a2640ce
-@doc grow!
-
-# ╔═╡ f76bca8f-70d7-46be-a98e-1acc1a4958d8
-md"""
-Try messing with the number of iterations vs the `min_granularity`.
-"""
-
-# ╔═╡ f69efe68-2d16-4c86-9f83-6d64ad09a783
-@bind max_iterations NumberField(0:100, default=5)
-
-# ╔═╡ 52fb4f65-9974-4b95-9090-e0a50a487b22
+# ╔═╡ 7f394991-4673-4f32-8c4f-09225822ae95
 call() do
-	tree = deepcopy(tree)
-	grow!(tree, dimensionality, simulation_function, Pace, spa, min_granularity; max_iterations)
+	reset_button, try_splitting_button
 	
-	draw(tree, draw_bounds, color_dict=action_color_dict)
-	scatter!([], m=(0, :white), msw=0, label="tree-size: $(length(PreOrderDFS(tree) |> collect))", legend=:outerright)
+	draw(reactive_tree, draw_bounds, color_dict=action_color_dict, 
+		aspectratio=:equal,
+		legend=:outertop,
+		size=(500,500))
+
+	if length(reactive_queue) > 0
+		bounds = get_bounds(reactive_queue[end], dimensionality)
+		plot!(TreeShielding.rectangle(bounds ∩ draw_bounds), 
+			label="next in queue",
+			linewidth=4,
+			linecolor=colors.PETER_RIVER,
+			color=colors.CONCRETE,
+			fillalpha=0.3)
+	end
+
+	leaf_count = Leaves(reactive_tree) |> collect |> length
+	plot!([], line=nothing, label="$leaf_count leaves")
 end
 
 # ╔═╡ Cell order:
@@ -593,39 +799,35 @@ end
 # ╠═a136ec18-5e84-489b-a13a-ff4ffbb1870d
 # ╠═0b6ba501-bc18-4239-b99e-6365b6f5deac
 # ╠═b2bc01c9-f501-4c75-8fc4-56dad5cd5c38
-# ╠═af5236ad-e88e-486d-ab43-e4d1a85a7333
 # ╠═ee408360-8c64-4619-9810-6038738045dc
 # ╠═e9c86cfa-e53f-4c1e-9102-14c821f4232a
 # ╟─86e9b7f7-f1f5-4ba2-95d6-5e528b1c0ce6
-# ╠═5ff6d2c9-6618-4938-bb05-657952651b8e
-# ╟─2b618fae-ca7d-412b-8edb-93305ca25353
-# ╟─d8b0d276-6bbb-4dca-9a66-00f421316c87
-# ╠═43dbb196-adc8-4c9f-8c1a-333d563ebec6
-# ╟─fe163130-24c3-4c7e-b7a0-4e162ac26b5d
-# ╠═0dccf16d-c9ae-4d69-b6b2-3118502ef9c4
-# ╠═e3c9c499-d55d-4e4b-a239-c3ccc721f0c3
-# ╟─02baf662-4ace-47ad-bd76-72e259a4861a
-# ╠═2b2421b7-34a5-4de0-b191-b0f9f4a914a3
-# ╟─6da5b379-ee87-42d1-8f48-5c465d4c4078
-# ╠═09a48bc2-9e8d-462c-abad-23d8ce60e058
-# ╟─c98a1165-9c3d-40df-8dee-e6e11a4ed2b5
-# ╠═d9fa8430-c474-4990-97b2-11ba77b85c7d
-# ╟─e69c7e85-b184-45b4-a3c5-ce1dc88010a1
-# ╟─843b96e7-3b4b-4389-b736-f16142133e2d
-# ╠═b4efde7a-eaac-4070-b332-29c3f76c43a9
-# ╟─b37b67cf-09e3-4c3a-865f-9a8a79d43c68
-# ╠═41be8c5c-5cb9-4123-a902-9d673a5f29a9
-# ╟─2a74f21d-0de7-4169-a767-ec0d4b0b1adb
-# ╠═e50b8e26-80ca-4571-9e7a-105221523df4
-# ╟─b4f6c703-b6ea-4ffa-998e-e6eba4e309b9
-# ╟─17d3107b-6437-4518-b32b-fdd87ad9c3a2
-# ╠═568bee1c-ae0b-4892-b7ea-496002cde79d
-# ╟─35af8e23-cdc7-498c-8bc8-c17b3e339597
-# ╠═48b66592-c82f-4626-8b63-475ef761ef96
-# ╟─fdb7f7d2-6923-43ca-8364-5e4cb42ef8f0
-# ╠═c388ec0a-b850-49ad-b74f-e0744c367942
-# ╟─0a30810f-ed03-4237-8362-a502c4470320
-# ╠═d1630c4c-c185-4f6c-9f25-45f63a2640ce
-# ╟─f76bca8f-70d7-46be-a98e-1acc1a4958d8
-# ╠═f69efe68-2d16-4c86-9f83-6d64ad09a783
-# ╠═52fb4f65-9974-4b95-9090-e0a50a487b22
+# ╟─0840b06f-246a-4d62-bf07-2ab9a1cc1e26
+# ╠═4455372a-5d12-4a35-bc43-97dcc5719f6c
+# ╠═50495f8a-e38f-4fdd-8c75-ca84fd9360c5
+# ╠═e7609f1e-3d94-4e53-9620-dd62995cfc50
+# ╟─2d999c21-cbdd-4ca6-9866-6f763c91feba
+# ╠═ed0def9c-15a3-41a2-b266-849d4a382a69
+# ╠═c8d182d8-537f-43d7-ab5f-1374219964e8
+# ╟─15b5d339-705e-4408-9629-2002117b8da7
+# ╠═394d5768-951b-418c-ab87-367a9b9b90ad
+# ╠═a8a02260-61d8-4698-9b61-351adaf68f78
+# ╠═da493978-1444-4ec3-be36-4aa1c59170b5
+# ╠═9fa8dd4a-3ffc-4c19-858e-e6188e73175e
+# ╠═3e6a861b-cbb9-4972-adee-46996faf68f3
+# ╠═c53e43e9-dc81-4b74-b6bd-41f13791f488
+# ╠═648fb8ab-b156-4c75-b0e0-16c8c7f151ec
+# ╠═bae11a44-67d8-4b6b-8d10-85b58e7fae63
+# ╟─410cb8b5-2ff3-4a5c-8956-cf748f46edf5
+# ╠═9e807328-488f-4e86-ae53-71f39b2631a7
+# ╟─87e24687-5fc2-485a-ba01-41c10c10d395
+# ╠═46f3eefe-15c7-4bae-acdb-54e485e4b5b7
+# ╟─76f13f2a-82cb-4037-a097-394fb080bf84
+# ╠═66af047f-a34f-484a-8608-8eaaed45b37d
+# ╠═447dc1e2-809a-4f71-b7f4-949ae2a0c4b6
+# ╟─1817421e-50b0-47b2-859d-e87aaf3064b0
+# ╟─7fd058fa-20c2-4b7a-b32d-0a1f806b48ac
+# ╟─42d2f87e-ce8b-4928-9d00-b0aa70a18cb5
+# ╟─e21201c8-b043-4214-b8bc-9e7cc2dced6f
+# ╠═8cc5f9f3-263c-459f-ae78-f2c0e8487e86
+# ╠═7f394991-4673-4f32-8c4f-09225822ae95
