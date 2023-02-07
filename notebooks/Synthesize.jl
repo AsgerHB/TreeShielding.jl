@@ -391,8 +391,10 @@ Automation is a wonderful thing.
 call() do
 
 	spa = 4
-	min_granularity = 0.05
+	min_granularity = 0.0001
+	max_iterations=100
 	max_recursion_depth = 8
+	margin = 0.00001
 	
 	tree = deepcopy(tree)
 	
@@ -402,7 +404,9 @@ call() do
 		Pace, 
 		spa, 
 		min_granularity,
+		max_grow_iterations=max_iterations,
 		max_grow_recursion_depth=max_recursion_depth,
+		grow_margin=margin,
 		verbose=true)
 
 	draw(tree, outer_bounds, 

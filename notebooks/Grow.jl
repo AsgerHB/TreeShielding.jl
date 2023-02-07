@@ -260,20 +260,6 @@ $(@doc get_threshold)
 # ╔═╡ a8a02260-61d8-4698-9b61-351adaf68f78
 bounds = get_bounds(get_leaf(tree, 0.5, 0.5), dimensionality)
 
-# ╔═╡ 648fb8ab-b156-4c75-b0e0-16c8c7f151ec
-md"""
-### `try_splitting!`
-
-$(@doc try_splitting!)
-"""
-
-# ╔═╡ 9e807328-488f-4e86-ae53-71f39b2631a7
-md"""
-### `grow!`
-
-$(@doc grow!)
-"""
-
 # ╔═╡ 87e24687-5fc2-485a-ba01-41c10c10d395
 md"""
 ### Parameters -- Try it Out!
@@ -288,10 +274,15 @@ And configure min granularity. The value is set as the number of leading zeros t
 
 `min_granularity_leading_zeros =` $(@bind min_granularity_leading_zeros NumberField(0:20, default=2))
 
+`margin =` $(@bind margin NumberField(0:0.001:1, default=0.02))
+
 And the recursion depth:
 
 `max_recursion_depth =` $(@bind max_recursion_depth NumberField(0:9, default=3))
 """
+
+# ╔═╡ 9fa8dd4a-3ffc-4c19-858e-e6188e73175e
+min_granularity = 10.0^(-min_granularity_leading_zeros)
 
 # ╔═╡ 50495f8a-e38f-4fdd-8c75-ca84fd9360c5
 bounds_safe, bounds_unsafe = 
@@ -333,10 +324,12 @@ call() do
 				simulation_function, 
 				Pace, 
 				samples_per_axis,
-				1,
-				max_recursion_depth=i)
+				1, #axis
+				min_granularity,
+				max_recursion_depth=i,
+				verbose=false)
 	
-		plot!(TreeShielding.rectangle(bounds), lw=0, alpha=0.3, label="$i recursoins")
+		plot!(TreeShielding.rectangle(bounds), lw=0, alpha=0.3, label="$i recursions")
 	end
 	p1
 end
@@ -344,15 +337,13 @@ end
 # ╔═╡ da493978-1444-4ec3-be36-4aa1c59170b5
 offset = get_spacing_sizes(SupportingPoints(samples_per_axis, bounds), dimensionality)
 
-# ╔═╡ 9fa8dd4a-3ffc-4c19-858e-e6188e73175e
-min_granularity = 10.0^(-min_granularity_leading_zeros)
-
 # ╔═╡ 3e6a861b-cbb9-4972-adee-46996faf68f3
 axis, threshold = get_threshold(tree,
 		dimensionality,
 		get_bounds(get_leaf(tree, 0.5, 0.5), dimensionality),
 		simulation_function, Pace, samples_per_axis, min_granularity;
-		max_recursion_depth)
+		max_recursion_depth,
+		margin)
 
 # ╔═╡ c53e43e9-dc81-4b74-b6bd-41f13791f488
 call() do
@@ -370,6 +361,7 @@ call() do
 			get_bounds(get_leaf(tree, 0.5, 0.5), dimensionality),
 			simulation_function, Pace, samples_per_axis,
 			axis,
+			min_granularity,
 			max_recursion_depth=i)
 	
 		plot!(TreeShielding.rectangle(bounds), lw=0, alpha=0.3, label="$i recursions")
@@ -387,20 +379,48 @@ call() do
 	end
 end
 
+# ╔═╡ 648fb8ab-b156-4c75-b0e0-16c8c7f151ec
+md"""
+### `try_splitting!`
+
+$(@doc try_splitting!)
+"""
+
 # ╔═╡ bae11a44-67d8-4b6b-8d10-85b58e7fae63
 call() do
 	tree = deepcopy(tree)
 	leaf = get_leaf(tree, 0.5, 0.5)
-	try_splitting!(leaf, dimensionality, simulation_function, Pace, samples_per_axis, min_granularity)
-	draw(tree, draw_bounds, color_dict=action_color_dict, aspectratio=:equal)
+	
+	# Here. #
+	try_splitting!(leaf, dimensionality, simulation_function, Pace, samples_per_axis, min_granularity; max_recursion_depth, margin)
+	
+	draw(tree, draw_bounds, color_dict=action_color_dict, 
+		aspectratio=:equal,
+		legend=:outertop,
+		size=(500,500))
+	leaf_count = length(Leaves(tree) |> collect)
+	plot!([], l=nothing, label="leaves: $leaf_count")
 end
+
+# ╔═╡ 9e807328-488f-4e86-ae53-71f39b2631a7
+md"""
+### `grow!`
+
+$(@doc grow!)
+"""
 
 # ╔═╡ 46f3eefe-15c7-4bae-acdb-54e485e4b5b7
 call() do
 	tree = deepcopy(tree)
-	grow!(tree, dimensionality, simulation_function, Pace, samples_per_axis, min_granularity; max_recursion_depth)
+	
+	# Here. #
+	grow!(tree, dimensionality, simulation_function, Pace, samples_per_axis, min_granularity; max_recursion_depth, margin)
+	
+	draw(tree, draw_bounds, color_dict=action_color_dict, 
+		aspectratio=:equal,
+		legend=:outertop,
+		size=(500,500))
 	leaf_count = length(Leaves(tree) |> collect)
-	draw(tree, draw_bounds, color_dict=action_color_dict, aspectratio=:equal)
 	plot!([], l=nothing, label="leaves: $leaf_count")
 end
 
@@ -461,6 +481,7 @@ if try_splitting_button > 0 && reactive_leaf !== nothing
 			samples_per_axis, 
 			min_granularity;
 			max_recursion_depth,
+			margin,
 			verbose=true)
 end;
 
@@ -516,6 +537,7 @@ end
 # ╠═ee408360-8c64-4619-9810-6038738045dc
 # ╠═e9c86cfa-e53f-4c1e-9102-14c821f4232a
 # ╟─86e9b7f7-f1f5-4ba2-95d6-5e528b1c0ce6
+# ╠═9fa8dd4a-3ffc-4c19-858e-e6188e73175e
 # ╟─0840b06f-246a-4d62-bf07-2ab9a1cc1e26
 # ╠═50495f8a-e38f-4fdd-8c75-ca84fd9360c5
 # ╟─e7609f1e-3d94-4e53-9620-dd62995cfc50
@@ -524,13 +546,12 @@ end
 # ╟─15b5d339-705e-4408-9629-2002117b8da7
 # ╠═a8a02260-61d8-4698-9b61-351adaf68f78
 # ╠═da493978-1444-4ec3-be36-4aa1c59170b5
-# ╠═9fa8dd4a-3ffc-4c19-858e-e6188e73175e
 # ╠═3e6a861b-cbb9-4972-adee-46996faf68f3
+# ╟─87e24687-5fc2-485a-ba01-41c10c10d395
 # ╟─c53e43e9-dc81-4b74-b6bd-41f13791f488
 # ╟─648fb8ab-b156-4c75-b0e0-16c8c7f151ec
-# ╠═bae11a44-67d8-4b6b-8d10-85b58e7fae63
+# ╟─bae11a44-67d8-4b6b-8d10-85b58e7fae63
 # ╟─9e807328-488f-4e86-ae53-71f39b2631a7
-# ╟─87e24687-5fc2-485a-ba01-41c10c10d395
 # ╟─46f3eefe-15c7-4bae-acdb-54e485e4b5b7
 # ╟─76f13f2a-82cb-4037-a097-394fb080bf84
 # ╟─66af047f-a34f-484a-8608-8eaaed45b37d

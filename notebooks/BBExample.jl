@@ -463,8 +463,10 @@ Automation is a wonderful thing.
 
 # ╔═╡ c92d8cf4-0908-4c7c-8d3d-3dd07972219e
 finished_tree = call() do
-	spa = 20
+	spa = 6
 	min_granularity = 0.0001
+	max_recursion_depth = 10
+	margin = 0.00005
 	
 	tree = deepcopy(initial_tree)
 	
@@ -474,13 +476,15 @@ finished_tree = call() do
 		Action, 
 		spa, 
 		min_granularity,
+		grow_margin=margin,
+		max_grow_recursion_depth=max_recursion_depth,
 		verbose=true)
 
 	tree
 end
 
 # ╔═╡ f113308a-1d72-41e9-ba54-71576994a664
-draw(finished_tree, draw_bounds, 
+draw(finished_tree, outer_bounds, 
 	color_dict=action_color_dict, 
 	aspectratio=:equal)
 

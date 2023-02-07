@@ -106,7 +106,8 @@ end
         simulation_function, 
         action_space, 
         samples_per_axis,
-        axis;
+        axis,
+        min_granularity;
         max_recursion_depth=5,
         verbose=false)
 
@@ -126,6 +127,7 @@ This is easiest to see visualised in the `Grow.jl` notebook.
 - `action_space` The possible actions to provide `simulation_function`. 
 - `samples_per_axis` See `SupportingPoints`.
 - `axis` Axis to search for the dividing bounds on.
+- `min_granularity` Splits are not made if the resulting size of the partition would be less than `min_granularity` on the given axis
 - `max_recursion_depth` Amount of times to repeat the computation, refining the bound.
 - `verbose` Print debug information using the `@info` macro.
 
@@ -135,7 +137,8 @@ function get_dividing_bounds(tree,
         simulation_function, 
         action_space, 
         samples_per_axis,
-        axis;
+        axis,
+        min_granularity;
         max_recursion_depth=5,
         verbose=false)
 
@@ -184,21 +187,24 @@ function get_dividing_bounds(tree,
 	else
 		return nothing, nothing
 	end
+
+    if min_granularity > abs(bounds′.lower[axis] - bounds′.upper[axis])
+        max_recursion_depth = 0
+    end
 	
 	if max_recursion_depth < 1 
 		verbose && @info "Found dividing bounds $bounds′"
 		return safe_above, bounds′
 	end
-	return something(
-		get_dividing_bounds(tree,
+	return get_dividing_bounds(tree,
 					bounds′,
 					simulation_function,
 					action_space,
 					samples_per_axis,
 					axis,
-					max_recursion_depth=max_recursion_depth - 1),
-		(safe_above, bounds′)
-	)
+                    min_granularity,
+					max_recursion_depth=max_recursion_depth - 1;
+                    verbose)
 end
 
 """
@@ -232,6 +238,7 @@ function get_threshold(tree,
         samples_per_axis,
         min_granularity;
         max_recursion_depth=5,
+        margin=0,
         verbose=false)
 
 	for axis in 1:dimensionality
@@ -240,7 +247,8 @@ function get_threshold(tree,
 			simulation_function, 
 			action_space, 
 			samples_per_axis,
-			axis; 
+			axis,
+            min_granularity; 
 			max_recursion_depth,
 			verbose)
 		
@@ -248,9 +256,9 @@ function get_threshold(tree,
 		if safe_above === nothing
 			continue
 		elseif safe_above
-			threshold = dividing_bounds.upper[axis]
+			threshold = dividing_bounds.upper[axis] + margin
 		else
-			threshold = dividing_bounds.lower[axis]
+			threshold = dividing_bounds.lower[axis] - margin
 		end
 
 		lower, upper = bounds.lower[axis], bounds.upper[axis]
@@ -279,11 +287,11 @@ end
 
 
 
-Makes calls to `get_splitting_point` for each axis, and performs the first split which can be made. The split can be made if 
+Makes calls to `get_threshold` for each axis, and performs the first split which can be made. A split can be made if 
 
  - The leaf has at least one safe action it can take. Splitting unsafe partitions is useless.
  - The leaf is properly bounded. That is, its bounds are finite on all axes.
- - `get_splitting_point` returns something other than `nothing`, i.e. there exists a thereshold such that all points are safe on one side of it.
+ - `get_threshold` returns something other than `nothing`, i.e. there exists a thereshold such that all points are safe on one side of it.
  - The threshold would not create a bound whose size is smaller than `min_granularity`.
    
 **Returns:** `true` if a split is made, and `false` otherwise.
@@ -296,6 +304,7 @@ Makes calls to `get_splitting_point` for each axis, and performs the first split
  - `samples_per_axis` See `SupportingPoints`.
  - `min_granularity` Splits are not made if the resulting size of the partition would be less than `min_granularity` on the given axis
  - `max_recursion_depth` Amount of times to repeat the computation, refining the bound.
+ - `margin` This value will be added to the threshold after it is computed, as an extra margin of error.
  - `verbose` Print debug information using the `@info` macro.
 """
 function try_splitting!(leaf::Leaf, 
@@ -305,6 +314,7 @@ function try_splitting!(leaf::Leaf,
 	    samples_per_axis,
 	    min_granularity;
 		max_recursion_depth=5,
+        margin=0,
 		verbose=false)
 
     root = getroot(leaf)
@@ -329,6 +339,7 @@ function try_splitting!(leaf::Leaf,
 		samples_per_axis,
 		min_granularity;
 		max_recursion_depth,
+        margin,
 		verbose)
 
         
@@ -352,7 +363,8 @@ end
         samples_per_axis,
         min_granularity;
         max_recursion_depth=5,
-        max_iterations=10)
+        max_iterations=10,
+        margin=0)
 
 Grow the entire tree by calling `split_all!` on all leaves, until no more changes can be made, or `max_iterations` is exceeded.
 
@@ -368,6 +380,7 @@ Note that the number of resulting leaves is potentially exponential in the numbe
  - `samples_per_axis` See `SupportingPoints`.
  - `min_granularity` Splits are not made if the resulting size of the partition would be less than `min_granularity` on the given axis
  - `max_recursion_depth` Amount of times to repeat the computation, refining the bound.
+ - `margin` This value will be added to the threshold after it is computed, as an extra margin of error.
  - `max_iterations` Function automatically terminates after this number of iterations.
 """
 function grow!(tree::Tree, 
@@ -377,7 +390,8 @@ function grow!(tree::Tree,
         samples_per_axis,
         min_granularity;
         max_recursion_depth=5,
-        max_iterations=10)
+        max_iterations=10,
+        margin=eps())
 
 	changes_made = 1 # just to enter loop
     leaf_count = 0
@@ -398,11 +412,12 @@ function grow!(tree::Tree,
                 action_space,
 				samples_per_axis,
 				min_granularity;
-				max_recursion_depth)
+				max_recursion_depth,
+                margin)
 
 			if split_successful
                 changes_made += 1
-                leaf_count += 1 # One leaf wsa removed, two leaves were added.
+                leaf_count += 1 # One leaf was removed, two leaves were added.
             end
 		end
 	end

@@ -30,6 +30,7 @@ function synthesize!(tree::Tree,
                     action_space,
                     samples_per_axis,
                     min_granularity;
+                    grow_margin=eps(),
                     max_grow_iterations=10,
                     max_grow_recursion_depth=5,
                     verbose=false)
@@ -45,6 +46,7 @@ function synthesize!(tree::Tree,
             action_space, 
             samples_per_axis, 
             min_granularity, 
+            margin=grow_margin,
             max_iterations=max_grow_iterations,
             max_recursion_depth=max_grow_recursion_depth)
 
@@ -63,7 +65,7 @@ function synthesize!(tree::Tree,
 
         verbose && @info "Pruned to $pruned_to leaves"
         
-        change_occured = grown_to != previous_leaf_count || updates > 0
+        change_occured = updates > 0
         previous_leaf_count = pruned_to
     end
 
