@@ -15,7 +15,7 @@ include("SuppotingPoints.jl")
 export actions_to_int, int_to_actions
 include("ActionConversion.jl")
 
-export get_splitting_point, compute_safety, try_splitting!, grow!
+export compute_safety, safety_bounds, get_dividing_bounds, get_threshold, try_splitting!, grow! 
 include("Grow.jl")
 
 export update!

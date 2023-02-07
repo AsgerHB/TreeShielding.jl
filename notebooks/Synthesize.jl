@@ -229,17 +229,6 @@ md"""
 Change the inputs and click the buttons to see how the parameters affect synthesis, one step at a time.
 """
 
-# ╔═╡ e21002c4-f772-4c55-9014-6551b41d7ef4
-@bind reset_button Button("Reset")
-
-# ╔═╡ 5cfd2617-c1d8-4228-b7ca-cde9c3d68a4c
-begin
-	reactive_tree = deepcopy(initial_tree)
-	set_safety!(reactive_tree, dimensionality, is_safe, any_action, no_action)
-	debounce1, debounce2, debounce3, debounce4 = Ref(1), Ref(1), Ref(1), Ref(1)
-	reset_button
-end
-
 # ╔═╡ de03955c-7064-401f-b20b-14302273da8b
 md"""
 Try changing the number of samples per axis, to see how this affects the growth of the tree.
@@ -251,7 +240,20 @@ And likewise try to adjust the minimum granularity. Defined as the number of lea
 `min_granularity_decimals` $(@bind min_granularity_decimals NumberField(1:15, 3))
 
 `max_grow_iterations` $(@bind max_grow_iterations NumberField(1:20, default=20))
+
+`max_grow_recursion_depth` $(@bind max_grow_recursion_depth NumberField(1:20, default=5))
 """
+
+# ╔═╡ e21002c4-f772-4c55-9014-6551b41d7ef4
+@bind reset_button Button("Reset")
+
+# ╔═╡ 5cfd2617-c1d8-4228-b7ca-cde9c3d68a4c
+begin
+	reactive_tree = deepcopy(initial_tree)
+	set_safety!(reactive_tree, dimensionality, is_safe, any_action, no_action)
+	debounce1, debounce2, debounce3, debounce4 = Ref(1), Ref(1), Ref(1), Ref(1)
+	reset_button
+end
 
 # ╔═╡ d020392b-ede6-4517-8e56-5ddcb1f33fea
 min_granularity = 10.0^(-min_granularity_decimals - 1)
@@ -272,7 +274,8 @@ else
 		Pace, 
 		spa, 
 		min_granularity, 
-		max_iterations=max_grow_iterations)
+		max_iterations=max_grow_iterations,
+		max_recursion_depth=max_grow_recursion_depth)
 
 	@info "Grown to $grown leaves"
 	reactivity1 = "grown"
@@ -387,8 +390,9 @@ Automation is a wonderful thing.
 # ╔═╡ 0e68f636-cf63-4df8-b9ca-c597701334a9
 call() do
 
-	spa = 15
-	min_granularity = 0.0001
+	spa = 4
+	min_granularity = 0.05
+	max_recursion_depth = 8
 	
 	tree = deepcopy(tree)
 	
@@ -398,11 +402,15 @@ call() do
 		Pace, 
 		spa, 
 		min_granularity,
+		max_grow_recursion_depth=max_recursion_depth,
 		verbose=true)
 
-	draw(tree, draw_bounds, 
+	draw(tree, outer_bounds, 
 		color_dict=action_color_dict, 
-		aspectratio=:equal)
+		aspectratio=:equal,
+		size=(400,400),
+		xlabel="x",
+		ylabel="t")
 end
 
 # ╔═╡ Cell order:
@@ -434,9 +442,9 @@ end
 # ╠═777f87fd-f497-49f8-9deb-e708c990cdd1
 # ╠═3b86ac41-4d87-4498-a1ca-c8c327ceb347
 # ╟─3bf43a31-1739-4b94-944c-0226cc3851cb
-# ╟─e21002c4-f772-4c55-9014-6551b41d7ef4
-# ╠═5cfd2617-c1d8-4228-b7ca-cde9c3d68a4c
 # ╟─de03955c-7064-401f-b20b-14302273da8b
+# ╟─e21002c4-f772-4c55-9014-6551b41d7ef4
+# ╟─5cfd2617-c1d8-4228-b7ca-cde9c3d68a4c
 # ╟─d020392b-ede6-4517-8e56-5ddcb1f33fea
 # ╟─c8248f9e-6fc2-49c4-9e69-b8387628f0fd
 # ╟─0583d3aa-719c-42dd-817a-6651edc90297
@@ -445,10 +453,10 @@ end
 # ╟─c8424961-5363-41bc-beb2-a0f54a289b5a
 # ╟─c39a5cbf-37b2-4712-a935-ac0ed4a41988
 # ╟─0fb4f059-135c-4713-be81-94e3acecc2ed
-# ╠═8306fbf0-c537-4f92-9e18-c2b006d7499e
+# ╟─8306fbf0-c537-4f92-9e18-c2b006d7499e
 # ╟─b167ada8-dc47-491c-b8f1-6b8dae176307
 # ╟─8c9d74e1-7ccb-4623-9169-69501e8af721
-# ╟─955ef68a-5a87-43d2-96bb-5b31f2d8e92a
+# ╠═955ef68a-5a87-43d2-96bb-5b31f2d8e92a
 # ╟─8af94312-e7f8-4b44-8190-ad0d2b5ce6d7
 # ╠═039a6f5c-2934-4345-a381-56f8c3c33483
 # ╠═0e68f636-cf63-4df8-b9ca-c597701334a9

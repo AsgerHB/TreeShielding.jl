@@ -30,7 +30,8 @@ function synthesize!(tree::Tree,
                     action_space,
                     samples_per_axis,
                     min_granularity;
-                    max_grow_iterations=100,
+                    max_grow_iterations=10,
+                    max_grow_recursion_depth=5,
                     verbose=false)
 
     previous_leaf_count = 0 # value not required when loop is entered.
@@ -44,7 +45,8 @@ function synthesize!(tree::Tree,
             action_space, 
             samples_per_axis, 
             min_granularity, 
-            max_iterations=max_grow_iterations)
+            max_iterations=max_grow_iterations,
+            max_recursion_depth=max_grow_recursion_depth)
 
         verbose && @info "Grown to $grown_to leaves"
         
