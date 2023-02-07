@@ -72,12 +72,12 @@ end
 
 function bounded(bounds::Bounds)
 	for b in bounds.lower
-		if b == -Inf
+		if b == -Inf || b == Inf
 			return false
 		end
 	end
 	for b in bounds.upper
-		if b == Inf
+		if b == Inf || b == -Inf
 			return false
 		end
 	end

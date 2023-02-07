@@ -22,6 +22,7 @@
 
     @testset "bounded" begin
         @test !bounded(Bounds((-Inf), (3)))
+        @test !bounded(Bounds((Inf), (3)))
         @test bounded(Bounds((-3), (3)))
         @test bounded(Bounds((-3, 5, 1, 0), (3, 100, 2, 10)))
         @test !bounded(Bounds((-3, 5, 1, 0), (3, 100, Inf, 10)))
