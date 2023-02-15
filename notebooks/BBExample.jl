@@ -341,7 +341,7 @@ md"""
 """
 
 # ╔═╡ 40b843de-e367-49d7-8a50-d2cefe4e3939
-outer_bounds = Bounds((-13, 0), (13, 8))
+outer_bounds = Bounds((-15, 0), (15, 10))
 
 # ╔═╡ c8b40bd6-a8f3-42e8-bcbb-5bddd452dab0
 initial_tree = call() do
@@ -463,10 +463,11 @@ Automation is a wonderful thing.
 
 # ╔═╡ c92d8cf4-0908-4c7c-8d3d-3dd07972219e
 finished_tree = call() do
-	spa = 6
-	min_granularity = 0.0001
+	spa = 8
+	min_granularity = 0.00001
+	margin = 0.00000
 	max_recursion_depth = 10
-	margin = 0.00005
+	grow_iterations=100
 	
 	tree = deepcopy(initial_tree)
 	
@@ -478,15 +479,35 @@ finished_tree = call() do
 		min_granularity,
 		grow_margin=margin,
 		max_grow_recursion_depth=max_recursion_depth,
+		max_grow_iterations=grow_iterations,
 		verbose=true)
 
 	tree
 end
 
+# ╔═╡ c42af80d-bb1e-42f7-9131-1080639cbd6a
+md"""
+Leaves: $(Leaves(finished_tree) |> collect |> length)
+"""
+
 # ╔═╡ f113308a-1d72-41e9-ba54-71576994a664
-draw(finished_tree, outer_bounds, 
-	color_dict=action_color_dict, 
-	aspectratio=:equal)
+begin
+	draw(finished_tree, 
+		Bounds(outer_bounds.lower, (outer_bounds.upper[1], outer_bounds.upper[2]+2)), 
+		color_dict=action_color_dict,
+		line=nothing,
+		xlabel="v",
+		ylabel="p")
+end
+
+# ╔═╡ 60d28d01-7209-477f-b3db-97a5b96dc642
+for v in -15:0.01:15
+	p = 8
+	if get_value(finished_tree, v, p) == 0
+		@show v, p
+		break
+	end
+end
 
 # ╔═╡ Cell order:
 # ╠═82e532dd-8ec1-458f-b4d6-59cea44dc2b6
@@ -536,7 +557,14 @@ draw(finished_tree, outer_bounds,
 # ╠═e7fbb9bb-63b5-4f6a-bb27-7ea1613d6740
 # ╟─0e18b756-f8a9-4821-8b85-30c908f7e3af
 # ╠═165ba9e0-7409-4f5d-b10b-4223fe589ac6
-# ╠═0039a51e-26ed-4ad2-aeda-117436295ca1
+# ╟─0039a51e-26ed-4ad2-aeda-117436295ca1
 # ╠═47e04910-d9e9-430f-8cec-bfd584c991e2
 # ╠═c92d8cf4-0908-4c7c-8d3d-3dd07972219e
+# ╟─c42af80d-bb1e-42f7-9131-1080639cbd6a
 # ╠═f113308a-1d72-41e9-ba54-71576994a664
+# ╠═60d28d01-7209-477f-b3db-97a5b96dc642
+# ╠═8d1cc07c-a529-4135-b92a-c24845009461
+# ╠═8918db4a-8814-46f9-b74f-7e48205f9df1
+# ╠═bda061b8-f809-4924-b60d-4f2eff419ef9
+# ╠═7a1911c2-9eb1-41ea-8894-e4c53117d8eb
+# ╠═752b7b36-df02-4581-913b-9902c750b1b2

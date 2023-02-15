@@ -65,7 +65,7 @@ function synthesize!(tree::Tree,
 
         verbose && @info "Pruned to $pruned_to leaves"
         
-        change_occured = updates > 0
+        change_occured = updates > 0 || previous_leaf_count != pruned_to
         previous_leaf_count = pruned_to
     end
 
