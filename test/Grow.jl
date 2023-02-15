@@ -51,18 +51,18 @@ function test_get_threshold(;samples_per_axis=9,
     action_space = Pace
 
     point = (0.5, 0.5) # The middle of the playfield.
+
+    m = ShieldingModel(simulation_function, 
+        action_space, 
+        dimensionality,
+        samples_per_axis;
+        min_granularity,
+        max_recursion_depth,
+        margin)
     
     ### Act ##
     axis, threshold = get_threshold(tree,
-        dimensionality,
-        get_bounds(get_leaf(tree, point), dimensionality),
-        simulation_function, 
-        action_space, 
-        samples_per_axis, 
-        min_granularity;
-        verbose=false,
-        max_recursion_depth,
-        margin)
+    get_bounds(get_leaf(tree, point), dimensionality), m, verbose=false)
 
     ### Assert ##
     bounds = get_bounds(get_leaf(tree, point), dimensionality)
@@ -143,15 +143,18 @@ end
         samples_per_axis = 8
         min_granularity = 1E-10
         max_recursion_depth = 10
+        margin = 0
 
         try_finding_threshold(expected) =  get_threshold(tree,
-            dimensionality,
-            bounds,
-            unsafe_at_threshold(expected),
-            Actions,
-            samples_per_axis,
-            min_granularity;
-            max_recursion_depth
+                bounds,
+                ShieldingModel(unsafe_at_threshold(expected), 
+                    Actions, 
+                    dimensionality,
+                    samples_per_axis;
+                    min_granularity,
+                    max_recursion_depth,
+                    margin
+                )
             )
 
             expected = 0.10
@@ -228,15 +231,19 @@ end
         samples_per_axis = 8
         min_granularity = 1E-10
         max_recursion_depth = 10
+        margin = 0
+
 
         try_finding_threshold(expected) =  get_threshold(tree,
-            dimensionality,
-            bounds,
-            unsafe_at_threshold(expected),
-            Actions,
-            samples_per_axis,
-            min_granularity;
-            max_recursion_depth
+                bounds,
+                ShieldingModel(unsafe_at_threshold(expected), 
+                    Actions, 
+                    dimensionality,
+                    samples_per_axis;
+                    min_granularity,
+                    max_recursion_depth,
+                    margin
+                )
             )
 
         expected = 0.10

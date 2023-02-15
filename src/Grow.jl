@@ -31,11 +31,7 @@ function compute_safety(tree::Tree, simulation_function, action_space, points)
 end
 
 """
-    safety_bounds(tree, 
-        bounds, 
-        simulation_function, 
-        action_space,
-        samples_per_axis)
+    safety_bounds(tree, bounds, m::ShieldingModel)
 
 From a set of `SupportingPoints` defined by the arguments, return bounds which cover safe and unsafe areas within the initial set of `bounds`.
 
@@ -44,15 +40,8 @@ From a set of `SupportingPoints` defined by the arguments, return bounds which c
 ***Args:**
  - `tree` Tree defining safe and unsafe regions.
  - `bounds` The set of bounds used for the `SupportingPoints`. Presumably they represent a leaf.
- - `simulation_function` A function `f(state, action)` which returns the resulting state.
- - `action_space` The possible actions to provide `simulation_function`. 
- - `samples_per_axis` See `SupportingPoints`.
 """
-function safety_bounds(tree, 
-        bounds, 
-        simulation_function, 
-        action_space,
-        samples_per_axis)
+function safety_bounds(tree, bounds, m::ShieldingModel)
 
 	no_action = actions_to_int([])
 	dimensionality = get_dim(bounds)
@@ -62,14 +51,15 @@ function safety_bounds(tree,
 	min_unsafe = [Inf for _ in 1:dimensionality]
 	max_unsafe = [-Inf for _ in 1:dimensionality]
 
-	for point in SupportingPoints(samples_per_axis, bounds)
+	for point in SupportingPoints(m.samples_per_axis, bounds)
 		safe = false
 
+		action_space = m.action_space
         if action_space isa Type
-            action_space = instances(action_space)
+            action_space = instances(m.action_space)
         end
 		for action in action_space
-			point′ = simulation_function(point, action)
+			point′ = m.simulation_function(point, action)
 			if get_value(tree, point′) != no_action
 				safe = true
 			end
@@ -103,12 +93,8 @@ end
 """
     get_dividing_bounds(tree, 
         bounds,
-        simulation_function, 
-        action_space, 
-        samples_per_axis,
-        axis,
-        min_granularity;
-        max_recursion_depth=5,
+        m,
+        max_recursion_depth=nothing,
         verbose=false)
 
 Recursively finds the best threshold, such that all points to one side of it are safe.
@@ -123,35 +109,20 @@ This is easiest to see visualised in the `Grow.jl` notebook.
 **Args:**
 - `tree` Tree defining safe and unsafe regions.
 - `bounds` The set of bounds used for the `SupportingPoints`.
-- `simulation_function` A function `f(state, action)` which returns the resulting state.
-- `action_space` The possible actions to provide `simulation_function`. 
-- `samples_per_axis` See `SupportingPoints`.
-- `axis` Axis to search for the dividing bounds on.
-- `min_granularity` Splits are not made if the resulting size of the partition would be less than `min_granularity` on the given axis
-- `max_recursion_depth` Amount of times to repeat the computation, refining the bound.
-- `verbose` Print debug information using the `@info` macro.
-
 """
 function get_dividing_bounds(tree, 
         bounds,
-        simulation_function, 
-        action_space, 
-        samples_per_axis,
-        axis,
-        min_granularity;
-        max_recursion_depth=5,
+		axis,
+        m,
+        max_recursion_depth=nothing;
         verbose=false)
 
-	dimensionality = get_dim(bounds)
+	max_recursion_depth = something(max_recursion_depth, m.max_recursion_depth)
 	
-	offset = get_spacing_sizes(SupportingPoints(samples_per_axis, bounds), 
-		dimensionality)
+	offset = get_spacing_sizes(SupportingPoints(m.samples_per_axis, bounds), 
+		m.dimensionality)
 	
-	safe, unsafe = safety_bounds(tree, 
-		bounds,
-		simulation_function,
-		action_space,
-		samples_per_axis)
+	safe, unsafe = safety_bounds(tree, bounds, m)
 
 	verbose && @info "safe: $safe \nunsafe: $unsafe"
 
@@ -188,7 +159,7 @@ function get_dividing_bounds(tree,
 		return nothing, nothing
 	end
 
-    if min_granularity > abs(bounds′.lower[axis] - bounds′.upper[axis])
+    if m.min_granularity > abs(bounds′.lower[axis] - bounds′.upper[axis])
         max_recursion_depth = 0
     end
 	
@@ -198,72 +169,44 @@ function get_dividing_bounds(tree,
 	end
 	return get_dividing_bounds(tree,
 					bounds′,
-					simulation_function,
-					action_space,
-					samples_per_axis,
 					axis,
-                    min_granularity,
-					max_recursion_depth=max_recursion_depth - 1;
+					m,
+					max_recursion_depth - 1;
                     verbose)
 end
 
 """
-    get_threshold(tree, 
-        bounds,
-        simulation_function, 
-        action_space, 
-        samples_per_axis,
-        min_granularity;
-        max_recursion_depth=5,
+    get_threshold(tree::Tree, 
+        bounds::Bounds,
+		m::ShieldingModel,
         verbose=false)
 
 Find a threshold along any axis, such that to one side all points are safe.
 
 **Args:** 
 - `tree` Tree defining safe and unsafe regions.
-- `dimensionality` Number of axes. 
 - `bounds` The set of bounds used for the `SupportingPoints`.
-- `simulation_function` A function `f(state, action)` which returns the resulting state.
-- `action_space` The possible actions to provide `simulation_function`. 
-- `samples_per_axis` See `SupportingPoints`.
-- `min_granularity` Splits are not made if the resulting size of the partition would be less than `min_granularity` on the given axis
-- `max_recursion_depth` Amount of times to repeat the computation, refining the bound.
-- `verbose` Print debug information using the `@info` macro.
 """
 function get_threshold(tree::Tree, 
-        dimensionality,
         bounds::Bounds,
-        simulation_function, 
-        action_space, 
-        samples_per_axis,
-        min_granularity;
-        max_recursion_depth=5,
-        margin=0,
+		m::ShieldingModel;
         verbose=false)
 
-	for axis in 1:dimensionality
-		safe_above, dividing_bounds = get_dividing_bounds(tree, 
-			bounds,
-			simulation_function, 
-			action_space, 
-			samples_per_axis,
-			axis,
-            min_granularity; 
-			max_recursion_depth,
-			verbose)
+	for axis in 1:m.dimensionality
+		safe_above, dividing_bounds = get_dividing_bounds(tree, bounds, axis, m; verbose)
 		
 	
 		if safe_above === nothing
 			continue
 		elseif safe_above
-			threshold = dividing_bounds.upper[axis] + margin
+			threshold = dividing_bounds.upper[axis] + m.margin
 		else
-			threshold = dividing_bounds.lower[axis] - margin
+			threshold = dividing_bounds.lower[axis] - m.margin
 		end
 
 		lower, upper = bounds.lower[axis], bounds.upper[axis]
-		if  abs(threshold - lower) < min_granularity ||
-			abs(threshold - upper) < min_granularity
+		if  abs(threshold - lower) < m.min_granularity ||
+			abs(threshold - upper) < m.min_granularity
 			verbose && @info "Skipped a split that went below min_granularity."
 			continue
 		end
@@ -277,15 +220,8 @@ end
 
 """
     try_splitting!(leaf::Leaf, 
-	    dimensionality, 
-	    simulation_function, 
-	    action_space,
-	    samples_per_axis,
-	    min_granularity;
-		max_recursion_depth=5,
+	    m::ShieldingModel,
 		verbose=false)
-
-
 
 Makes calls to `get_threshold` for each axis, and performs the first split which can be made. A split can be made if 
 
@@ -298,27 +234,13 @@ Makes calls to `get_threshold` for each axis, and performs the first split which
 
 **Args:**
  - `leaf` This leaf will be split at the first axis where a division can be made between safe and unsafe points.
- - `dimensionality` Number of axes. 
- - `simulation_function` A function `f(state, action)` which returns the resulting state.
- - `action_space` The possible actions to provide `simulation_function`. 
- - `samples_per_axis` See `SupportingPoints`.
- - `min_granularity` Splits are not made if the resulting size of the partition would be less than `min_granularity` on the given axis
- - `max_recursion_depth` Amount of times to repeat the computation, refining the bound.
- - `margin` This value will be added to the threshold after it is computed, as an extra margin of error.
- - `verbose` Print debug information using the `@info` macro.
 """
 function try_splitting!(leaf::Leaf, 
-	    dimensionality, 
-	    simulation_function, 
-	    action_space,
-	    samples_per_axis,
-	    min_granularity;
-		max_recursion_depth=5,
-        margin=0,
+	    m::ShieldingModel,
 		verbose=false)
 
     root = getroot(leaf)
-    bounds = get_bounds(leaf, dimensionality)
+    bounds = get_bounds(leaf, m.dimensionality)
     unsafe_value = actions_to_int([]) # The value for states where no actions are allowed.
 
     if leaf.value == unsafe_value
@@ -331,16 +253,7 @@ function try_splitting!(leaf::Leaf,
         return false
     end
 
-	axis, threshold = get_threshold(root, 
-		dimensionality,
-		bounds, 
-		simulation_function, 
-		action_space,
-		samples_per_axis,
-		min_granularity;
-		max_recursion_depth,
-        margin,
-		verbose)
+	axis, threshold = get_threshold(root, bounds, m; verbose)
 
         
 	if threshold === nothing 
@@ -356,15 +269,7 @@ end
 
 
 """
-    grow!(tree::Tree, 
-        dimensionality,
-        simulation_function, 
-        action_space,
-        samples_per_axis,
-        min_granularity;
-        max_recursion_depth=5,
-        max_iterations=10,
-        margin=0)
+    grow!(tree::Tree, m::ShieldingModel)
 
 Grow the entire tree by calling `split_all!` on all leaves, until no more changes can be made, or `max_iterations` is exceeded.
 
@@ -383,18 +288,11 @@ Note that the number of resulting leaves is potentially exponential in the numbe
  - `margin` This value will be added to the threshold after it is computed, as an extra margin of error.
  - `max_iterations` Function automatically terminates after this number of iterations.
 """
-function grow!(tree::Tree, 
-        dimensionality,
-        simulation_function, 
-        action_space,
-        samples_per_axis,
-        min_granularity;
-        max_recursion_depth=5,
-        max_iterations=10,
-        margin=eps())
+function grow!(tree::Tree, m::ShieldingModel)
 
 	changes_made = 1 # just to enter loop
     leaf_count = 0
+	max_iterations = m.max_iterations
 	while changes_made > 0
 		if (max_iterations -= 1) < 0
 			@warn "Max iterations reached while growing tree."
@@ -406,14 +304,7 @@ function grow!(tree::Tree,
         leaf_count = length(queue)
 		for leaf in queue
 
-			split_successful = try_splitting!(leaf, 
-				dimensionality, 
-				simulation_function, 
-                action_space,
-				samples_per_axis,
-				min_granularity;
-				max_recursion_depth,
-                margin)
+			split_successful = try_splitting!(leaf, m)
 
 			if split_successful
                 changes_made += 1

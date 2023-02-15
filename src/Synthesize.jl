@@ -1,12 +1,5 @@
 """
-    synthesize!(tree::Tree, 
-                    dimensionality, 
-                    simulation_function,
-                    action_space,
-                    samples_per_axis,
-                    min_granularity;
-                    max_grow_iterations=100,
-                    verbose=false)
+    synthesize!(tree::Tree, m::ShieldingModel, verbose=false)
 
 Turn a tree -- which defines safe and unsafe areas -- into a nondeterministic strategy for avoiding these unsafe areas.
 
@@ -16,48 +9,19 @@ The state space must be properly bounded (see function `bounded`) since partitio
 
 **Args:**
 - `tree` A properly initialized tree. See description.
-- `dimensionality` Number of axes must be stated explicitly.
-- `simulation_function` A function `f(state, action)` which returns the resulting state.
-- `action_space` The possible actions to provide `simulation_function`. Should be an `Enum` or at least work with functions `actions_to_int` and `instances`.
-- `samples_per_axis` See `SupportingPoints`.
-- `min_granularity` Splits are not made if the resulting size of the partition would be less than `min_granularity` on the given axis. See `grow!`.
-- `max_grow_iterations` Growth function automatically terminates after this amount of iterations. See `grow!`.
 - `verbose` If true, will print progress updates using the `@info` macro.
 """
-function synthesize!(tree::Tree, 
-                    dimensionality, 
-                    simulation_function,
-                    action_space,
-                    samples_per_axis,
-                    min_granularity;
-                    grow_margin=eps(),
-                    max_grow_iterations=10,
-                    max_grow_recursion_depth=5,
-                    verbose=false)
+function synthesize!(tree::Tree, m::ShieldingModel; verbose=false)
 
     previous_leaf_count = 0 # value not required when loop is entered.
     updates_made = 0
     change_occured = true
     while change_occured
-        grown_to = grow!(
-            tree, 
-            dimensionality, 
-            simulation_function, 
-            action_space, 
-            samples_per_axis, 
-            min_granularity, 
-            margin=grow_margin,
-            max_iterations=max_grow_iterations,
-            max_recursion_depth=max_grow_recursion_depth)
+        grown_to = grow!(tree, m)
 
         verbose && @info "Grown to $grown_to leaves"
         
-        updates = update!(
-            tree, 
-            dimensionality, 
-            simulation_function, 
-            action_space, 
-            samples_per_axis)
+        updates = update!(tree, m)
 
         verbose && @info "Updated $updates leaves"
         
@@ -71,50 +35,33 @@ function synthesize!(tree::Tree,
 
     verbose && @info "Safe strategy synthesised. Making more permissive."
 
-    make_permissive!(tree, 
-        dimensionality, 
-        simulation_function,
-        action_space,
-        samples_per_axis,
-        min_granularity;
-        max_grow_iterations,
-        verbose)
+    make_permissive!(tree, m; verbose)
 end
 
-function make_permissive!(tree::Tree, 
-    dimensionality, 
-    simulation_function,
-    action_space,
-    samples_per_axis,
-    min_granularity;
-    max_grow_iterations=100,
-    verbose=false)
+function make_permissive!(tree::Tree, m; verbose=false)
 
     # For every action in turn, grow the tree assuming it is not available.
     # This seperates the safe partitions into the ones where this action is required,
     # and where more actions are allowed.
-    for action in instances(action_space)
-        action_space′ = filter(a -> a != action, instances(action_space))
+    for action in instances(m.action_space)
+        action_space′ = filter(a -> a != action, instances(m.action_space))
 
-        grown_to = grow!(
-            tree,
-            dimensionality,
-            simulation_function,
+        m′ = ShieldingModel(m.simulation_function,
             action_space′,
-            samples_per_axis,
-            min_granularity,
-            max_iterations=max_grow_iterations)
+            m.dimensionality,
+            m.samples_per_axis,
+            min_granularity=m.min_granularity,
+            max_recursion_depth=m.max_recursion_depth,
+            max_iterations=m.max_iterations,
+            margin=m.margin)
+
+        grown_to = grow!(tree, m′)
 
             verbose && @info "Grown to $grown_to leaves"
     end
         
     # One last update
-    updates = update!(
-        tree, 
-        dimensionality, 
-        simulation_function, 
-        action_space, 
-        samples_per_axis)
+    updates = update!(tree, m)
 
     verbose && @info "Updated $updates leaves"
         

@@ -1,15 +1,13 @@
 function get_allowed_actions(tree::Tree,
         bounds::Bounds,
-        simulation_function,
-        action_space,
-        samples_per_axis)
+        m::ShieldingModel)
 
     no_actions = actions_to_int([])
 
-    allowed = Set(instances(action_space))
-    for p in SupportingPoints(samples_per_axis, bounds)
-        for a in instances(action_space)
-            p′ = simulation_function(p, a)
+    allowed = Set(instances(m.action_space))
+    for p in SupportingPoints(m.samples_per_axis, bounds)
+        for a in instances(m.action_space)
+            p′ = m.simulation_function(p, a)
             if get_value(tree, p′) == no_actions
                 delete!(allowed, a)
             end
@@ -18,16 +16,12 @@ function get_allowed_actions(tree::Tree,
     return allowed
 end
 
-function get_allowed_actions(leaf::Tree,
-        dimensionality,
-        simulation_function,
-        action_space,
-        samples_per_axis)
+function get_allowed_actions(leaf::Tree, m::ShieldingModel)
 
     tree = getroot(leaf)
-    bounds = get_bounds(leaf, dimensionality)
+    bounds = get_bounds(leaf, m.dimensionality)
 
-    get_allowed_actions(tree, bounds, simulation_function, action_space, samples_per_axis)
+    get_allowed_actions(tree, bounds, m)
 end
 
 abstract type Update
@@ -77,11 +71,7 @@ Updates every properly bounded partition with a new set of safe actions. An acti
 - `action_space` The possible actions to provide `simulation_function`. Should be an `Enum` or at least work with functions `actions_to_int` and `instances`.
 - `samples_per_axis` See `SupportingPoints`.
 """
-function update!(tree::Tree, 
-    dimensionality,
-    simulation_function, 
-    action_space, 
-    samples_per_axis)
+function update!(tree::Tree, m::ShieldingModel)
 
     updates = []
     no_actions = actions_to_int([])
@@ -90,15 +80,11 @@ function update!(tree::Tree,
             continue # bad leaves stay bad
         end
 
-        if !bounded(get_bounds(leaf, dimensionality))
+        if !bounded(get_bounds(leaf, m.dimensionality))
             continue # I don't actually know what to do here.
         end
 
-        allowed = get_allowed_actions(leaf, 
-            dimensionality,
-            simulation_function, 
-            action_space, 
-            samples_per_axis)
+        allowed = get_allowed_actions(leaf, m)
 
         new_value = actions_to_int(allowed)
 

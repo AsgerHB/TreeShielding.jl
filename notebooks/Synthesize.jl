@@ -239,9 +239,11 @@ And likewise try to adjust the minimum granularity. Defined as the number of lea
 
 `min_granularity_decimals` $(@bind min_granularity_decimals NumberField(1:15, 3))
 
-`max_grow_iterations` $(@bind max_grow_iterations NumberField(1:20, default=20))
+`max_iterations` $(@bind max_iterations NumberField(1:20, default=20))
 
-`max_grow_recursion_depth` $(@bind max_grow_recursion_depth NumberField(1:20, default=5))
+`max_recursion_depth` $(@bind max_recursion_depth NumberField(1:20, default=5))
+
+`margin` $(@bind margin NumberField(0:0.0001:1, default=0))
 """
 
 # ╔═╡ e21002c4-f772-4c55-9014-6551b41d7ef4
@@ -258,6 +260,9 @@ end
 # ╔═╡ d020392b-ede6-4517-8e56-5ddcb1f33fea
 min_granularity = 10.0^(-min_granularity_decimals - 1)
 
+# ╔═╡ a52e9520-f4df-4e88-bb39-e516f37335ea
+m = ShieldingModel(simulation_function, Pace, dimensionality, spa; min_granularity, max_recursion_depth, max_iterations, margin)
+
 # ╔═╡ c8248f9e-6fc2-49c4-9e69-b8387628f0fd
 @bind grow_button Button("Grow")
 
@@ -268,14 +273,7 @@ if debounce1[] == 1
 	reactivity1 = "ready"
 else
 	
-	grown = grow!(reactive_tree, 
-		dimensionality, 
-		simulation_function, 
-		Pace, 
-		spa, 
-		min_granularity, 
-		max_iterations=max_grow_iterations,
-		max_recursion_depth=max_grow_recursion_depth)
+	grown = grow!(reactive_tree, m)
 
 	@info "Grown to $grown leaves"
 	reactivity1 = "grown"
@@ -387,29 +385,17 @@ Automation is a wonderful thing.
 # ╔═╡ 039a6f5c-2934-4345-a381-56f8c3c33483
 @doc synthesize!
 
+# ╔═╡ 6823a7d1-f404-46b1-9490-862aeba553a7
+m; @bind synthesize_button CounterButton("Synthesize!")
+
 # ╔═╡ 0e68f636-cf63-4df8-b9ca-c597701334a9
-call() do
-
-	spa = 4
-	min_granularity = 0.0001
-	max_iterations=100
-	max_recursion_depth = 8
-	margin = 0.00001
+if synthesize_button > -1
 	
-	tree = deepcopy(tree)
+	finished_tree = deepcopy(tree)
 	
-	synthesize!(tree, 
-		dimensionality, 
-		simulation_function, 
-		Pace, 
-		spa, 
-		min_granularity,
-		max_grow_iterations=max_iterations,
-		max_grow_recursion_depth=max_recursion_depth,
-		grow_margin=margin,
-		verbose=true)
+	synthesize!(finished_tree, m, verbose=true)
 
-	draw(tree, outer_bounds, 
+	draw(finished_tree, outer_bounds, 
 		color_dict=action_color_dict, 
 		aspectratio=:equal,
 		size=(400,400),
@@ -446,7 +432,8 @@ end
 # ╠═777f87fd-f497-49f8-9deb-e708c990cdd1
 # ╠═3b86ac41-4d87-4498-a1ca-c8c327ceb347
 # ╟─3bf43a31-1739-4b94-944c-0226cc3851cb
-# ╟─de03955c-7064-401f-b20b-14302273da8b
+# ╠═de03955c-7064-401f-b20b-14302273da8b
+# ╠═a52e9520-f4df-4e88-bb39-e516f37335ea
 # ╟─e21002c4-f772-4c55-9014-6551b41d7ef4
 # ╟─5cfd2617-c1d8-4228-b7ca-cde9c3d68a4c
 # ╟─d020392b-ede6-4517-8e56-5ddcb1f33fea
@@ -463,4 +450,5 @@ end
 # ╠═955ef68a-5a87-43d2-96bb-5b31f2d8e92a
 # ╟─8af94312-e7f8-4b44-8190-ad0d2b5ce6d7
 # ╠═039a6f5c-2934-4345-a381-56f8c3c33483
+# ╠═6823a7d1-f404-46b1-9490-862aeba553a7
 # ╠═0e68f636-cf63-4df8-b9ca-c597701334a9

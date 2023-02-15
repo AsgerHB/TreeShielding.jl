@@ -464,7 +464,7 @@ Automation is a wonderful thing.
 # ╔═╡ c92d8cf4-0908-4c7c-8d3d-3dd07972219e
 finished_tree = call() do
 	spa = 8
-	min_granularity = 0.00001
+	min_granularity = 0.01
 	margin = 0.00000
 	max_recursion_depth = 10
 	grow_iterations=100
@@ -508,6 +508,44 @@ for v in -15:0.01:15
 		break
 	end
 end
+
+# ╔═╡ 8d1cc07c-a529-4135-b92a-c24845009461
+# ╠═╡ disabled = true
+#=╠═╡
+bad_leaf = get_leaf(finished_tree, 0.53, 8);
+  ╠═╡ =#
+
+# ╔═╡ 8918db4a-8814-46f9-b74f-7e48205f9df1
+#=╠═╡
+get_bounds(bad_leaf, dimensionality)
+  ╠═╡ =#
+
+# ╔═╡ bda061b8-f809-4924-b60d-4f2eff419ef9
+#=╠═╡
+bad_leaf.value = 3
+  ╠═╡ =#
+
+# ╔═╡ 7a1911c2-9eb1-41ea-8894-e4c53117d8eb
+#=╠═╡
+try_splitting!(bad_leaf, 
+		dimensionality, 
+		simulation_function, 
+		Action, 
+		spa, 
+		min_granularity,
+		verbose=true)
+  ╠═╡ =#
+
+# ╔═╡ 752b7b36-df02-4581-913b-9902c750b1b2
+#=╠═╡
+get_dividing_bounds(finished_tree, 
+		get_bounds(bad_leaf, dimensionality), 
+		simulation_function, 
+		Action, 
+		spa, 
+		2,
+		min_granularity)
+  ╠═╡ =#
 
 # ╔═╡ Cell order:
 # ╠═82e532dd-8ec1-458f-b4d6-59cea44dc2b6
