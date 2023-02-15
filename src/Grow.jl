@@ -230,9 +230,9 @@ Find a threshold along any axis, such that to one side all points are safe.
 - `max_recursion_depth` Amount of times to repeat the computation, refining the bound.
 - `verbose` Print debug information using the `@info` macro.
 """
-function get_threshold(tree, 
+function get_threshold(tree::Tree, 
         dimensionality,
-        bounds,
+        bounds::Bounds,
         simulation_function, 
         action_space, 
         samples_per_axis,

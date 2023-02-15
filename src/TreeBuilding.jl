@@ -9,6 +9,10 @@ Create a tree consisting of a single bounded partition with value `inside_bounds
 function tree_from_bounds(bounds::Bounds, out_of_bounds=-1, inside_bounds=1)
 	l, u = bounds.lower, bounds.upper
 
+	if get_dim(bounds) != 2
+		error("Not implemented. Only works for 2D state spaces.")
+	end
+
 	tree = Node(1, l[1], 
             Leaf(out_of_bounds),
             Node(2, l[2],

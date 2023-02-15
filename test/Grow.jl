@@ -83,7 +83,7 @@ end
 
 
 @testset "Grow.jl" begin
-    @testset "get_threshold" begin
+    @testset "RW get_threshold" begin
         test_get_threshold(
             samples_per_axis=9,
             min_granularity=0.00001,
@@ -113,6 +113,170 @@ end
             min_granularity = 0.00001,
             max_recursion_depth = 20, #
             margin = 0.01)
+    end
+
+    @enum Actions greeble grooble # This is not just me being silly :3 Julia doesn't like having two enums with the same names.
+
+    @testset "get_threshold, axis-aligned linear" begin
+        safe, unsafe = 1, -1
         
+        is_safe(p) = p != unsafe
+        
+        dimensionality = 1
+        
+        no_action, any_action = actions_to_int([]), actions_to_int([greeble grooble])
+
+        # Function to make simulation_functions
+        # greeble is unsafe if p[1] is below the threshold. grooble will always be less safe than greeble.
+        unsafe_at_threshold(t) = (p, a) -> a == greeble ? (p[1] < t ? unsafe : safe) : (p[1] < t*2 ? unsafe : safe)
+
+        tree = Node(1, -0.99,
+            Leaf(no_action),
+            Node(1, 100,
+                Leaf(any_action),
+                Leaf(any_action))
+            )
+
+        leaf = get_leaf(tree, 0.5) # Safe leaf with bounds [-0.99, 100[
+        bounds = get_bounds(leaf, dimensionality)
+
+        samples_per_axis = 8
+        min_granularity = 1E-10
+        max_recursion_depth = 10
+
+        try_finding_threshold(expected) =  get_threshold(tree,
+            dimensionality,
+            bounds,
+            unsafe_at_threshold(expected),
+            Actions,
+            samples_per_axis,
+            min_granularity;
+            max_recursion_depth
+            )
+
+            expected = 0.10
+    
+            axis, result = try_finding_threshold(expected)
+    
+            @test result ≈ expected     rtol=1e-5
+            @test axis == 1
+            
+
+            expected = 0.3
+    
+            axis, result = try_finding_threshold(expected)
+    
+            @test result ≈ expected     rtol=1e-5
+            @test axis == 1
+            
+
+            expected = 0.9
+    
+            axis, result = try_finding_threshold(expected)
+    
+            @test result ≈ expected     rtol=1e-5
+            @test axis == 1
+            
+
+            expected = 50.
+    
+            axis, result = try_finding_threshold(expected)
+    
+            @test result ≈ expected     rtol=1e-5
+            @test axis == 1
+            
+
+            expected = 99.
+    
+            axis, result = try_finding_threshold(expected)
+    
+            @test result ≈ expected     rtol=1e-5
+            @test axis == 1
+            
+    end
+
+    @testset "get_threshold, linear" begin
+        safe, unsafe = (1, 1), (-1, -1)
+        
+        is_safe(p) = p != unsafe
+        
+        dimensionality = 2
+        
+        no_action, any_action = actions_to_int([]), actions_to_int([greeble grooble])
+
+        # Function to make simulation_functions
+        # greeble is always unsafe if p[1] is below the threshold.  Otherwise it is safe depending on the values of p[2]
+        # grooble will always be less safe than greeble.
+        function unsafe_at_threshold(t) 
+            (p, a) -> if a == greeble 
+                (p[1] < (t - p[2]) ? unsafe : safe)
+            elseif a == grooble
+                (p[1] < (t - 2*p[2]) ? unsafe : safe)
+            else 
+                error("Not a valid action: $a")
+            end
+        end
+
+        tree = tree_from_bounds(Bounds((-0.99, 0), (100, 100)))
+
+        unsafe_leaf = get_leaf(tree, unsafe)
+        unsafe_leaf.value = no_action # Unsafe leaf is unsafe.
+
+        leaf = get_leaf(tree, safe) # Safe leaf with bounds ( [-0.99, 100[,  [0, 100[ )
+        bounds = get_bounds(leaf, dimensionality)
+
+        samples_per_axis = 8
+        min_granularity = 1E-10
+        max_recursion_depth = 10
+
+        try_finding_threshold(expected) =  get_threshold(tree,
+            dimensionality,
+            bounds,
+            unsafe_at_threshold(expected),
+            Actions,
+            samples_per_axis,
+            min_granularity;
+            max_recursion_depth
+            )
+
+        expected = 0.10
+
+        axis, result = try_finding_threshold(expected)
+
+        @test result ≈ expected     rtol=1e-5
+        @test axis == 1
+        
+
+        expected = 0.3
+
+        axis, result = try_finding_threshold(expected)
+
+        @test result ≈ expected     rtol=1e-5
+        @test axis == 1
+        
+
+        expected = 0.9
+
+        axis, result = try_finding_threshold(expected)
+
+        @test result ≈ expected     rtol=1e-5
+        @test axis == 1
+        
+
+        expected = 50.
+
+        axis, result = try_finding_threshold(expected)
+
+        @test result ≈ expected     rtol=1e-5
+        @test axis == 1
+        
+
+        expected = 99.
+
+        axis, result = try_finding_threshold(expected)
+
+        @test result ≈ expected     rtol=1e-5
+        @test axis == 1
+            
     end
 end
