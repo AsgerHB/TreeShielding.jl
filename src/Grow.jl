@@ -12,10 +12,6 @@ For each point, use the `simulation_function` to check if it would end up in an 
  - `action_space` The possible actions to provide `simulation_function`. 
  - `points` This is the set of points.
 """
-function compute_safety(tree::Tree, simulation_function, action_space::Type, points)
-    compute_safety(tree::Tree, simulation_function, instances(action_space), points)
-end
-
 function compute_safety(tree::Tree, simulation_function, action_space, points)
     unsafe_value = actions_to_int([]) # The value for states where no actions are allowed.
 	result = []
@@ -54,11 +50,7 @@ function safety_bounds(tree, bounds, m::ShieldingModel)
 	for point in SupportingPoints(m.samples_per_axis, bounds)
 		safe = false
 
-		action_space = m.action_space
-        if action_space isa Type
-            action_space = instances(m.action_space)
-        end
-		for action in action_space
+		for action in m.action_space
 			point′ = m.simulation_function(point, action)
 			if get_value(tree, point′) != no_action
 				safe = true
@@ -127,10 +119,10 @@ function get_dividing_bounds(tree,
 	verbose && @info "safe: $safe \nunsafe: $unsafe"
 
 	if !bounded(safe)
-		verbose && @warn "No safe points found in partition."
+		m.verbose && @warn "No safe points found in partition."
 		return nothing, nothing
 	elseif !bounded(unsafe)
-		verbose && @info "No unsafe points found in partition."
+		m.verbose && @info "No unsafe points found in partition."
 		return nothing, nothing
 	end
 

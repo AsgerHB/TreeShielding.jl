@@ -1,5 +1,5 @@
 """
-    synthesize!(tree::Tree, m::ShieldingModel, verbose=false)
+    synthesize!(tree::Tree, m::ShieldingModel)
 
 Turn a tree -- which defines safe and unsafe areas -- into a nondeterministic strategy for avoiding these unsafe areas.
 
@@ -9,9 +9,8 @@ The state space must be properly bounded (see function `bounded`) since partitio
 
 **Args:**
 - `tree` A properly initialized tree. See description.
-- `verbose` If true, will print progress updates using the `@info` macro.
 """
-function synthesize!(tree::Tree, m::ShieldingModel; verbose=false)
+function synthesize!(tree::Tree, m::ShieldingModel)
 
     previous_leaf_count = 0 # value not required when loop is entered.
     updates_made = 0
@@ -19,32 +18,32 @@ function synthesize!(tree::Tree, m::ShieldingModel; verbose=false)
     while change_occured
         grown_to = grow!(tree, m)
 
-        verbose && @info "Grown to $grown_to leaves"
+        m.verbose && @info "Grown to $grown_to leaves"
         
         updates = update!(tree, m)
 
-        verbose && @info "Updated $updates leaves"
+        m.verbose && @info "Updated $updates leaves"
         
         pruned_to = prune!(tree)
 
-        verbose && @info "Pruned to $pruned_to leaves"
+        m.verbose && @info "Pruned to $pruned_to leaves"
         
         change_occured = updates > 0 || previous_leaf_count != pruned_to
         previous_leaf_count = pruned_to
     end
 
-    verbose && @info "Safe strategy synthesised. Making more permissive."
+    m.verbose && @info "Safe strategy synthesised. Making more permissive."
 
-    make_permissive!(tree, m; verbose)
+    make_permissive!(tree, m)
 end
 
-function make_permissive!(tree::Tree, m; verbose=false)
+function make_permissive!(tree::Tree, m)
 
     # For every action in turn, grow the tree assuming it is not available.
     # This seperates the safe partitions into the ones where this action is required,
     # and where more actions are allowed.
-    for action in instances(m.action_space)
-        action_space′ = filter(a -> a != action, instances(m.action_space))
+    for action in m.action_space
+        action_space′ = filter(a -> a != action, m.action_space)
 
         m′ = ShieldingModel(m.simulation_function,
             action_space′,
@@ -57,15 +56,15 @@ function make_permissive!(tree::Tree, m; verbose=false)
 
         grown_to = grow!(tree, m′)
 
-            verbose && @info "Grown to $grown_to leaves"
+            m.verbose && @info "Grown to $grown_to leaves"
     end
         
     # One last update
     updates = update!(tree, m)
 
-    verbose && @info "Updated $updates leaves"
+    m.verbose && @info "Updated $updates leaves"
         
     pruned_to = prune!(tree)
 
-    verbose && @info "Pruned to $pruned_to leaves"
+    m.verbose && @info "Pruned to $pruned_to leaves"
 end
