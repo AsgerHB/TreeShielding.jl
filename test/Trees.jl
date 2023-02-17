@@ -17,6 +17,7 @@
 					Leaf(-7),
 					Leaf(-6))),)
 	
+    @test bigtree == deepcopy(bigtree)
 
     @test get_value(bigtree, (2, 20)) == 0
 

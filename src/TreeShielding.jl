@@ -1,6 +1,7 @@
 module TreeShielding
 
 using Plots
+using Serialization
 using AbstractTrees
 
 export Bounds,  get_dim, bounded, magnitude
@@ -8,6 +9,9 @@ include("Bounds.jl")
 
 export Tree, Node,  Leaf,   get_leaf,  get_value,  draw,  replace_subtree!,  split!,  get_bounds
 include("Trees.jl")
+
+export robust_serialize, robust_deserialize
+include("RobustSerialization.jl")
 
 export SupportingPoints, get_spacing_sizes
 include("SuppotingPoints.jl")

@@ -36,6 +36,17 @@ AbstractTrees.nodevalue(leaf::Leaf) = leaf.value
 AbstractTrees.parent(tree::Tree) = tree.parent
 AbstractTrees.ParentLinks(::Type{<:Tree}) = AbstractTrees.StoredParents()
 
+Base.:(==)(a::Node, b::Node) = begin
+    a.axis == b.axis &&
+    a.threshold == b.threshold &&
+    a.lt == b.lt && 
+    a.geq == b.geq
+end
+
+Base.:(==)(a::Leaf, b::Leaf) = begin
+    a.value == b.value
+end
+
 function get_leaf(leaf::Leaf, _)
     leaf
 end
@@ -147,10 +158,6 @@ function split!(leaf::Leaf, axis, threshold, lower=nothing, upper=nothing)
         Leaf(upper))
 
     return replace_subtree!(leaf, new_tree)
-end
-
-function split!(node::Node, _...)
-    error("Tried to split non-leaf node. This is not allowed.")
 end
 
 function get_bounds(tree::Tree, dimensionality; _lower=Dict(), _upper=Dict())
