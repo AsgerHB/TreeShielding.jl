@@ -1,6 +1,7 @@
 module TreeShielding
 
 using Plots
+using Unzip
 using Serialization
 using AbstractTrees
 
@@ -36,6 +37,9 @@ include("Prune.jl")
 
 export synthesize!
 include("Synthesize.jl")
+
+export draw, draw_support_points!, scatter_outcomes!, scatter_supporting_points!
+include("Plotting.jl")
 
 
 module RW

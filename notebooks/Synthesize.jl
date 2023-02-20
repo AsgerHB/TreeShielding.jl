@@ -83,44 +83,6 @@ begin
 	[colors...]
 end
 
-# ╔═╡ 3a2f71b6-d01b-469f-a5c8-afbc9e0f5a2c
-md"""
-### Plotting Convenience Functions
-"""
-
-# ╔═╡ ec1099e2-4d49-440b-b70f-03cf92ce0b80
-scatter_supporting_points!(s::SupportingPoints) = 
-	scatter!(unzip(s), 
-		m=(:+, 5, colors.WET_ASPHALT), msw=4, 
-		label="supporting points")
-
-# ╔═╡ 775c46f2-c207-4de0-ae6e-f108f6d162de
-scatter_outcomes!(outcomes) = scatter!(outcomes, m=(:c, 3, colors.ASBESTOS), msw=0, label="outcomes")
-
-# ╔═╡ a5b84dc9-deab-4809-8937-885916e2556c
-function draw_support_points!(tree::Tree, 
-	dimensionality, 
-	simulation_function, 
-	action_space,
-	spa, 
-	p, 
-	action)
-	
-	bounds = get_bounds(get_leaf(tree, p), dimensionality)
-	supporting_points = SupportingPoints(spa, bounds)
-	scatter_supporting_points!(supporting_points)
-	outcomes = map(p -> simulation_function(p, action), supporting_points)
-	scatter_outcomes!(outcomes)
-
-	points_safe = compute_safety(tree, 
-		simulation_function, 
-		action_space, 
-		supporting_points)
-	
-	unsafe_points = [p for (p, safe) in points_safe if !safe]
-	scatter!(unsafe_points, m=(:x, 5, colors.ALIZARIN), msw=3, label="unsafe")
-end
-
 # ╔═╡ 7ecd8370-4546-45e1-bfcc-9fd6bbb22663
 md"""
 ## Example Function and safety constraint
@@ -334,7 +296,7 @@ begin
 
 	if show_supporting_points
 		p = (partition_x, partition_y)
-		draw_support_points!(reactive_tree, dimensionality, simulation_function, m.action_space, spa, p, a)
+		draw_support_points!(reactive_tree, p, a, m)
 		scatter!(p, m=(4, :rtriangle, :white), msw=1, label=nothing, )
 	end
 	plot!(aspectratio=:equal)
@@ -440,10 +402,6 @@ end
 # ╟─9ce0412c-5023-4ce6-a6a7-5710cff08977
 # ╟─aac97ac0-dde3-4b4f-b32f-0feb87c91497
 # ╟─d49c1419-7380-4527-af3a-65aca35dfcf3
-# ╟─3a2f71b6-d01b-469f-a5c8-afbc9e0f5a2c
-# ╟─ec1099e2-4d49-440b-b70f-03cf92ce0b80
-# ╟─775c46f2-c207-4de0-ae6e-f108f6d162de
-# ╠═a5b84dc9-deab-4809-8937-885916e2556c
 # ╟─7ecd8370-4546-45e1-bfcc-9fd6bbb22663
 # ╠═80c812df-9b1c-4fd8-9100-b58fdfc24ff9
 # ╠═7cd5e7bb-36d1-4aea-8384-969d98eaec1a

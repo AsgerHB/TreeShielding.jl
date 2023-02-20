@@ -87,67 +87,6 @@ call(f) = f()
 # ╔═╡ deab42ea-ba6b-4bca-97f5-02217d532de7
 dimensionality = 2
 
-# ╔═╡ f3dd8d47-d582-4e76-ba7c-8975280eb273
-md"""
-### Plotting Convenience Functions
-"""
-
-# ╔═╡ 4a2cc218-1278-48a2-8e8e-2deabc664802
-scatter_supporting_points!(s::SupportingPoints) = 
-	scatter!(unzip(s), 
-		m=(:+, 5, colors.WET_ASPHALT), msw=4, 
-		label="supporting points")
-
-# ╔═╡ a8b53549-5de6-43c8-983d-43e8ca1520da
-scatter_outcomes!(outcomes) = scatter!(outcomes, m=(:c, 3, colors.ASBESTOS), msw=0, label="outcomes")
-
-# ╔═╡ 4fe2ab4a-6bc3-40a1-9aed-b702a0fcdf69
-begin
-	function draw_support_points!(tree::Tree, 
-		dimensionality, 
-		simulation_function, 
-		action_space,
-		spa, 
-		p, 
-		action)
-		
-		bounds = get_bounds(get_leaf(tree, p), dimensionality)
-
-		draw_support_points!(tree::Tree, 
-			dimensionality, 
-			simulation_function, 
-			action_space,
-			spa, 
-			bounds, 
-			action)
-	end
-	
-	function draw_support_points!(tree::Tree, 
-	dimensionality, 
-	simulation_function, 
-	action_space,
-	spa, 
-	bounds::Bounds, 
-	action)
-
-	if action_space isa Type
-		action_space = instances(action_space)
-	end
-	supporting_points = SupportingPoints(spa, bounds)
-	scatter_supporting_points!(supporting_points)
-	outcomes = map(p -> simulation_function(p, action), supporting_points)
-	scatter_outcomes!(outcomes)
-
-	points_safe = compute_safety(tree, 
-		simulation_function, 
-		action_space, 
-		supporting_points)
-	
-	unsafe_points = [p for (p, safe) in points_safe if !safe]
-	scatter!(unsafe_points, m=(:x, 5, colors.ALIZARIN), msw=3, label="unsafe")
-end
-end
-
 # ╔═╡ f14a4efc-1063-4e0d-b968-6c5f46a8c384
 md"""
 ## Example Function and safety constraint
@@ -370,6 +309,26 @@ m = ShieldingModel(simulation_function, Pace, dimensionality, samples_per_axis; 
 bounds_safe, bounds_unsafe = 
 	get_safety_bounds(tree, bounds, m)
 
+# ╔═╡ e7609f1e-3d94-4e53-9620-dd62995cfc50
+call() do
+	leaf = get_leaf(tree, 0.5, 0.5)
+	bounds = get_bounds(leaf, dimensionality)
+	p1 = draw(tree, draw_bounds, color_dict=action_color_dict,legend=:outerright)
+	plot!(size=(800,600))
+	draw_support_points!(tree, (0.5, 0.5), RW.fast, m)
+
+	plot!(TreeShielding.rectangle(bounds_safe), 
+		label="safe", 
+		fill=nothing, 
+		lw=4,
+		lc=colors.NEPHRITIS)
+	plot!(TreeShielding.rectangle(bounds_unsafe), 
+		label="unsafe", 
+		fill=nothing, 
+		lw=6,
+		lc=colors.ALIZARIN)
+end
+
 # ╔═╡ 3e8defcb-c420-46a8-8abc-78ab228abef6
 @bind axis NumberField(1:m.dimensionality)
 
@@ -409,26 +368,6 @@ call() do
 	plot!([], l=nothing, label="leaves: $leaf_count")
 end
 
-# ╔═╡ e7609f1e-3d94-4e53-9620-dd62995cfc50
-call() do
-	leaf = get_leaf(tree, 0.5, 0.5)
-	bounds = get_bounds(leaf, dimensionality)
-	p1 = draw(tree, draw_bounds, color_dict=action_color_dict,legend=:outerright)
-	plot!(size=(800,600))
-	draw_support_points!(tree, dimensionality, simulation_function, Pace, samples_per_axis, (0.5, 0.5), RW.fast)
-
-	plot!(TreeShielding.rectangle(bounds_safe), 
-		label="safe", 
-		fill=nothing, 
-		lw=4,
-		lc=colors.NEPHRITIS)
-	plot!(TreeShielding.rectangle(bounds_unsafe), 
-		label="unsafe", 
-		fill=nothing, 
-		lw=6,
-		lc=colors.ALIZARIN)
-end
-
 # ╔═╡ c8d182d8-537f-43d7-ab5f-1374219964e8
 call() do
 	axis = 1
@@ -436,7 +375,7 @@ call() do
 	bounds = get_bounds(leaf, dimensionality)
 	p1 = draw(tree, draw_bounds, color_dict=action_color_dict,legend=:outerright)
 	plot!(size=(800,600))
-	draw_support_points!(tree, dimensionality, simulation_function, Pace, samples_per_axis, (0.5, 0.5), RW.fast)
+	draw_support_points!(tree, (0.5, 0.5), RW.fast, m)
 
 	
 	dividing_bounds = bounds
@@ -459,7 +398,7 @@ call() do
 	bounds = get_bounds(leaf, dimensionality)
 	p1 = draw(tree, draw_bounds, color_dict=action_color_dict,legend=:outerright)
 	plot!(size=(800,600))
-	draw_support_points!(tree, dimensionality, simulation_function, Pace, samples_per_axis, (0.5, 0.5), RW.fast)
+	draw_support_points!(tree, (0.5, 0.5), RW.fast, m)
 
 	if threshold === nothing 
 		return p1
@@ -534,13 +473,7 @@ call() do
 			color=colors.CONCRETE,
 			fillalpha=0.3)
 
-		draw_support_points!(tree::Tree, 
-			dimensionality, 
-			simulation_function, 
-			m.action_space,
-			m.samples_per_axis, 
-			bounds, 
-			RW.fast)
+		draw_support_points!(tree::Tree, bounds, RW.fast, m)
 	end
 
 	leaf_count = Leaves(reactive_tree) |> collect |> length
@@ -557,10 +490,6 @@ end
 # ╟─ffb29885-827f-4dea-b127-0f6b5a2defa4
 # ╠═b738614d-9040-430e-94a3-9051a07765c5
 # ╠═deab42ea-ba6b-4bca-97f5-02217d532de7
-# ╟─f3dd8d47-d582-4e76-ba7c-8975280eb273
-# ╟─4a2cc218-1278-48a2-8e8e-2deabc664802
-# ╟─a8b53549-5de6-43c8-983d-43e8ca1520da
-# ╟─4fe2ab4a-6bc3-40a1-9aed-b702a0fcdf69
 # ╟─f14a4efc-1063-4e0d-b968-6c5f46a8c384
 # ╠═d043a35e-8092-4306-afbc-e076200e6240
 # ╠═7fd00150-0b98-4825-8064-3c805e077206
@@ -589,7 +518,7 @@ end
 # ╠═da493978-1444-4ec3-be36-4aa1c59170b5
 # ╠═3e8defcb-c420-46a8-8abc-78ab228abef6
 # ╠═3e6a861b-cbb9-4972-adee-46996faf68f3
-# ╟─c53e43e9-dc81-4b74-b6bd-41f13791f488
+# ╠═c53e43e9-dc81-4b74-b6bd-41f13791f488
 # ╟─648fb8ab-b156-4c75-b0e0-16c8c7f151ec
 # ╠═53cf3fc9-788c-4700-8b07-fe9118432c84
 # ╠═bae11a44-67d8-4b6b-8d10-85b58e7fae63
@@ -607,4 +536,4 @@ end
 # ╠═0a14602c-aa5e-460f-9ab3-9edd18234b5a
 # ╟─87e24687-5fc2-485a-ba01-41c10c10d395
 # ╟─e21201c8-b043-4214-b8bc-9e7cc2dced6f
-# ╟─7f394991-4673-4f32-8c4f-09225822ae95
+# ╠═7f394991-4673-4f32-8c4f-09225822ae95

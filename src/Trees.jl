@@ -71,60 +71,6 @@ function get_value(tree::Tree, state...)
     get_value(tree, (state))
 end
 
-function draw(policy::Function, bounds; 
-    G = 0.1, 
-    slice=[:,:], 
-    params...)
-
-    if 2 != count((==(Colon())), slice)
-        throw(ArgumentError("The slice argument should be an array of indices and exactly two colons. Example: [:, 10, :]"))
-    end
-    
-    x, y = findall((==(Colon())), slice)
-
-    lower = (bounds.lower[x], bounds.lower[y])
-    upper = (bounds.upper[x], bounds.upper[y])
-    x_min, y_min = lower
-    x_max, y_max = upper
-    
-    size_x, size_y = Int((x_max - x_min)/G), Int((y_max - y_min)/G)
-    matrix = Matrix(undef, size_x, size_y)
-    for i in 1:size_x
-        for j in 1:size_y
-            x, y = i*G + x_min, j*G + x_min
-            matrix[i, j] = policy((x, y))
-        end
-    end
-
-    x_tics = x_min:G:x_max
-    y_tics = y_min:G:y_max
-    
-    heatmap(x_tics, y_tics, transpose(matrix),
-            levels=10;
-            params...)
-end
-
-function rectangle(bounds::Bounds) 
-    l, u = bounds.lower, bounds.upper
-    xl, yl = l
-    xu, yu = u
-    Shape(
-        [xl, xl, xu, xu],
-        [yl, yu, yu, yl])
-end
-
-function draw(tree::Tree, global_bounds::Bounds; color_dict=Dict(), params...)
-	dimensionality = 2
-	rectangles = []
-	fillcolors = []
-	for leaf in Leaves(tree)
-		bounds = get_bounds(leaf, dimensionality) ∩ global_bounds
-		push!(rectangles, rectangle(bounds))
-		push!(fillcolors, get(color_dict, leaf.value, leaf.value))
-	end
-	fillcolors = permutedims(fillcolors)
-	plot([rectangles...], label=nothing, fillcolor=fillcolors; params...)
-end
 
 function replace_subtree!(tree::Tree, new_tree::Tree)
 	if tree.parent === nothing

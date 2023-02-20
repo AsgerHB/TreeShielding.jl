@@ -88,67 +88,6 @@ call(f) = f()
 # ╔═╡ 39cd11b7-2428-47ae-b8ec-90459bb03636
 dimensionality = 2
 
-# ╔═╡ f9545edd-1621-4b87-89c2-81f25d669613
-md"""
-### Plotting Convenience Functions
-"""
-
-# ╔═╡ 739ac5a1-d9d1-4497-86b0-6fbaf1008c7a
-scatter_supporting_points!(s::SupportingPoints) = 
-	scatter!(unzip(s), 
-		m=(:+, 5, colors.WET_ASPHALT), msw=4, 
-		label="supporting points")
-
-# ╔═╡ 4f8c1497-b904-4e44-8a87-4a15c92a4dda
-scatter_outcomes!(outcomes) = scatter!(outcomes, m=(:c, 3, colors.ASBESTOS), msw=0, label="outcomes")
-
-# ╔═╡ 76f3e2b3-daaa-4e69-bac7-9cf84857eb86
-begin
-	function draw_support_points!(tree::Tree, 
-		dimensionality, 
-		simulation_function, 
-		action_space,
-		spa, 
-		p, 
-		action)
-		
-		bounds = get_bounds(get_leaf(tree, p), dimensionality)
-
-		draw_support_points!(tree::Tree, 
-			dimensionality, 
-			simulation_function, 
-			action_space,
-			spa, 
-			bounds, 
-			action)
-	end
-	
-	function draw_support_points!(tree::Tree, 
-	dimensionality, 
-	simulation_function, 
-	action_space,
-	spa, 
-	bounds::Bounds, 
-	action)
-
-	if action_space isa Type
-		action_space = instances(action_space)
-	end
-	supporting_points = SupportingPoints(spa, bounds)
-	scatter_supporting_points!(supporting_points)
-	outcomes = map(p -> simulation_function(p, action), supporting_points)
-	scatter_outcomes!(outcomes)
-
-	points_safe = compute_safety(tree, 
-		simulation_function, 
-		action_space, 
-		supporting_points)
-	
-	unsafe_points = [p for (p, safe) in points_safe if !safe]
-	scatter!(unsafe_points, m=(:x, 5, colors.ALIZARIN), msw=3, label="unsafe")
-end
-end
-
 # ╔═╡ 1feb5107-1587-495d-8024-160f9cc68447
 md"""
 # The ShieldingModel
@@ -398,17 +337,6 @@ md"""
 Change the inputs and click the buttons to see how the parameters affect synthesis, one step at a time.
 """
 
-# ╔═╡ fb359eb9-2ce4-466a-9de8-0a0d691f78b9
-@bind reset_button Button("Reset")
-
-# ╔═╡ 142d1db7-183e-45a5-b219-30120ffe437b
-begin
-	reactive_tree = deepcopy(initial_tree)
-	set_safety!(reactive_tree, dimensionality, is_safe, any_action, no_action)
-	debounce1, debounce2, debounce3 = Ref(1), Ref(1), Ref(1)
-	reset_button
-end
-
 # ╔═╡ 57be14bb-d748-4432-8608-106c44c38f83
 md"""
 
@@ -418,9 +346,10 @@ Try setting a different number of samples per axis:
 
 And configure min granularity. The value is set as the number of leading zeros to the first digit.
 
-`min_granularity_leading_zeros =` $(@bind min_granularity_leading_zeros NumberField(0:20, default=2))
+`min_granularity =` $(@bind min_granularity NumberField(0:1E-10:1, default=1E-8))
 
-`margin =` $(@bind margin NumberField(0:0.001:1, default=0.02))
+
+`margin =` $(@bind margin NumberField(0:0.001:1, default=0.00))
 
 `splitting_tolerance =` $(@bind splitting_tolerance NumberField(0:1E-10:1, default=1E-5))
 
@@ -429,11 +358,19 @@ And the recursion depth:
 `max_recursion_depth =` $(@bind max_recursion_depth NumberField(0:9, default=3))
 """
 
-# ╔═╡ 8f38ee1c-6abd-4b43-a359-33c01c256a11
-min_granularity = 0
-
 # ╔═╡ f878ebd6-b261-4151-8aae-521b6736b28a
 m = ShieldingModel(simulation_function, Action, dimensionality, samples_per_axis; min_granularity, margin, splitting_tolerance)
+
+# ╔═╡ fb359eb9-2ce4-466a-9de8-0a0d691f78b9
+m; @bind reset_button Button("Reset")
+
+# ╔═╡ 142d1db7-183e-45a5-b219-30120ffe437b
+begin
+	reactive_tree = deepcopy(initial_tree)
+	set_safety!(reactive_tree, dimensionality, is_safe, any_action, no_action)
+	debounce1, debounce2, debounce3 = Ref(1), Ref(1), Ref(1)
+	reset_button
+end
 
 # ╔═╡ 129fbdb0-88a5-4f3d-82e0-56df43c7a46c
 reset_button; @bind go_clock CounterButton("Go!")
@@ -442,7 +379,7 @@ reset_button; @bind go_clock CounterButton("Go!")
 go_clock,
 if debounce1[] == 1
 	debounce1[] += 1
-	reactivity1 = "ready"
+	"ready"
 else
 	
 	grown = grow!(reactive_tree, m)
@@ -455,14 +392,8 @@ else
 	pruned_to = prune!(reactive_tree)
 	# @info "Pruned to $pruned_to leaves"
 	
-	reactivity1 = "done"
+	"done"
 end
-
-# ╔═╡ 958a1678-95ec-415b-b3cd-c9f8b3556482
--2.4305921433202458 - (-2.4305912017822267)
-
-# ╔═╡ f64f4b48-9173-48e5-8f78-575f21465ca2
--1.0 - (-2.4305921433202458)
 
 # ╔═╡ 0e18b756-f8a9-4821-8b85-30c908f7e3af
 md"""
@@ -490,7 +421,7 @@ begin
 
 	if show_supporting_points
 		p = (partition_x, partition_y)
-		draw_support_points!(reactive_tree, dimensionality, simulation_function, Pace, samples_per_axis, p, a)
+		draw_support_points!(reactive_tree, p, a, m)
 		scatter!(p, m=(4, :rtriangle, :white), msw=1, label=nothing, )
 	end
 	plot!(xlabel="v", ylabel="p")
@@ -504,6 +435,9 @@ go_clock; get_split(reactive_tree, l, (@set m.verbose=true))
 
 # ╔═╡ ef651fce-cdca-4ca1-9f08-e94fd25df4a4
 go_clock; b = get_bounds(l, m.dimensionality)
+
+# ╔═╡ 970c3bf6-36c3-4934-8b4a-704e76864143
+get_safety_bounds(reactive_tree, b, m)
 
 # ╔═╡ ec1628b6-9dd3-43a6-aa10-01f9743ce0ea
 go_clock; action_color_dict[l.value]
@@ -519,7 +453,7 @@ Automation is a wonderful thing.
 @doc synthesize!
 
 # ╔═╡ 1d3ec97f-1818-48dc-9357-35da2a8d6a9d
-@bind synthesize_button CounterButton("Synthesize")
+m; @bind synthesize_button CounterButton("Synthesize")
 
 # ╔═╡ c92d8cf4-0908-4c7c-8d3d-3dd07972219e
 finished_tree = call() do
@@ -550,8 +484,14 @@ if finished_tree !== nothing
 		ylabel="p")
 end
 
-# ╔═╡ def81db9-6dab-48d3-8767-020e86a6c9e2
-robust_serialize(joinpath(homedir(), "finished.tree"), finished_tree)
+# ╔═╡ 629440a0-3ec7-4204-9f27-6575334aae3c
+begin
+	finished_tree_buffer = IOBuffer()
+	robust_serialize(finished_tree_buffer, finished_tree)
+end
+
+# ╔═╡ b338748b-0801-474f-9a79-5d794e88d15c
+DownloadButton(finished_tree_buffer, "finished.tree")
 
 # ╔═╡ 60d28d01-7209-477f-b3db-97a5b96dc642
 for v in -15:0.01:15
@@ -594,10 +534,6 @@ get_dividing_bounds(finished_tree,
 # ╠═3bf7051c-a644-427b-bbba-14a69d98f4f5
 # ╠═56f10aa2-c768-4936-9a70-76d6b0ec21a1
 # ╠═39cd11b7-2428-47ae-b8ec-90459bb03636
-# ╟─f9545edd-1621-4b87-89c2-81f25d669613
-# ╟─739ac5a1-d9d1-4497-86b0-6fbaf1008c7a
-# ╟─4f8c1497-b904-4e44-8a87-4a15c92a4dda
-# ╟─76f3e2b3-daaa-4e69-bac7-9cf84857eb86
 # ╟─1feb5107-1587-495d-8024-160f9cc68447
 # ╠═f878ebd6-b261-4151-8aae-521b6736b28a
 # ╟─3cdda0dd-59f8-4d6f-b37a-cdc923b242c0
@@ -630,15 +566,14 @@ get_dividing_bounds(finished_tree,
 # ╟─fb359eb9-2ce4-466a-9de8-0a0d691f78b9
 # ╟─142d1db7-183e-45a5-b219-30120ffe437b
 # ╟─57be14bb-d748-4432-8608-106c44c38f83
-# ╠═8f38ee1c-6abd-4b43-a359-33c01c256a11
 # ╟─129fbdb0-88a5-4f3d-82e0-56df43c7a46c
 # ╟─e7fbb9bb-63b5-4f6a-bb27-7ea1613d6740
-# ╠═958a1678-95ec-415b-b3cd-c9f8b3556482
-# ╠═f64f4b48-9173-48e5-8f78-575f21465ca2
 # ╟─0e18b756-f8a9-4821-8b85-30c908f7e3af
 # ╟─165ba9e0-7409-4f5d-b10b-4223fe589ac6
-# ╠═f204e821-45d4-4518-8cd6-4a6ab3963460
+# ╠═165ba9e0-7409-4f5d-b10b-4223fe589ac6
 # ╠═56c7971b-d1d0-4c82-8081-1d27364804e1
+# ╠═f204e821-45d4-4518-8cd6-4a6ab3963460
+# ╠═970c3bf6-36c3-4934-8b4a-704e76864143
 # ╠═ef651fce-cdca-4ca1-9f08-e94fd25df4a4
 # ╠═ec1628b6-9dd3-43a6-aa10-01f9743ce0ea
 # ╟─0039a51e-26ed-4ad2-aeda-117436295ca1
@@ -647,7 +582,8 @@ get_dividing_bounds(finished_tree,
 # ╠═c92d8cf4-0908-4c7c-8d3d-3dd07972219e
 # ╟─c42af80d-bb1e-42f7-9131-1080639cbd6a
 # ╠═f113308a-1d72-41e9-ba54-71576994a664
-# ╠═def81db9-6dab-48d3-8767-020e86a6c9e2
+# ╠═629440a0-3ec7-4204-9f27-6575334aae3c
+# ╠═b338748b-0801-474f-9a79-5d794e88d15c
 # ╠═60d28d01-7209-477f-b3db-97a5b96dc642
 # ╠═8d1cc07c-a529-4135-b92a-c24845009461
 # ╠═8918db4a-8814-46f9-b74f-7e48205f9df1
