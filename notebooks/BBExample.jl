@@ -27,6 +27,7 @@ begin
 	using Unzip
 	using AbstractTrees
 	using StatsBase
+	using Setfield
 	TableOfContents()
 end
 

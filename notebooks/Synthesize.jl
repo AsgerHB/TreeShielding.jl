@@ -26,6 +26,7 @@ begin
 	using PlutoTest
 	using Unzip
 	using AbstractTrees
+	using Setfield
 	TableOfContents()
 end
 
