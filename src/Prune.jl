@@ -14,7 +14,7 @@ function prune!(tree::Tree)
     # If a node heas two leaves and they have the same value, replace it with a single leaf.
 	for leaf in Leaves(tree)
         leaf_count += 1
-		if leaf.parent.lt != leaf
+		if leaf.parent.lt !== leaf
 			continue
 		elseif !(leaf.parent.geq isa Leaf)
 			continue
