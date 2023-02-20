@@ -409,9 +409,31 @@ $(@bind partition_y
 	NumberField(outer_bounds.lower[2]:0.01:outer_bounds.upper[2], default=0.9))
 """
 
+# ╔═╡ cd190e4a-9e48-4e6a-8058-1bcb105d9c0b
+# Cell that does grow/update until it is about to create a vertical red bar
+begin
+	for i in 1:100
+		grow!(reactive_tree, m)
+		updates = TreeShielding.get_updates(reactive_tree, m)
+	
+		for update in updates
+			if get_bounds(update.leaf, m.dimensionality).upper[2] == 10 &&
+				update.new_value == 0
+			
+				@warn "It's about to bork. $(get_bounds(update.leaf, m.dimensionality))"
+				
+				@goto break_all
+			end
+		end
+		TreeShielding.apply_updates!(updates)
+	end
+	@info "Didn't bork."
+	@label break_all
+end
+
 # ╔═╡ 165ba9e0-7409-4f5d-b10b-4223fe589ac6
 begin
-	reactivity1
+	reset_button, go_clock
 	
 	p1 = draw(reactive_tree, outer_bounds, 
 		color_dict=action_color_dict,
@@ -435,6 +457,12 @@ go_clock; get_split(reactive_tree, l, (@set m.verbose=true))
 
 # ╔═╡ ef651fce-cdca-4ca1-9f08-e94fd25df4a4
 go_clock; b = get_bounds(l, m.dimensionality)
+
+# ╔═╡ 7f560461-bfc7-4419-8a27-670b09830052
+TreeShielding.get_allowed_actions(reactive_tree, b, (@set m.verbose = true))
+
+# ╔═╡ f3edc169-94ff-4560-874c-05aab6f8782c
+TreeShielding.compute_safety(reactive_tree, SupportingPoints(m.samples_per_axis, b), m)
 
 # ╔═╡ 970c3bf6-36c3-4934-8b4a-704e76864143
 get_safety_bounds(reactive_tree, b, m)
@@ -524,6 +552,11 @@ get_dividing_bounds(finished_tree,
 		2,
 		min_granularity)
 
+# ╔═╡ 25d4797d-293d-449d-984f-c1d7d830dfaa
+md"""
+# Scratchpad
+"""
+
 # ╔═╡ Cell order:
 # ╠═82e532dd-8ec1-458f-b4d6-59cea44dc2b6
 # ╠═bdace121-c7a3-48ba-8588-0f68fabf5fea
@@ -569,9 +602,11 @@ get_dividing_bounds(finished_tree,
 # ╟─129fbdb0-88a5-4f3d-82e0-56df43c7a46c
 # ╟─e7fbb9bb-63b5-4f6a-bb27-7ea1613d6740
 # ╟─0e18b756-f8a9-4821-8b85-30c908f7e3af
+# ╠═cd190e4a-9e48-4e6a-8058-1bcb105d9c0b
 # ╟─165ba9e0-7409-4f5d-b10b-4223fe589ac6
-# ╠═165ba9e0-7409-4f5d-b10b-4223fe589ac6
 # ╠═56c7971b-d1d0-4c82-8081-1d27364804e1
+# ╠═7f560461-bfc7-4419-8a27-670b09830052
+# ╠═f3edc169-94ff-4560-874c-05aab6f8782c
 # ╠═f204e821-45d4-4518-8cd6-4a6ab3963460
 # ╠═970c3bf6-36c3-4934-8b4a-704e76864143
 # ╠═ef651fce-cdca-4ca1-9f08-e94fd25df4a4
@@ -590,3 +625,4 @@ get_dividing_bounds(finished_tree,
 # ╠═bda061b8-f809-4924-b60d-4f2eff419ef9
 # ╠═7a1911c2-9eb1-41ea-8894-e4c53117d8eb
 # ╠═752b7b36-df02-4581-913b-9902c750b1b2
+# ╟─25d4797d-293d-449d-984f-c1d7d830dfaa

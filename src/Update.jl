@@ -26,6 +26,7 @@ function get_allowed_actions(tree::Tree,
         for a in m.action_space
             p′ = m.simulation_function(p, a)
             if get_value(tree, p′) == no_actions
+                m.verbose && @info "$a is unsafe at $p."
                 delete!(allowed, a)
             end
         end
@@ -41,22 +42,7 @@ function get_allowed_actions(leaf::Tree, m::ShieldingModel)
     get_allowed_actions(tree, bounds, m)
 end
 
-"""
-    update!(tree::Tree, 
-    dimensionality,
-    simulation_function, 
-    action_space, 
-    samples_per_axis)
-
-Updates every properly bounded partition with a new set of safe actions. An action is considered safe for a partition, if none of its supporting points can end up in an unsafe state by following that action.
-
-**Returns:** The number of partitons who had their set of actions changed.
-
-**Args:**
-- `tree` The tree to update.
-"""
-function update!(tree::Tree, m::ShieldingModel)
-
+function get_updates(tree::Tree, m::ShieldingModel)
     updates = ValueUpdate[]
     no_actions = actions_to_int([])
     for leaf in Leaves(tree)
@@ -76,6 +62,25 @@ function update!(tree::Tree, m::ShieldingModel)
             push!(updates, ValueUpdate(leaf, new_value))
         end
     end
+    updates
+end
+
+"""
+    update!(tree::Tree, 
+    dimensionality,
+    simulation_function, 
+    action_space, 
+    samples_per_axis)
+
+Updates every properly bounded partition with a new set of safe actions. An action is considered safe for a partition, if none of its supporting points can end up in an unsafe state by following that action.
+
+**Returns:** The number of partitons who had their set of actions changed.
+
+**Args:**
+- `tree` The tree to update.
+"""
+function update!(tree::Tree, m::ShieldingModel)
+    updates = get_updates(tree, m)
 
     apply_updates!(updates)
 
