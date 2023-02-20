@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.20
+# v0.19.22
 
 using Markdown
 using InteractiveUtils
@@ -245,7 +245,17 @@ And likewise try to adjust the minimum granularity. Defined as the number of lea
 `max_recursion_depth` $(@bind max_recursion_depth NumberField(1:20, default=5))
 
 `margin` $(@bind margin NumberField(0:0.0001:1, default=0))
+
+`splitting_tolerance` $(@bind splitting_tolerance NumberField(0.0001:0.0001:1))
+
+`verbose` $(@bind verbose CheckBox())
 """
+
+# ╔═╡ d020392b-ede6-4517-8e56-5ddcb1f33fea
+min_granularity = 10.0^(-min_granularity_decimals - 1)
+
+# ╔═╡ a52e9520-f4df-4e88-bb39-e516f37335ea
+m = ShieldingModel(simulation_function, Pace, dimensionality, spa; min_granularity, max_recursion_depth, max_iterations, margin, splitting_tolerance, verbose)
 
 # ╔═╡ e21002c4-f772-4c55-9014-6551b41d7ef4
 @bind reset_button Button("Reset")
@@ -257,12 +267,6 @@ begin
 	debounce1, debounce2, debounce3, debounce4 = Ref(1), Ref(1), Ref(1), Ref(1)
 	reset_button
 end
-
-# ╔═╡ d020392b-ede6-4517-8e56-5ddcb1f33fea
-min_granularity = 10.0^(-min_granularity_decimals - 1)
-
-# ╔═╡ a52e9520-f4df-4e88-bb39-e516f37335ea
-m = ShieldingModel(simulation_function, Pace, dimensionality, spa; min_granularity, max_recursion_depth, max_iterations, margin)
 
 # ╔═╡ c8248f9e-6fc2-49c4-9e69-b8387628f0fd
 @bind grow_button Button("Grow")
@@ -289,7 +293,7 @@ if debounce2[] == 1
 	debounce2[] += 1
 	reactivity2 = "ready"
 else
-	updates = update!(reactive_tree, dimensionality, simulation_function, Pace, spa)
+	updates = update!(reactive_tree, m)
 	@info "Updated $updates leaves"
 	reactivity2 = "updated"
 end
@@ -330,11 +334,40 @@ begin
 
 	if show_supporting_points
 		p = (partition_x, partition_y)
-		draw_support_points!(reactive_tree, dimensionality, simulation_function, Pace, spa, p, a)
+		draw_support_points!(reactive_tree, dimensionality, simulation_function, m.action_space, spa, p, a)
 		scatter!(p, m=(4, :rtriangle, :white), msw=1, label=nothing, )
 	end
 	plot!(aspectratio=:equal)
 end
+
+# ╔═╡ 897c4e0a-2544-4e7a-b270-8212189f84c0
+leaf = get_leaf(reactive_tree, partition_x, partition_y)
+
+# ╔═╡ f29db2ed-6a47-451a-b7c9-9ddf8fb48fce
+axis, threshold = get_split(reactive_tree, leaf, m)
+
+# ╔═╡ 455c7e81-2875-48fe-95c2-2dd92ed3f013
+bounds = get_bounds(leaf, m.dimensionality)
+
+# ╔═╡ e76c943b-acbd-4e97-92b2-f035c574a66a
+bounds_gt = call() do
+	result = Bounds(bounds.lower |> copy, bounds.upper |> copy)
+	result.lower[axis] = threshold
+	result
+end
+
+# ╔═╡ 887add25-5e17-4688-9b87-239d1276f140
+bounds_lt = call() do
+	result = Bounds(bounds.lower |> copy, bounds.upper |> copy)
+	result.upper[axis] = threshold
+	result
+end
+
+# ╔═╡ 5ff44f02-8c19-404d-baf6-421566a5f322
+TreeShielding.get_allowed_actions(reactive_tree, bounds_lt, m)
+
+# ╔═╡ 271cf6fd-1c9e-4d8e-8f8e-c0b4b9fde9dd
+TreeShielding.get_allowed_actions(reactive_tree, bounds_gt, m)
 
 # ╔═╡ b167ada8-dc47-491c-b8f1-6b8dae176307
 md"""
@@ -357,17 +390,11 @@ call() do
 	make_permissive_button
 	
 	tree = deepcopy(reactive_tree)
-	grown = grow!(tree, 
-		dimensionality, 
-		simulation_function, 
-		[RW.slow], 
-		spa, 
-		min_granularity, 
-		max_iterations=max_grow_iterations)
+	grown = grow!(tree, (@set m.action_space = [slow]))
 	
 	@info "Grown to $grown leaves"
 
-	updates = update!(tree, dimensionality, simulation_function, Pace, spa)
+	updates = update!(tree, m)
 	@info "Updated $updates leaves"
 	
 	pruned_to = prune!(reactive_tree)
@@ -390,13 +417,13 @@ Automation is a wonderful thing.
 m; @bind synthesize_button CounterButton("Synthesize!")
 
 # ╔═╡ 0e68f636-cf63-4df8-b9ca-c597701334a9
-if synthesize_button > -1
+if synthesize_button > -1 # Set to 0 to prevent refresh on every update
 	
 	finished_tree = deepcopy(tree)
 	
-	synthesize!(finished_tree, m, verbose=true)
+	synthesize!(finished_tree, m)
 
-	draw(finished_tree, outer_bounds, 
+	draw(finished_tree, draw_bounds, 
 		color_dict=action_color_dict, 
 		aspectratio=:equal,
 		size=(400,400),
@@ -416,7 +443,7 @@ end
 # ╟─3a2f71b6-d01b-469f-a5c8-afbc9e0f5a2c
 # ╟─ec1099e2-4d49-440b-b70f-03cf92ce0b80
 # ╟─775c46f2-c207-4de0-ae6e-f108f6d162de
-# ╟─a5b84dc9-deab-4809-8937-885916e2556c
+# ╠═a5b84dc9-deab-4809-8937-885916e2556c
 # ╟─7ecd8370-4546-45e1-bfcc-9fd6bbb22663
 # ╠═80c812df-9b1c-4fd8-9100-b58fdfc24ff9
 # ╠═7cd5e7bb-36d1-4aea-8384-969d98eaec1a
@@ -433,11 +460,11 @@ end
 # ╠═777f87fd-f497-49f8-9deb-e708c990cdd1
 # ╠═3b86ac41-4d87-4498-a1ca-c8c327ceb347
 # ╟─3bf43a31-1739-4b94-944c-0226cc3851cb
-# ╠═de03955c-7064-401f-b20b-14302273da8b
+# ╟─de03955c-7064-401f-b20b-14302273da8b
+# ╟─d020392b-ede6-4517-8e56-5ddcb1f33fea
 # ╠═a52e9520-f4df-4e88-bb39-e516f37335ea
 # ╟─e21002c4-f772-4c55-9014-6551b41d7ef4
 # ╟─5cfd2617-c1d8-4228-b7ca-cde9c3d68a4c
-# ╟─d020392b-ede6-4517-8e56-5ddcb1f33fea
 # ╟─c8248f9e-6fc2-49c4-9e69-b8387628f0fd
 # ╟─0583d3aa-719c-42dd-817a-6651edc90297
 # ╟─b5ee1e74-bd9a-47ab-8a3d-99d7b495766d
@@ -446,10 +473,17 @@ end
 # ╟─c39a5cbf-37b2-4712-a935-ac0ed4a41988
 # ╟─0fb4f059-135c-4713-be81-94e3acecc2ed
 # ╟─8306fbf0-c537-4f92-9e18-c2b006d7499e
+# ╠═897c4e0a-2544-4e7a-b270-8212189f84c0
+# ╠═f29db2ed-6a47-451a-b7c9-9ddf8fb48fce
+# ╠═455c7e81-2875-48fe-95c2-2dd92ed3f013
+# ╠═e76c943b-acbd-4e97-92b2-f035c574a66a
+# ╠═887add25-5e17-4688-9b87-239d1276f140
+# ╠═5ff44f02-8c19-404d-baf6-421566a5f322
+# ╠═271cf6fd-1c9e-4d8e-8f8e-c0b4b9fde9dd
 # ╟─b167ada8-dc47-491c-b8f1-6b8dae176307
 # ╟─8c9d74e1-7ccb-4623-9169-69501e8af721
 # ╠═955ef68a-5a87-43d2-96bb-5b31f2d8e92a
 # ╟─8af94312-e7f8-4b44-8190-ad0d2b5ce6d7
 # ╠═039a6f5c-2934-4345-a381-56f8c3c33483
-# ╠═6823a7d1-f404-46b1-9490-862aeba553a7
+# ╟─6823a7d1-f404-46b1-9490-862aeba553a7
 # ╠═0e68f636-cf63-4df8-b9ca-c597701334a9

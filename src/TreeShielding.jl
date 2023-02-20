@@ -22,10 +22,10 @@ include("ActionConversion.jl")
 export ShieldingModel
 include("ShieldingModel.jl")
 
-export compute_safety, safety_bounds, get_dividing_bounds, get_threshold, try_splitting!, grow! 
+export get_split, compute_safety, get_safety_bounds, get_dividing_bounds, get_threshold, try_splitting!, grow! 
 include("Grow.jl")
 
-export update!
+export update!, ValueUpdate
 include("Update.jl")
 
 export tree_from_bounds, even_split!, gridify!, set_safety!

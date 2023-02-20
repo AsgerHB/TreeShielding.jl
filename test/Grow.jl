@@ -48,7 +48,7 @@ function test_get_threshold(;samples_per_axis=9,
 		any_action, 
 		no_action)
 
-    action_space = Pace
+    action_space = instances(Pace)
 
     point = (0.5, 0.5) # The middle of the playfield.
 
@@ -60,12 +60,12 @@ function test_get_threshold(;samples_per_axis=9,
         max_recursion_depth,
         margin)
     
+    bounds = get_bounds(get_leaf(tree, point), dimensionality)
+
     ### Act ##
-    axis, threshold = get_threshold(tree,
-    get_bounds(get_leaf(tree, point), dimensionality), m, verbose=false)
+    _, axis, threshold = get_threshold(tree, bounds, m)
 
     ### Assert ##
-    bounds = get_bounds(get_leaf(tree, point), dimensionality)
 
     bounds_above, bounds_below = deepcopy(bounds), deepcopy(bounds)
     
@@ -139,62 +139,65 @@ end
 
         leaf = get_leaf(tree, 0.5) # Safe leaf with bounds [-0.99, 100[
         bounds = get_bounds(leaf, dimensionality)
-
+        
+        
         samples_per_axis = 8
-        min_granularity = 1E-10
-        max_recursion_depth = 10
-        margin = 0
+        splitting_tolerance = 1E-5
+        model(expected) = ShieldingModel(unsafe_at_threshold(expected), 
+            Actions, 
+            dimensionality,
+            samples_per_axis;
+            min_granularity = 1E-10,
+            max_recursion_depth = 10,
+            splitting_tolerance,
+            margin = 0
+        )
 
-        try_finding_threshold(expected) =  get_threshold(tree,
-                bounds,
-                ShieldingModel(unsafe_at_threshold(expected), 
-                    Actions, 
-                    dimensionality,
-                    samples_per_axis;
-                    min_granularity,
-                    max_recursion_depth,
-                    margin
-                )
-            )
+        try_finding_threshold(expected) =  get_threshold(tree, bounds, model(expected))
 
-            expected = 0.10
-    
-            axis, result = try_finding_threshold(expected)
-    
-            @test result ≈ expected     rtol=1e-5
-            @test axis == 1
-            
+        expected = 0.10
 
-            expected = 0.3
-    
-            axis, result = try_finding_threshold(expected)
-    
-            @test result ≈ expected     rtol=1e-5
-            @test axis == 1
-            
+geq_is_safe,         axis, result = try_finding_threshold(expected)
 
-            expected = 0.9
-    
-            axis, result = try_finding_threshold(expected)
-    
-            @test result ≈ expected     rtol=1e-5
-            @test axis == 1
-            
+@test geq_is_safe
+        @test result ≈ expected     atol=splitting_tolerance
+        @test axis == 1
+        
 
-            expected = 50.
-    
-            axis, result = try_finding_threshold(expected)
-    
-            @test result ≈ expected     rtol=1e-5
-            @test axis == 1
-            
+        expected = 0.3
 
-            expected = 99.
-    
-            axis, result = try_finding_threshold(expected)
-    
-            @test result ≈ expected     rtol=1e-5
-            @test axis == 1
+        geq_is_safe, axis, result = try_finding_threshold(expected)
+
+        @test geq_is_safe
+        @test result ≈ expected     atol=splitting_tolerance
+        @test axis == 1
+        
+
+        expected = 0.9
+
+        geq_is_safe, axis, result = try_finding_threshold(expected)
+
+        @test geq_is_safe
+        @test result ≈ expected     atol=splitting_tolerance
+        @test axis == 1
+        
+
+        expected = 50.
+
+        geq_is_safe, axis, result = try_finding_threshold(expected)
+
+        @test geq_is_safe
+        @test result ≈ expected     atol=splitting_tolerance
+        @test axis == 1
+        
+
+        expected = 99.
+
+        geq_is_safe, axis, result = try_finding_threshold(expected)
+
+        @test geq_is_safe
+        @test result ≈ expected     atol=splitting_tolerance
+        @test axis == 1
             
     end
 
@@ -229,60 +232,61 @@ end
         bounds = get_bounds(leaf, dimensionality)
 
         samples_per_axis = 8
-        min_granularity = 1E-10
-        max_recursion_depth = 10
-        margin = 0
+        splitting_tolerance = 1E-5
+        model(expected) = ShieldingModel(unsafe_at_threshold(expected), 
+            Actions, 
+            dimensionality,
+            samples_per_axis;
+            min_granularity = 1E-10,
+            max_recursion_depth = 10,
+            splitting_tolerance,
+            margin = 0
+        )
 
-
-        try_finding_threshold(expected) =  get_threshold(tree,
-                bounds,
-                ShieldingModel(unsafe_at_threshold(expected), 
-                    Actions, 
-                    dimensionality,
-                    samples_per_axis;
-                    min_granularity,
-                    max_recursion_depth,
-                    margin
-                )
-            )
+        try_finding_threshold(expected) =  get_threshold(tree, bounds, model(expected))
 
         expected = 0.10
 
-        axis, result = try_finding_threshold(expected)
+        geq_is_safe, axis, result = try_finding_threshold(expected)
 
-        @test result ≈ expected     rtol=1e-5
+        @test geq_is_safe
+        @test result ≈ expected     atol=splitting_tolerance
         @test axis == 1
         
 
         expected = 0.3
 
-        axis, result = try_finding_threshold(expected)
+        geq_is_safe, axis, result = try_finding_threshold(expected)
 
-        @test result ≈ expected     rtol=1e-5
+        @test geq_is_safe
+        @test result ≈ expected     atol=splitting_tolerance
         @test axis == 1
         
 
         expected = 0.9
 
-        axis, result = try_finding_threshold(expected)
+        geq_is_safe, axis, result = try_finding_threshold(expected)
 
-        @test result ≈ expected     rtol=1e-5
+        @test geq_is_safe
+        @test result ≈ expected     atol=splitting_tolerance
         @test axis == 1
         
 
         expected = 50.
 
-        axis, result = try_finding_threshold(expected)
+        geq_is_safe, axis, result = try_finding_threshold(expected)
 
-        @test result ≈ expected     rtol=1e-5
+        @test geq_is_safe
+        @test result ≈ expected     atol=splitting_tolerance
         @test axis == 1
         
 
         expected = 99.
 
-        axis, result = try_finding_threshold(expected)
+        geq_is_safe, axis, result = try_finding_threshold(expected)
 
-        @test result ≈ expected     rtol=1e-5
+        @test geq_is_safe
+        @test result ≈ expected     atol=splitting_tolerance
         @test axis == 1
             
     end

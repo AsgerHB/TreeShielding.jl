@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.20
+# v0.19.22
 
 using Markdown
 using InteractiveUtils
@@ -103,15 +103,37 @@ scatter_supporting_points!(s::SupportingPoints) =
 scatter_outcomes!(outcomes) = scatter!(outcomes, m=(:c, 3, colors.ASBESTOS), msw=0, label="outcomes")
 
 # ╔═╡ 76f3e2b3-daaa-4e69-bac7-9cf84857eb86
-function draw_support_points!(tree::Tree, 
+begin
+	function draw_support_points!(tree::Tree, 
+		dimensionality, 
+		simulation_function, 
+		action_space,
+		spa, 
+		p, 
+		action)
+		
+		bounds = get_bounds(get_leaf(tree, p), dimensionality)
+
+		draw_support_points!(tree::Tree, 
+			dimensionality, 
+			simulation_function, 
+			action_space,
+			spa, 
+			bounds, 
+			action)
+	end
+	
+	function draw_support_points!(tree::Tree, 
 	dimensionality, 
 	simulation_function, 
 	action_space,
 	spa, 
-	p, 
+	bounds::Bounds, 
 	action)
-	
-	bounds = get_bounds(get_leaf(tree, p), dimensionality)
+
+	if action_space isa Type
+		action_space = instances(action_space)
+	end
 	supporting_points = SupportingPoints(spa, bounds)
 	scatter_supporting_points!(supporting_points)
 	outcomes = map(p -> simulation_function(p, action), supporting_points)
@@ -125,10 +147,18 @@ function draw_support_points!(tree::Tree,
 	unsafe_points = [p for (p, safe) in points_safe if !safe]
 	scatter!(unsafe_points, m=(:x, 5, colors.ALIZARIN), msw=3, label="unsafe")
 end
+end
+
+# ╔═╡ 1feb5107-1587-495d-8024-160f9cc68447
+md"""
+# The ShieldingModel
+
+Everything is rolled up into a convenient little ball that is easy to toss around between functions. This ball is called `ShieldingModel`
+"""
 
 # ╔═╡ 3cdda0dd-59f8-4d6f-b37a-cdc923b242c0
 md"""
-# Bouncing Ball Functions
+## Bouncing Ball Functions
 
 The ball it bounce.
 """
@@ -143,6 +173,7 @@ any_action, no_action = actions_to_int([hit, nohit]) , actions_to_int([])
 action_color_dict=Dict(
 	any_action => colorant"#ffffff", 
 	1 => colorant"#a1eaff", 
+	2 => colors.EMERALD,
 	no_action => colorant"#ff9178"
 )
 
@@ -306,6 +337,9 @@ simulation_function((0, 7), hit)
 # ╔═╡ cd82ff88-3e88-4a94-b414-abca02a55217
 simulation_function((0.1, 0), hit)
 
+# ╔═╡ 0aaab7d9-9733-4c67-aef8-89ffbc245845
+
+
 # ╔═╡ 33aae1b2-cffb-44f7-9b19-5c5b682473ed
 md"""
 ## Safety Property
@@ -375,21 +409,31 @@ begin
 	reset_button
 end
 
-# ╔═╡ c277b47d-169c-4d4c-9629-4d84fe74a44c
+# ╔═╡ 57be14bb-d748-4432-8608-106c44c38f83
 md"""
-Try changing the number of samples per axis, to see how this affects the growth of the tree.
 
-`spa =` $(@bind spa NumberField(1:20, default=5))
+Try setting a different number of samples per axis: 
 
-And likewise try to adjust the minimum granularity. Defined as the number of leading zeros to the one.
+`samples_per_axis =` $(@bind samples_per_axis NumberField(3:30, default=3))
 
-`min_granularity_decimals` $(@bind min_granularity_decimals NumberField(1:15, 3))
+And configure min granularity. The value is set as the number of leading zeros to the first digit.
 
-`max_grow_iterations` $(@bind max_grow_iterations NumberField(1:20, default=20))
+`min_granularity_leading_zeros =` $(@bind min_granularity_leading_zeros NumberField(0:20, default=2))
+
+`margin =` $(@bind margin NumberField(0:0.001:1, default=0.02))
+
+`splitting_tolerance =` $(@bind splitting_tolerance NumberField(0:1E-10:1, default=1E-5))
+
+And the recursion depth:
+
+`max_recursion_depth =` $(@bind max_recursion_depth NumberField(0:9, default=3))
 """
 
-# ╔═╡ c8b29812-4cd6-4929-994b-cb769d2122c9
-min_granularity = 10.0^(-min_granularity_decimals)
+# ╔═╡ 8f38ee1c-6abd-4b43-a359-33c01c256a11
+min_granularity = 0
+
+# ╔═╡ f878ebd6-b261-4151-8aae-521b6736b28a
+m = ShieldingModel(simulation_function, Action, dimensionality, samples_per_axis; min_granularity, margin, splitting_tolerance)
 
 # ╔═╡ 129fbdb0-88a5-4f3d-82e0-56df43c7a46c
 reset_button; @bind go_clock CounterButton("Go!")
@@ -401,24 +445,24 @@ if debounce1[] == 1
 	reactivity1 = "ready"
 else
 	
-	grown = grow!(reactive_tree, 
-		dimensionality, 
-		simulation_function, 
-		Action, 
-		spa, 
-		min_granularity, 
-		max_iterations=max_grow_iterations)
+	grown = grow!(reactive_tree, m)
 
-	@info "Grown to $grown leaves"
+	# @info "Grown to $grown leaves"
 	
-	updates = update!(reactive_tree, dimensionality, simulation_function, Action, spa)
-	@info "Updated $updates leaves"
+	updates = update!(reactive_tree, m)
+	# @info "Updated $updates leaves"
 	
 	pruned_to = prune!(reactive_tree)
-	@info "Pruned to $pruned_to leaves"
+	# @info "Pruned to $pruned_to leaves"
 	
 	reactivity1 = "done"
 end
+
+# ╔═╡ 958a1678-95ec-415b-b3cd-c9f8b3556482
+-2.4305921433202458 - (-2.4305912017822267)
+
+# ╔═╡ f64f4b48-9173-48e5-8f78-575f21465ca2
+-1.0 - (-2.4305921433202458)
 
 # ╔═╡ 0e18b756-f8a9-4821-8b85-30c908f7e3af
 md"""
@@ -446,11 +490,23 @@ begin
 
 	if show_supporting_points
 		p = (partition_x, partition_y)
-		draw_support_points!(reactive_tree, dimensionality, simulation_function, Pace, spa, p, a)
+		draw_support_points!(reactive_tree, dimensionality, simulation_function, Pace, samples_per_axis, p, a)
 		scatter!(p, m=(4, :rtriangle, :white), msw=1, label=nothing, )
 	end
 	plot!(xlabel="v", ylabel="p")
 end
+
+# ╔═╡ 56c7971b-d1d0-4c82-8081-1d27364804e1
+go_clock; l = get_leaf(reactive_tree, partition_x, partition_y)
+
+# ╔═╡ f204e821-45d4-4518-8cd6-4a6ab3963460
+go_clock; get_split(reactive_tree, l, (@set m.verbose=true))
+
+# ╔═╡ ef651fce-cdca-4ca1-9f08-e94fd25df4a4
+go_clock; b = get_bounds(l, m.dimensionality)
+
+# ╔═╡ ec1628b6-9dd3-43a6-aa10-01f9743ce0ea
+go_clock; action_color_dict[l.value]
 
 # ╔═╡ 0039a51e-26ed-4ad2-aeda-117436295ca1
 md"""
@@ -462,28 +518,21 @@ Automation is a wonderful thing.
 # ╔═╡ 47e04910-d9e9-430f-8cec-bfd584c991e2
 @doc synthesize!
 
+# ╔═╡ 1d3ec97f-1818-48dc-9357-35da2a8d6a9d
+@bind synthesize_button CounterButton("Synthesize")
+
 # ╔═╡ c92d8cf4-0908-4c7c-8d3d-3dd07972219e
 finished_tree = call() do
-	spa = 8
-	min_granularity = 0.01
-	margin = 0.00000
-	max_recursion_depth = 10
-	grow_iterations=100
+	if synthesize_button > 0
 	
-	tree = deepcopy(initial_tree)
-	
-	synthesize!(tree, 
-		dimensionality, 
-		simulation_function, 
-		Action, 
-		spa, 
-		min_granularity,
-		grow_margin=margin,
-		max_grow_recursion_depth=max_recursion_depth,
-		max_grow_iterations=grow_iterations,
-		verbose=true)
+		tree = deepcopy(initial_tree)
+		
+		synthesize!(tree, m)
 
-	tree
+		return tree
+	else
+		return nothing
+	end
 end
 
 # ╔═╡ c42af80d-bb1e-42f7-9131-1080639cbd6a
@@ -492,7 +541,7 @@ Leaves: $(Leaves(finished_tree) |> collect |> length)
 """
 
 # ╔═╡ f113308a-1d72-41e9-ba54-71576994a664
-begin
+if finished_tree !== nothing
 	draw(finished_tree, 
 		Bounds(outer_bounds.lower, (outer_bounds.upper[1], outer_bounds.upper[2]+2)), 
 		color_dict=action_color_dict,
@@ -501,9 +550,13 @@ begin
 		ylabel="p")
 end
 
+# ╔═╡ def81db9-6dab-48d3-8767-020e86a6c9e2
+robust_serialize(joinpath(homedir(), "finished.tree"), finished_tree)
+
 # ╔═╡ 60d28d01-7209-477f-b3db-97a5b96dc642
 for v in -15:0.01:15
-	p = 8
+	finished_tree === nothing && break
+	p = 9.99
 	if get_value(finished_tree, v, p) == 0
 		@show v, p
 		break
@@ -511,34 +564,18 @@ for v in -15:0.01:15
 end
 
 # ╔═╡ 8d1cc07c-a529-4135-b92a-c24845009461
-# ╠═╡ disabled = true
-#=╠═╡
-bad_leaf = get_leaf(finished_tree, 0.53, 8);
-  ╠═╡ =#
+bad_leaf = get_leaf(finished_tree, .96, 9.99);
 
 # ╔═╡ 8918db4a-8814-46f9-b74f-7e48205f9df1
-#=╠═╡
 get_bounds(bad_leaf, dimensionality)
-  ╠═╡ =#
 
 # ╔═╡ bda061b8-f809-4924-b60d-4f2eff419ef9
-#=╠═╡
 bad_leaf.value = 3
-  ╠═╡ =#
 
 # ╔═╡ 7a1911c2-9eb1-41ea-8894-e4c53117d8eb
-#=╠═╡
-try_splitting!(bad_leaf, 
-		dimensionality, 
-		simulation_function, 
-		Action, 
-		spa, 
-		min_granularity,
-		verbose=true)
-  ╠═╡ =#
+get_split(bad_leaf, (@set m.verbose=true))
 
 # ╔═╡ 752b7b36-df02-4581-913b-9902c750b1b2
-#=╠═╡
 get_dividing_bounds(finished_tree, 
 		get_bounds(bad_leaf, dimensionality), 
 		simulation_function, 
@@ -546,7 +583,6 @@ get_dividing_bounds(finished_tree,
 		spa, 
 		2,
 		min_granularity)
-  ╠═╡ =#
 
 # ╔═╡ Cell order:
 # ╠═82e532dd-8ec1-458f-b4d6-59cea44dc2b6
@@ -555,13 +591,15 @@ get_dividing_bounds(finished_tree,
 # ╟─dbdc3329-b95d-42a1-9a98-20ff149bb062
 # ╟─5464b116-06fb-4704-bbd5-f7817dce7cbe
 # ╟─ef615614-6e22-455b-b9aa-74b1dfbb4f61
-# ╟─3bf7051c-a644-427b-bbba-14a69d98f4f5
+# ╠═3bf7051c-a644-427b-bbba-14a69d98f4f5
 # ╠═56f10aa2-c768-4936-9a70-76d6b0ec21a1
 # ╠═39cd11b7-2428-47ae-b8ec-90459bb03636
 # ╟─f9545edd-1621-4b87-89c2-81f25d669613
 # ╟─739ac5a1-d9d1-4497-86b0-6fbaf1008c7a
 # ╟─4f8c1497-b904-4e44-8a87-4a15c92a4dda
 # ╟─76f3e2b3-daaa-4e69-bac7-9cf84857eb86
+# ╟─1feb5107-1587-495d-8024-160f9cc68447
+# ╠═f878ebd6-b261-4151-8aae-521b6736b28a
 # ╟─3cdda0dd-59f8-4d6f-b37a-cdc923b242c0
 # ╠═3167e418-c88c-45ba-aea9-710ba48a7c97
 # ╠═31b93679-82d4-49e5-b47b-45873e4f8452
@@ -576,6 +614,7 @@ get_dividing_bounds(finished_tree,
 # ╠═1cc57555-e687-4b84-9568-c7eb903f57ef
 # ╠═d772354b-b855-4d4e-b768-2200c03cc0d6
 # ╠═cd82ff88-3e88-4a94-b414-abca02a55217
+# ╠═0aaab7d9-9733-4c67-aef8-89ffbc245845
 # ╟─33aae1b2-cffb-44f7-9b19-5c5b682473ed
 # ╠═f86a0e8b-9d76-4e68-91cf-927595c27387
 # ╠═caa90ceb-0435-40b7-a97d-74919b040002
@@ -590,17 +629,25 @@ get_dividing_bounds(finished_tree,
 # ╟─afd89bd1-347e-4792-8f3b-e5b372c649fe
 # ╟─fb359eb9-2ce4-466a-9de8-0a0d691f78b9
 # ╟─142d1db7-183e-45a5-b219-30120ffe437b
-# ╟─c277b47d-169c-4d4c-9629-4d84fe74a44c
-# ╟─c8b29812-4cd6-4929-994b-cb769d2122c9
+# ╟─57be14bb-d748-4432-8608-106c44c38f83
+# ╠═8f38ee1c-6abd-4b43-a359-33c01c256a11
 # ╟─129fbdb0-88a5-4f3d-82e0-56df43c7a46c
-# ╠═e7fbb9bb-63b5-4f6a-bb27-7ea1613d6740
+# ╟─e7fbb9bb-63b5-4f6a-bb27-7ea1613d6740
+# ╠═958a1678-95ec-415b-b3cd-c9f8b3556482
+# ╠═f64f4b48-9173-48e5-8f78-575f21465ca2
 # ╟─0e18b756-f8a9-4821-8b85-30c908f7e3af
-# ╠═165ba9e0-7409-4f5d-b10b-4223fe589ac6
+# ╟─165ba9e0-7409-4f5d-b10b-4223fe589ac6
+# ╠═f204e821-45d4-4518-8cd6-4a6ab3963460
+# ╠═56c7971b-d1d0-4c82-8081-1d27364804e1
+# ╠═ef651fce-cdca-4ca1-9f08-e94fd25df4a4
+# ╠═ec1628b6-9dd3-43a6-aa10-01f9743ce0ea
 # ╟─0039a51e-26ed-4ad2-aeda-117436295ca1
 # ╠═47e04910-d9e9-430f-8cec-bfd584c991e2
+# ╟─1d3ec97f-1818-48dc-9357-35da2a8d6a9d
 # ╠═c92d8cf4-0908-4c7c-8d3d-3dd07972219e
 # ╟─c42af80d-bb1e-42f7-9131-1080639cbd6a
 # ╠═f113308a-1d72-41e9-ba54-71576994a664
+# ╠═def81db9-6dab-48d3-8767-020e86a6c9e2
 # ╠═60d28d01-7209-477f-b3db-97a5b96dc642
 # ╠═8d1cc07c-a529-4135-b92a-c24845009461
 # ╠═8918db4a-8814-46f9-b74f-7e48205f9df1
