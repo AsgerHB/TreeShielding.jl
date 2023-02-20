@@ -59,11 +59,13 @@ function test_get_threshold(;samples_per_axis=9,
         min_granularity,
         max_recursion_depth,
         margin)
-    
-    bounds = get_bounds(get_leaf(tree, point), dimensionality)
 
+        
+        
     ### Act ##
-    _, axis, threshold = get_threshold(tree, bounds, m)
+    bounds = get_bounds(get_leaf(tree, point), dimensionality)
+    axis = 2
+    _, threshold = get_threshold(tree, bounds, axis, m)
 
     ### Assert ##
 
@@ -73,10 +75,10 @@ function test_get_threshold(;samples_per_axis=9,
     bounds_below.upper[axis] = threshold
 
     supporting_points = SupportingPoints(spa_when_testing, bounds_above)
-    safety_above = compute_safety(tree, simulation_function, action_space, supporting_points)
+    safety_above = compute_safety(tree, supporting_points, m)
     
     supporting_points = SupportingPoints(spa_when_testing, bounds_below)
-    safety_below = compute_safety(tree, simulation_function, action_space, supporting_points)
+    safety_below = compute_safety(tree, supporting_points, m)
 
     @test all([safe for (_, safe) in safety_above]) || all([safe for (_, safe) in safety_below])
 end
@@ -117,7 +119,7 @@ end
 
     @enum Actions greeble grooble # This is not just me being silly :3 Julia doesn't like having two enums with the same names.
 
-    @testset "get_threshold, axis-aligned linear" begin
+    @testset "get_split, axis-aligned linear" begin
         safe, unsafe = 1, -1
         
         is_safe(p) = p != unsafe
@@ -138,7 +140,6 @@ end
             )
 
         leaf = get_leaf(tree, 0.5) # Safe leaf with bounds [-0.99, 100[
-        bounds = get_bounds(leaf, dimensionality)
         
         
         samples_per_axis = 8
@@ -153,49 +154,44 @@ end
             margin = 0
         )
 
-        try_finding_threshold(expected) =  get_threshold(tree, bounds, model(expected))
+        try_finding_threshold(expected) =  get_split(tree, leaf, model(expected))
 
         expected = 0.10
 
-geq_is_safe,         axis, result = try_finding_threshold(expected)
+        axis, result = try_finding_threshold(expected)
 
-@test geq_is_safe
         @test result ≈ expected     atol=splitting_tolerance
         @test axis == 1
         
 
         expected = 0.3
 
-        geq_is_safe, axis, result = try_finding_threshold(expected)
+        axis, result = try_finding_threshold(expected)
 
-        @test geq_is_safe
         @test result ≈ expected     atol=splitting_tolerance
         @test axis == 1
         
 
         expected = 0.9
 
-        geq_is_safe, axis, result = try_finding_threshold(expected)
+        axis, result = try_finding_threshold(expected)
 
-        @test geq_is_safe
         @test result ≈ expected     atol=splitting_tolerance
         @test axis == 1
         
 
         expected = 50.
 
-        geq_is_safe, axis, result = try_finding_threshold(expected)
+        axis, result = try_finding_threshold(expected)
 
-        @test geq_is_safe
         @test result ≈ expected     atol=splitting_tolerance
         @test axis == 1
         
 
         expected = 99.
 
-        geq_is_safe, axis, result = try_finding_threshold(expected)
+        axis, result = try_finding_threshold(expected)
 
-        @test geq_is_safe
         @test result ≈ expected     atol=splitting_tolerance
         @test axis == 1
             
@@ -229,7 +225,6 @@ geq_is_safe,         axis, result = try_finding_threshold(expected)
         unsafe_leaf.value = no_action # Unsafe leaf is unsafe.
 
         leaf = get_leaf(tree, safe) # Safe leaf with bounds ( [-0.99, 100[,  [0, 100[ )
-        bounds = get_bounds(leaf, dimensionality)
 
         samples_per_axis = 8
         splitting_tolerance = 1E-5
@@ -243,49 +238,44 @@ geq_is_safe,         axis, result = try_finding_threshold(expected)
             margin = 0
         )
 
-        try_finding_threshold(expected) =  get_threshold(tree, bounds, model(expected))
+        try_finding_threshold(expected) =  get_split(tree, leaf, model(expected))
 
         expected = 0.10
 
-        geq_is_safe, axis, result = try_finding_threshold(expected)
+        axis, result = try_finding_threshold(expected)
 
-        @test geq_is_safe
         @test result ≈ expected     atol=splitting_tolerance
         @test axis == 1
         
 
         expected = 0.3
 
-        geq_is_safe, axis, result = try_finding_threshold(expected)
+        axis, result = try_finding_threshold(expected)
 
-        @test geq_is_safe
         @test result ≈ expected     atol=splitting_tolerance
         @test axis == 1
         
 
         expected = 0.9
 
-        geq_is_safe, axis, result = try_finding_threshold(expected)
+        axis, result = try_finding_threshold(expected)
 
-        @test geq_is_safe
         @test result ≈ expected     atol=splitting_tolerance
         @test axis == 1
         
 
         expected = 50.
 
-        geq_is_safe, axis, result = try_finding_threshold(expected)
+        axis, result = try_finding_threshold(expected)
 
-        @test geq_is_safe
         @test result ≈ expected     atol=splitting_tolerance
         @test axis == 1
         
 
         expected = 99.
 
-        geq_is_safe, axis, result = try_finding_threshold(expected)
+        axis, result = try_finding_threshold(expected)
 
-        @test geq_is_safe
         @test result ≈ expected     atol=splitting_tolerance
         @test axis == 1
             

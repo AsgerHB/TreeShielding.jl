@@ -66,11 +66,7 @@ function get_updates(tree::Tree, m::ShieldingModel)
 end
 
 """
-    update!(tree::Tree, 
-    dimensionality,
-    simulation_function, 
-    action_space, 
-    samples_per_axis)
+    update!(tree::Tree, m::ShieldingModel)
 
 Updates every properly bounded partition with a new set of safe actions. An action is considered safe for a partition, if none of its supporting points can end up in an unsafe state by following that action.
 

@@ -12,35 +12,43 @@
                 return 1
             end
         end
-        return -1
+        return -10
     end
 
-
-    struct MockTree <: Tree
-        leaves
-    end
-    mutable struct MockLeaf <: Tree
-        value
-        bounds::Bounds
-    end
-
-    leaf1 = MockLeaf(safe, Bounds((0,), (1,)))   # fi is safe
-    leaf2 = MockLeaf(safe, Bounds((0.5,), (1,))) # fi and fo are safe
-    leaf3 = MockLeaf(safe, Bounds((-1,), (0,)))  # unsafe partition
-    mock_tree = MockTree([leaf1, leaf2, leaf3])
-
-    AbstractTrees.Leaves(tree::MockTree) = tree.leaves
-    AbstractTrees.getroot(l::MockLeaf) = mock_tree
-    TreeShielding.get_bounds(leaf::MockLeaf, _) = leaf.bounds
-    TreeShielding.get_value(tree::MockTree, p) = p > 0 ? safe : unsafe # Positive values are safe
+    tree = Node(1, -1,
+        Leaf(unsafe), # ]-inf; -1]
+        Node(1, 0,
+            Leaf(safe), # ]-1;0] -> unsafe
+            Node(1, 0.5,
+                Leaf(safe), # ]0;0.5] -> fi allowed
+                Node(1, 1,
+                    Leaf(safe), # ]0.5;1] -> fi and fo allowed
+                    Leaf(safe)  # ]1;Inf[
+                )
+            )
+        )
+    )
+    leaf1 = get_leaf(tree, (0.3,))   # ]0.0, 0.5] fi is safe
+    leaf2 = get_leaf(tree, (0.6,))   # ]0.5, 1.0] fi and fo are safe
+    leaf3 = get_leaf(tree, (-0.1,))  # ]-1.0, 0.0] unsafe partition
+    
 
     dimensionality = 1
     samples_per_axis = 3
 
-    # Act #
-    @test_skip update!(mock_tree, dimensionality, simulation_function, Action, samples_per_axis)
+    m = ShieldingModel(simulation_function, Action, dimensionality, samples_per_axis)
 
-    @test_skip leaf1.value == actions_to_int([fi])
-    @test_skip leaf2.value == actions_to_int([fi, fo])
-    @test_skip leaf3.value == actions_to_int([])
+    # Act #
+    @test update!(tree, m) == 2
+
+    # @show get_bounds(leaf1, m.dimensionality)
+    # @show get_bounds(leaf2, m.dimensionality)
+    # @show get_bounds(leaf3, m.dimensionality)
+    # @show TreeShielding.get_allowed_actions(leaf1, m)
+    # @show TreeShielding.get_allowed_actions(leaf2, m)
+    # @show TreeShielding.get_allowed_actions(leaf3, m)
+
+    @test leaf1.value == actions_to_int([fi])
+    @test leaf2.value == actions_to_int([fi, fo])
+    @test leaf3.value == actions_to_int([])
 end
