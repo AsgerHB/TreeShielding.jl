@@ -12,13 +12,13 @@ For each point, use the `simulation_function` to check if it would end up in an 
  - `action_space` The possible actions to provide `simulation_function`. 
  - `points` This is the set of points.
 """
-function compute_safety(tree::Tree, simulation_function, action_space, points)
+function compute_safety(tree::Tree, points, m)
     unsafe_value = actions_to_int([]) # The value for states where no actions are allowed.
 	result = []
 	for p in points
         safe = false
-        for a in action_space
-            p′ = simulation_function(p, a)
+        for a in m.action_space
+            p′ = m.simulation_function(p, a)
             safe = safe || (get_value(tree, p′) != unsafe_value)
         end
         push!(result, (p, safe))
@@ -84,14 +84,15 @@ end
 
 function get_dividing_bounds(tree::Tree, bounds::Bounds, axis, m::ShieldingModel)
 	safe, unsafe = get_safety_bounds(tree, bounds, m)
-	m.verbose && @info "safe: $safe \nunsafe: $unsafe"
 	
 	get_dividing_bounds(bounds, safe, unsafe, axis, m)
 end
 
 function get_dividing_bounds(bounds::Bounds, safe::Bounds, unsafe::Bounds, axis, m::ShieldingModel)
+	m.verbose && @info "safe: $safe \nunsafe: $unsafe"
 	if !bounded(safe) || !bounded(unsafe)
 
+		m.verbose && @info "No dividing_bounds exist for this partition."
 		return nothing, nothing
 	end
 
@@ -188,7 +189,7 @@ function get_threshold(tree::Tree, bounds::Bounds, axis, m::ShieldingModel; safe
 	if bounds.upper[axis] - threshold < m.min_granularity || 
 	   threshold - bounds.lower[axis] < m.min_granularity
 		
-		@warn "Skipping split ($axis, $threshold) of partition $bounds since it exceeds min_granularity $(m.min_granularity)."
+		m.verbose && @info "Skipping split ($axis, $threshold) of partition $bounds since it exceeds min_granularity $(m.min_granularity)."
         return nothing, nothing
 	end
 

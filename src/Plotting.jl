@@ -111,10 +111,7 @@ function draw_support_points!(tree::Tree,  bounds::Bounds, action, m::ShieldingM
     outcomes = map(p -> m.simulation_function(p, action), supporting_points)
     scatter_outcomes!(outcomes)
 
-    points_safe = compute_safety(tree, 
-        m.simulation_function, 
-        m.action_space, 
-        supporting_points)
+    points_safe = compute_safety(tree, supporting_points, m)
     
     unsafe_points = [p for (p, safe) in points_safe if !safe]
     scatter!(unsafe_points, m=(:x, 5, colors.ALIZARIN), msw=3, label="unsafe")
