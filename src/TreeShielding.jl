@@ -2,6 +2,7 @@ module TreeShielding
 
 using Plots
 using Unzip
+using Printf
 using Serialization
 using AbstractTrees
 

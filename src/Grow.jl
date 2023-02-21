@@ -89,7 +89,7 @@ function get_dividing_bounds(tree::Tree, bounds::Bounds, axis, m::ShieldingModel
 end
 
 function get_dividing_bounds(bounds::Bounds, safe::Bounds, unsafe::Bounds, axis, m::ShieldingModel)
-	m.verbose && @info "safe: $safe \nunsafe: $unsafe"
+	m.verbose && @info @sprintf "safe:   ]%-+0.05f; %-+0.05f] \nunsafe: ]%-+0.05f; %-+0.05f]" safe.lower[axis] safe.upper[axis] unsafe.lower[axis] unsafe.upper[axis]
 	if !bounded(safe) || !bounded(unsafe)
 
 		m.verbose && @info "No dividing_bounds exist for this partition."

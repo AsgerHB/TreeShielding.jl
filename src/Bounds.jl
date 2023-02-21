@@ -24,6 +24,15 @@ function Bounds(lower::Dict, upper::Dict, dimensionality)
     Bounds(lower′, upper′)
 end
 
+Base.show(io::IO, bounds::Bounds) = begin
+	dimensionality = get_dim(bounds)
+	intervals = [(bounds.lower[axis], bounds.upper[axis]) for axis in 1:dimensionality]
+
+	intervals = [(@sprintf "]%-+0.05f; %-+0.05f]" a b) for (a, b) in intervals]
+	result = join(intervals, " × ")
+    println(io, result)
+end
+
 function get_dim(bounds::Bounds)
     length(bounds.lower)
 end
