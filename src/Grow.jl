@@ -163,6 +163,7 @@ function get_threshold(tree::Tree, bounds::Bounds, axis, m::ShieldingModel; safe
 	# We don't want to split right on top of a previous split
 	if ≈(threshold, bounds.lower[axis], atol=m.splitting_tolerance) || 
 	   ≈(threshold, bounds.upper[axis], atol=m.splitting_tolerance)
+	   m.verbose && @info "Skipping split since it's on top of a previous one"
 		return nothing, nothing
 	end
 

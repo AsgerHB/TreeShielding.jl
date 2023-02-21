@@ -26,7 +26,7 @@ function get_allowed_actions(tree::Tree,
         for a in m.action_space
             p′ = m.simulation_function(p, a)
             if get_value(tree, p′) == no_actions
-                m.verbose && @info "$a is unsafe at $p."
+                # m.verbose && @info "$a is unsafe at $p."
                 delete!(allowed, a)
             end
         end
