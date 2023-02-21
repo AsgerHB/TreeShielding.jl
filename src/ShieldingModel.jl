@@ -1,3 +1,14 @@
+"""
+**Fields:**
+ - `dimensionality` Number of axes. 
+ - `simulation_function` A function `f(state, action)` which returns the resulting state.
+ - `action_space` The possible actions to provide `simulation_function`. 
+ - `samples_per_axis` See `SupportingPoints`.
+ - `min_granularity` Splits are not made if the resulting size of the partition would be less than `min_granularity` on the given axis
+ - `max_recursion_depth` Amount of times to repeat the computation, refining the bound.
+ - `margin` This value will be added to the threshold after it is computed, as an extra margin of error.
+ - `max_iterations` Function automatically terminates after this number of iterations.
+"""
 struct ShieldingModel
     simulation_function::Function
     action_space
