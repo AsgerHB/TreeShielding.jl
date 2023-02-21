@@ -315,7 +315,7 @@ md"""
 """
 
 # ╔═╡ 40b843de-e367-49d7-8a50-d2cefe4e3939
-outer_bounds = Bounds((-15, 0), (15, 10))
+outer_bounds = Bounds((-15, 0), (15, 6))
 
 # ╔═╡ c8b40bd6-a8f3-42e8-bcbb-5bddd452dab0
 initial_tree = call() do
@@ -408,15 +408,17 @@ $(@bind partition_y
 # ╔═╡ cd190e4a-9e48-4e6a-8058-1bcb105d9c0b
 # Cell that does grow/update until it is about to create a vertical red bar
 begin
+	borked_bounds = nothing
 	for i in 1:100
 		grow!(reactive_tree, m)
 		updates = TreeShielding.get_updates(reactive_tree, m)
 	
 		for update in updates
-			if get_bounds(update.leaf, m.dimensionality).upper[2] == 10 &&
+			if get_bounds(update.leaf, m.dimensionality).upper[2] == outer_bounds.upper[2] &&
 				update.new_value == 0
-			
-				@warn "It's about to bork. $(get_bounds(update.leaf, m.dimensionality))"
+
+				global borked_bounds = get_bounds(update.leaf, m.dimensionality)
+				@warn "It's about to bork. $(borked_bounds)"
 				
 				@goto break_all
 			end
@@ -439,14 +441,16 @@ begin
 
 	if show_supporting_points
 		p = (partition_x, partition_y)
-		draw_support_points!(reactive_tree, p, a, m)
-		scatter!(p, m=(4, :rtriangle, :white), msw=1, label=nothing, )
+		scatter_allowed_actions!(reactive_tree, borked_bounds, (@set m.samples_per_axis = 8))
+		#scatter!(p, m=(4, :rtriangle, :white), msw=1, label=nothing, )
 	end
 	plot!(xlabel="v", ylabel="p")
 end
 
-# ╔═╡ 56c7971b-d1d0-4c82-8081-1d27364804e1
-go_clock; l = get_leaf(reactive_tree, partition_x, partition_y)
+# ╔═╡ 0837b974-a284-488d-9d6c-b21eb4a6aecf
+l = get_leaf(reactive_tree, 
+	borked_bounds.upper[1] - 0.0001, 
+	borked_bounds.upper[2] - 0.0001)
 
 # ╔═╡ f204e821-45d4-4518-8cd6-4a6ab3963460
 go_clock; get_split(reactive_tree, l, (@set m.verbose=true))
@@ -599,8 +603,8 @@ md"""
 # ╟─e7fbb9bb-63b5-4f6a-bb27-7ea1613d6740
 # ╟─0e18b756-f8a9-4821-8b85-30c908f7e3af
 # ╠═cd190e4a-9e48-4e6a-8058-1bcb105d9c0b
-# ╟─165ba9e0-7409-4f5d-b10b-4223fe589ac6
-# ╠═56c7971b-d1d0-4c82-8081-1d27364804e1
+# ╠═165ba9e0-7409-4f5d-b10b-4223fe589ac6
+# ╠═0837b974-a284-488d-9d6c-b21eb4a6aecf
 # ╠═7f560461-bfc7-4419-8a27-670b09830052
 # ╠═f3edc169-94ff-4560-874c-05aab6f8782c
 # ╠═f204e821-45d4-4518-8cd6-4a6ab3963460

@@ -135,13 +135,23 @@ simulation_function(point, action) = RW.simulate(
 md"""
 The goal of the game is to reach `x >= x_max` without reaching `t >= t_max`. 
 
+As an additional constraint, the player must not be too early. Arriving before `t == earliest` is also a safety violation.
+
 This corresponds to the below safety property. It is defined both for a single `(x, t)` point, as well as for a set of points given by `Bounds`.
 """
 
+# ╔═╡ 4f33f9a0-9a7a-426b-8022-43a87bb3d188
+earliest = 0.2
+
 # ╔═╡ 957a7a75-0ac0-4c2e-9359-f9ad915e88be
 begin
-	is_safe(point) = point[2] <= rwmechanics.t_max
-	is_safe(bounds::Bounds) = is_safe((bounds.lower[1], bounds.upper[2]))
+	is_safe(point) = point[2] <= rwmechanics.t_max && 
+					(point[1] <= rwmechanics.x_max || point[2] >= earliest)
+	
+	is_safe(bounds::Bounds) = is_safe((bounds.lower[1], bounds.upper[2])) &&
+                              is_safe((bounds.upper[1], bounds.upper[2])) &&
+                              is_safe((bounds.upper[1], bounds.lower[2])) &&
+                              is_safe((bounds.lower[1], bounds.lower[2]))
 end
 
 # ╔═╡ 98cd05d4-07ee-4574-a157-8e3270091c15
@@ -170,6 +180,7 @@ begin
 	x_max, y_max = rwmechanics.x_max, rwmechanics.t_max
 	split!(get_leaf(initial_tree, x_min - 1, y_max), 2, y_max)
 	split!(get_leaf(initial_tree, x_max + 1, y_max), 2, y_max)
+	split!(get_leaf(initial_tree, x_max + 1, y_max/2), 2, earliest)
 end
 
 # ╔═╡ 7c4dba76-5ce9-4db7-b5d5-421c5ef981d3
@@ -215,7 +226,20 @@ And likewise try to adjust the minimum granularity. Defined as the number of lea
 min_granularity = 10.0^(-min_granularity_decimals - 1)
 
 # ╔═╡ a52e9520-f4df-4e88-bb39-e516f37335ea
-m = ShieldingModel(simulation_function, Pace, dimensionality, spa; min_granularity, max_recursion_depth, max_iterations, margin, splitting_tolerance, verbose)
+m = ShieldingModel(simulation_function, Pace, dimensionality, spa; min_granularity, max_iterations, margin, splitting_tolerance, verbose)
+
+# ╔═╡ e3ba9c22-6e2c-4d90-9823-93f871c036b4
+get_bounds(get_leaf(initial_tree, x_max + 1, y_max/2), m.dimensionality)
+
+# ╔═╡ 1e96d57c-3dfe-4bd3-89b8-09d2157b6472
+call() do
+	bounds = get_bounds(get_leaf(initial_tree, x_max/2, y_max/2), m.dimensionality)
+	@test is_safe(bounds)
+	@test is_safe((bounds.lower[1], bounds.upper[2]))
+	@test is_safe((bounds.upper[1], bounds.upper[2]))
+	@test is_safe((bounds.upper[1], bounds.lower[2]))
+	@test is_safe((bounds.lower[1], bounds.lower[2]))
+end
 
 # ╔═╡ e21002c4-f772-4c55-9014-6551b41d7ef4
 @bind reset_button Button("Reset")
@@ -329,6 +353,20 @@ TreeShielding.get_allowed_actions(reactive_tree, bounds_lt, m)
 # ╔═╡ 271cf6fd-1c9e-4d8e-8f8e-c0b4b9fde9dd
 TreeShielding.get_allowed_actions(reactive_tree, bounds_gt, m)
 
+# ╔═╡ 47c35443-498d-4dba-87b4-cc329fa534dc
+call() do
+	plot(legend=:outerright)
+    supporting_points = SupportingPoints(m.samples_per_axis, bounds)
+    scatter_supporting_points!(supporting_points)
+    outcomes = map(p -> m.simulation_function(p, a), supporting_points)
+    scatter_outcomes!(outcomes)
+
+    return points_safe = compute_safety(tree, supporting_points, m)
+    
+    unsafe_points = [p for (p, safe) in points_safe if !safe]
+    scatter!(unsafe_points, m=(:x, 5, colors.ALIZARIN), msw=3, label="unsafe")
+end
+
 # ╔═╡ b167ada8-dc47-491c-b8f1-6b8dae176307
 md"""
 # Making the Strategy More Permissive
@@ -407,11 +445,14 @@ end
 # ╟─b7410cc3-d5b7-497b-88c8-1f525c646b3e
 # ╠═f698931f-0f24-4f82-8a09-f521bb1b4d2d
 # ╟─c235f874-a7dc-4090-9733-7a92263b6d32
+# ╠═4f33f9a0-9a7a-426b-8022-43a87bb3d188
 # ╠═957a7a75-0ac0-4c2e-9359-f9ad915e88be
 # ╟─98cd05d4-07ee-4574-a157-8e3270091c15
 # ╠═36ffecc0-b0f3-47ee-91aa-83c31a117405
 # ╠═3e46f4e4-7711-4e7f-915c-17db6ab18a42
 # ╠═35da0d89-1799-43c9-ba07-f48e7803e395
+# ╠═e3ba9c22-6e2c-4d90-9823-93f871c036b4
+# ╠═1e96d57c-3dfe-4bd3-89b8-09d2157b6472
 # ╠═7c4dba76-5ce9-4db7-b5d5-421c5ef981d3
 # ╠═777f87fd-f497-49f8-9deb-e708c990cdd1
 # ╠═3b86ac41-4d87-4498-a1ca-c8c327ceb347
@@ -436,6 +477,7 @@ end
 # ╠═887add25-5e17-4688-9b87-239d1276f140
 # ╠═5ff44f02-8c19-404d-baf6-421566a5f322
 # ╠═271cf6fd-1c9e-4d8e-8f8e-c0b4b9fde9dd
+# ╠═47c35443-498d-4dba-87b4-cc329fa534dc
 # ╟─b167ada8-dc47-491c-b8f1-6b8dae176307
 # ╟─8c9d74e1-7ccb-4623-9169-69501e8af721
 # ╠═955ef68a-5a87-43d2-96bb-5b31f2d8e92a
