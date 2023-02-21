@@ -38,7 +38,7 @@ include("Prune.jl")
 export synthesize!
 include("Synthesize.jl")
 
-export draw, draw_support_points!, scatter_outcomes!, scatter_supporting_points!
+export draw, draw_support_points!, scatter_outcomes!, scatter_supporting_points!, scatter_allowed_actions!
 include("Plotting.jl")
 
 

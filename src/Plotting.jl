@@ -116,3 +116,39 @@ function draw_support_points!(tree::Tree,  bounds::Bounds, action, m::ShieldingM
     unsafe_points = [p for (p, safe) in points_safe if !safe]
     scatter!(unsafe_points, m=(:x, 5, colors.ALIZARIN), msw=3, label="unsafe")
 end
+
+function scatter_allowed_actions!(tree, bounds, m)
+    no_action = actions_to_int([])
+	actions = [[] for _ in m.action_space]
+	unsafe = []
+
+	for p in SupportingPoints(m.samples_per_axis, bounds)
+		safe = false
+		for (i, a) in enumerate(m.action_space)
+			p′ = m.simulation_function(p, a)
+			if get_value(get_leaf(tree, p′)) != no_action
+				push!(actions[i], p)
+				safe = true
+			end
+		end
+		if !safe
+			push!(unsafe, p)
+		end
+	end
+	markers = [(:ltriangle, colors.EMERALD, 10) (:circle, colors.SUNFLOWER, 4) (:star, colors.PETER_RIVER, 3)]
+	for (i, a) in enumerate(m.action_space)
+        if length(actions[i]) > 0
+            scatter!(actions[i] |> unzip, 
+                marker=markers[i],
+                markerstrokewidth=0,
+                label=a)
+        end
+	end
+    if length(unsafe) > 0
+        scatter!(unsafe |> unzip,
+            marker=(:x, 4, colors.ALIZARIN),
+            markerstrokewidth=3,
+            label="unsafe",
+            legend=:outerright)
+    end
+end
