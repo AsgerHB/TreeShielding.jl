@@ -2,7 +2,6 @@
 """
     test_get_threshold(;samples_per_axis=9,
     min_granularity=0.00001,
-    max_recursion_depth=2,
     margin=0.01)
 
 Using the random walk problem, tests that the `get_threshold` function will return a threshold,
@@ -10,7 +9,6 @@ such that all supporting points to one side of the threshold are safe.
 """
 function test_get_threshold(;samples_per_axis=9,
     min_granularity=0.00001,
-    max_recursion_depth=2,
     margin=0.01)
 
     spa_when_testing = 20 
@@ -57,7 +55,6 @@ function test_get_threshold(;samples_per_axis=9,
         dimensionality,
         samples_per_axis;
         min_granularity,
-        max_recursion_depth,
         margin)
 
         
@@ -88,32 +85,27 @@ end
     @testset "RW get_threshold" begin
         test_get_threshold(
             samples_per_axis=9,
-            min_granularity=0.00001,
-            max_recursion_depth=5,
+            min_granularity=0.0000,
             margin=0.01)
         
         test_get_threshold(
             samples_per_axis = 9,
-            min_granularity = 0.00001,
-            max_recursion_depth = 5,
+            min_granularity = 0.0000,
             margin = 0.00001)#
         
         test_get_threshold(
             samples_per_axis = 3,#
-            min_granularity = 0.00001,
-            max_recursion_depth = 5,
+            min_granularity = 0.0000,
             margin = 0.01)
         
         test_get_threshold(
             samples_per_axis = 9,
             min_granularity = 0.01,#
-            max_recursion_depth = 5,
             margin = 0.01)
         
         test_get_threshold(
             samples_per_axis = 9,
             min_granularity = 0.00001,
-            max_recursion_depth = 20, #
             margin = 0.01)
     end
 
@@ -149,7 +141,6 @@ end
             dimensionality,
             samples_per_axis;
             min_granularity = 1E-10,
-            max_recursion_depth = 10,
             splitting_tolerance,
             margin = 0
         )
@@ -233,7 +224,6 @@ end
             dimensionality,
             samples_per_axis;
             min_granularity = 1E-10,
-            max_recursion_depth = 10,
             splitting_tolerance,
             margin = 0
         )

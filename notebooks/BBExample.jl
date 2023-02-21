@@ -352,10 +352,6 @@ And configure min granularity. The value is set as the number of leading zeros t
 `margin =` $(@bind margin NumberField(0:0.001:1, default=0.00))
 
 `splitting_tolerance =` $(@bind splitting_tolerance NumberField(0:1E-10:1, default=1E-5))
-
-And the recursion depth:
-
-`max_recursion_depth =` $(@bind max_recursion_depth NumberField(0:9, default=3))
 """
 
 # ╔═╡ f878ebd6-b261-4151-8aae-521b6736b28a

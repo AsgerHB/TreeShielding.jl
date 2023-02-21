@@ -50,7 +50,6 @@ function make_permissive!(tree::Tree, m)
             m.dimensionality,
             m.samples_per_axis,
             min_granularity=m.min_granularity,
-            max_recursion_depth=m.max_recursion_depth,
             max_iterations=m.max_iterations,
             margin=m.margin)
 

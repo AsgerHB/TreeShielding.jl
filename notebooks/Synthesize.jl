@@ -204,8 +204,6 @@ And likewise try to adjust the minimum granularity. Defined as the number of lea
 
 `max_iterations` $(@bind max_iterations NumberField(1:20, default=20))
 
-`max_recursion_depth` $(@bind max_recursion_depth NumberField(1:20, default=5))
-
 `margin` $(@bind margin NumberField(0:0.0001:1, default=0))
 
 `splitting_tolerance` $(@bind splitting_tolerance NumberField(0.0001:0.0001:1))
