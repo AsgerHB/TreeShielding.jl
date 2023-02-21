@@ -91,7 +91,6 @@ end
 function get_dividing_bounds(bounds::Bounds, safe::Bounds, unsafe::Bounds, axis, m::ShieldingModel)
 	m.verbose && @info @sprintf "safe:   ]%-+0.05f; %-+0.05f] \nunsafe: ]%-+0.05f; %-+0.05f]" safe.lower[axis] safe.upper[axis] unsafe.lower[axis] unsafe.upper[axis]
 	if !bounded(safe) || !bounded(unsafe)
-
 		m.verbose && @info "No dividing_bounds exist for this partition."
 		return nothing, nothing
 	end
@@ -127,31 +126,27 @@ function get_dividing_bounds(bounds::Bounds, safe::Bounds, unsafe::Bounds, axis,
 	return gt_is_safe, dividing_bounds
 end
 
-function get_threshold(tree::Tree, bounds::Bounds, axis, m::ShieldingModel; safety_bounds=nothing)
-	# The arg safety_bounds can be supplied to save a SupportingPoints computation step
-	if safety_bounds !== nothing
-		gt_is_safe, dividing_bounds = get_dividing_bounds(bounds, safety_bounds..., axis, m)
-	else
-		gt_is_safe, dividing_bounds = get_dividing_bounds(tree, bounds, axis, m)
-	end
+function get_threshold(tree::Tree, bounds::Bounds, axis, m::ShieldingModel)
+	gt_is_safe, dividing_bounds = get_dividing_bounds(tree, bounds, axis, m)
 
 	if dividing_bounds === nothing
-		m.verbose && @info "Skipping split at axis $axis since no threshold exists."
+		m.verbose && @info "Skipping split at axis $axis since no dividing bounds were found."
 		return nothing, nothing
 	end
 
 	# Mainmatter. Keep refining the threshold until splitting_tolerance is reached.
 	iterations = 0
 	while dividing_bounds.upper[axis] - dividing_bounds.lower[axis] > m.splitting_tolerance
-		(iterations += 1) >= 100 &&	(@warn "Loop break"; break)
+		(iterations += 1) >= 100 &&	(@warn "Maximum iterations exceeded while refining threshold"; break)
 		
 		gt_is_safe′, dividing_bounds′ = get_dividing_bounds(tree, dividing_bounds, axis, m)
 		
 		@assert gt_is_safe == gt_is_safe′
 
-		gt_is_safe = gt_is_safe′
 		dividing_bounds = dividing_bounds′
 	end
+
+	m.verbose && @info "Found dividing bounds $dividing_bounds for axis $axis in $iterations iterations"
 
 	# It is not known whether the points inside dividing_bounds are safe
 	# But it is known that all points to one side of dividing_bounds are.
@@ -159,7 +154,32 @@ function get_threshold(tree::Tree, bounds::Bounds, axis, m::ShieldingModel; safe
 	# If all points greater than the dividing_bounds are safe, 
 	# then the uppper bound is the last set of points known to be safe. Otherwise it is the lower.
 	threshold = gt_is_safe ? dividing_bounds.upper[axis] : dividing_bounds.lower[axis]
+	
+	m.verbose && @info "Resolved to threshold $threshold"
 
+	# Apply safety margin
+	if gt_is_safe
+		threshold = min(threshold + m.margin, bounds.upper[axis])
+	else
+		threshold = max(threshold - m.margin, bounds.lower[axis])
+	end
+	
+	m.verbose && @info "Applied safety margin.   Threshold is now $threshold."
+
+	# Apply min_granularity
+	threshold = min(threshold, bounds.upper[axis] - m.min_granularity)
+	threshold = max(threshold, bounds.lower[axis] + m.min_granularity)
+	m.verbose && @info "Applied min_granularity. Threshold is now $threshold."
+
+	# Check against min_granularity
+	# Because maybe the partition was already as small as could be.
+	if bounds.upper[axis] - threshold < m.min_granularity || 
+	   threshold - bounds.lower[axis] < m.min_granularity
+		
+		m.verbose && @info "Skipping split ($axis, $threshold) since it exceeds min_granularity $(m.min_granularity)."
+        return nothing, nothing
+	end
+	
 	# We don't want to split right on top of a previous split
 	if ≈(threshold, bounds.lower[axis], atol=m.splitting_tolerance) || 
 	   ≈(threshold, bounds.upper[axis], atol=m.splitting_tolerance)
@@ -167,36 +187,8 @@ function get_threshold(tree::Tree, bounds::Bounds, axis, m::ShieldingModel; safe
 		return nothing, nothing
 	end
 
-	if !(bounds.lower[axis] < threshold < bounds.upper[axis])
-		@show bounds
-		@show axis
-		@show threshold
-		@assert bounds.lower[axis] < threshold < bounds.upper[axis]
-	end
-
-	# Apply safety margin
-	if gt_is_safe
-		threshold += m.margin
-	else
-		threshold -= m.margin
-	end
-
-	# Apply min_granularity
-	threshold = max(threshold, bounds.lower[axis] + m.min_granularity)
-	threshold = min(threshold, bounds.upper[axis] - m.min_granularity)
-
-	# Check against min_granularity
-	# Because maybe the partition was already as small as could be.
-	if bounds.upper[axis] - threshold < m.min_granularity || 
-	   threshold - bounds.lower[axis] < m.min_granularity
-		
-		m.verbose && @info "Skipping split ($axis, $threshold) of partition $bounds since it exceeds min_granularity $(m.min_granularity)."
-        return nothing, nothing
-	end
-
-	RoundingMode
-	 m.verbose && @info "Found threshold $threshold for axis $axis in $iterations iterations"
-
+	@assert bounds.lower[axis] < threshold < bounds.upper[axis] "$(bounds.lower[axis]) < $threshold < $(bounds.upper[axis])"
+	
 	return gt_is_safe, threshold
 end
 
@@ -215,8 +207,9 @@ function get_split(root::Tree, leaf::Leaf, m::ShieldingModel)
     bounds = get_bounds(leaf, m.dimensionality)
 	!bounded(bounds) && return nothing, nothing
 
+	m.verbose && @info "Trying to split partition $bounds"
+
 	gt_is_safe, threshold = nothing, nothing
-	safety_bounds = get_safety_bounds(root, bounds, m)
 	axis = 1
 	for i in 1:m.dimensionality
 		m.verbose && @info "Trying axis $i"
@@ -225,7 +218,7 @@ function get_split(root::Tree, leaf::Leaf, m::ShieldingModel)
 			m.verbose && @info "Already split down to min_granularity"
 			continue
 		end
-		gt_is_safe, threshold = get_threshold(root, bounds, axis, m; safety_bounds)
+		gt_is_safe, threshold = get_threshold(root, bounds, axis, m)
 		if threshold !== nothing
 			break
 		end
@@ -275,6 +268,8 @@ function grow!(tree::Tree, m::ShieldingModel)
 
 			if threshold !== nothing
 				split!(leaf, axis, threshold)
+
+				m.verbose && @info "Performed split."
 				
 				changes_made += 1
                 leaf_count += 1 # One leaf was removed, two leaves were added.

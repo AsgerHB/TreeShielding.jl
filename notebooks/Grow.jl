@@ -26,6 +26,7 @@ begin
 	using PlutoTest
 	using Unzip
 	using AbstractTrees
+	using Printf
 	using Setfield
 	TableOfContents()
 end
@@ -138,18 +139,12 @@ simulation_function(point, action) = RW.simulate(
 md"""
 The goal of the game is to reach `x >= x_max` without reaching `t >= t_max`. 
 
-As an additional constraint, the player must not be too early. Arriving before `t == earliest` is also a safety violation.
-
 This corresponds to the below safety property. It is defined both for a single `(x, t)` point, as well as for a set of points given by `Bounds`.
 """
 
-# ╔═╡ dc54d6ad-c013-452c-a322-364fbcb2cfb0
-earliest = 0.2
-
 # ╔═╡ 1cb52b21-8d14-4e2e-ad63-788a56d6bcd2
 begin
-	is_safe(point) = point[2] <= rwmechanics.t_max && 
-					(point[1] <= rwmechanics.x_max || point[2] >= earliest)
+	is_safe(point) = point[2] <= rwmechanics.t_max
 	
 	is_safe(bounds::Bounds) = is_safe((bounds.lower[1], bounds.upper[2])) &&
                               is_safe((bounds.upper[1], bounds.upper[2])) &&
@@ -185,7 +180,6 @@ begin
 	x_max, y_max = rwmechanics.x_max, rwmechanics.t_max
 	split!(get_leaf(initial_tree, x_min - 1, y_max), 2, y_max)
 	split!(get_leaf(initial_tree, x_max + 1, y_max), 2, y_max)
-	split!(get_leaf(initial_tree, x_max + 1, y_max/2), 2, earliest)
 end
 
 # ╔═╡ ee408360-8c64-4619-9810-6038738045dc
@@ -224,6 +218,49 @@ md"""
 $(@doc get_safety_bounds)
 """
 
+# ╔═╡ 2d999c21-cbdd-4ca6-9866-6f763c91feba
+md"""
+### `get_dividing_bounds`
+
+$(@doc get_dividing_bounds)
+"""
+
+# ╔═╡ b97cf160-79ab-4cf7-a321-31a86b3bccac
+md"""
+Also it is possible to control the number of refinement steps in the figures.
+
+`refinement_steps =` $(@bind refinement_steps NumberField(0:9, default=3))
+"""
+
+# ╔═╡ 15b5d339-705e-4408-9629-2002117b8da7
+md"""
+### `get_threshold`
+
+$(@doc get_threshold)
+"""
+
+# ╔═╡ a8a02260-61d8-4698-9b61-351adaf68f78
+bounds = get_bounds(get_leaf(tree, 0.5, 0.5), dimensionality)
+
+# ╔═╡ 648fb8ab-b156-4c75-b0e0-16c8c7f151ec
+md"""
+### `get_split`
+
+$(@doc get_split)
+"""
+
+# ╔═╡ 9e807328-488f-4e86-ae53-71f39b2631a7
+md"""
+### `grow!`
+
+$(@doc grow!)
+"""
+
+# ╔═╡ 76f13f2a-82cb-4037-a097-394fb080bf84
+md"""
+# One Split at a Time -- Try it out!
+"""
+
 # ╔═╡ 87e24687-5fc2-485a-ba01-41c10c10d395
 md"""
 ### Parameters -- Try it Out!
@@ -232,23 +269,14 @@ md"""
 
 Try setting a different number of samples per axis: 
 
-`samples_per_axis =` $(@bind samples_per_axis NumberField(3:30, default=3))
+`samples_per_axis =` $(@bind samples_per_axis NumberField(3:30, default=16))
 
-And configure min granularity. The value is set as the number of leading zeros to the first digit.
-
-`min_granularity_leading_zeros =` $(@bind min_granularity_leading_zeros NumberField(0:20, default=2))
+`min_granularity =` $(@bind min_granularity NumberField(0:1E-15:1, default=1E-5))
 
 `margin =` $(@bind margin NumberField(0:0.001:1, default=0.02))
 
 `splitting_tolerance =` $(@bind splitting_tolerance NumberField(0:1E-10:1, default=1E-5))
-
-Also it is possible to control the number of refinement steps in the figures. (todo: move into seperate cell.)
-
-`refinement_steps =` $(@bind refinement_steps NumberField(0:9, default=3))
 """
-
-# ╔═╡ 9fa8dd4a-3ffc-4c19-858e-e6188e73175e
-min_granularity = 10.0^(-min_granularity_leading_zeros)
 
 # ╔═╡ 3c613061-1cd9-4b72-b419-6387c25da513
 m = ShieldingModel(simulation_function, Pace, dimensionality, samples_per_axis; min_granularity, margin, splitting_tolerance)
@@ -262,44 +290,6 @@ call() do
 
 	scatter_allowed_actions!(tree, bounds, m)
 end
-
-# ╔═╡ 2d999c21-cbdd-4ca6-9866-6f763c91feba
-md"""
-### `get_dividing_bounds`
-
-$(@doc get_dividing_bounds)
-"""
-
-# ╔═╡ c8d182d8-537f-43d7-ab5f-1374219964e8
-call() do
-	axis = 1
-	leaf = get_leaf(tree, 0.5, 0.5)
-	bounds = get_bounds(leaf, dimensionality)
-	p1 = draw(tree, draw_bounds, color_dict=action_color_dict,legend=:outerright)
-	plot!(size=(800,600))
-	draw_support_points!(tree, (0.5, 0.5), RW.fast, m)
-
-	
-	dividing_bounds = bounds
-	for i in 0:refinement_steps
-		
-		safe_above, dividing_bounds = 
-			get_dividing_bounds(tree, dividing_bounds, axis, m)
-	
-		plot!(TreeShielding.rectangle(dividing_bounds), lw=0, alpha=0.3, label="$i recursions")
-	end
-	p1
-end
-
-# ╔═╡ 15b5d339-705e-4408-9629-2002117b8da7
-md"""
-### `get_threshold`
-
-$(@doc get_threshold)
-"""
-
-# ╔═╡ a8a02260-61d8-4698-9b61-351adaf68f78
-bounds = get_bounds(get_leaf(tree, 0.5, 0.5), dimensionality)
 
 # ╔═╡ 50495f8a-e38f-4fdd-8c75-ca84fd9360c5
 bounds_safe, bounds_unsafe = 
@@ -325,14 +315,47 @@ call() do
 		lc=colors.ALIZARIN)
 end
 
-# ╔═╡ da493978-1444-4ec3-be36-4aa1c59170b5
-offset = get_spacing_sizes(SupportingPoints(samples_per_axis, bounds), dimensionality)
+# ╔═╡ c8d182d8-537f-43d7-ab5f-1374219964e8
+call() do
+	axis = 1
+	leaf = get_leaf(tree, 0.5, 0.5)
+	bounds = get_bounds(leaf, dimensionality)
+	p1 = draw(tree, draw_bounds, color_dict=action_color_dict,legend=:outerright)
+	plot!(size=(800,600))
+	draw_support_points!(tree, (0.5, 0.5), RW.fast, m)
+
+	
+	dividing_bounds = bounds
+	for i in 0:refinement_steps
+		
+		safe_above, dividing_bounds = 
+			get_dividing_bounds(tree, dividing_bounds, axis, m)
+	
+		plot!(TreeShielding.rectangle(dividing_bounds), lw=0, alpha=0.3, label="$i refinements")
+	end
+	p1
+end
 
 # ╔═╡ 3e8defcb-c420-46a8-8abc-78ab228abef6
 @bind axis NumberField(1:m.dimensionality)
 
 # ╔═╡ 3e6a861b-cbb9-4972-adee-46996faf68f3
 geq_safe, threshold = get_threshold(tree, bounds, 1, m)
+
+# ╔═╡ bae11a44-67d8-4b6b-8d10-85b58e7fae63
+call() do
+	tree = deepcopy(tree)
+	leaf = get_leaf(tree, 0.5, 0.5)
+	
+	split!(leaf, axis, threshold)
+	
+	draw(tree, draw_bounds, color_dict=action_color_dict, 
+		aspectratio=:equal,
+		legend=:outertop,
+		size=(500,500))
+	leaf_count = length(Leaves(tree) |> collect)
+	plot!([], l=nothing, label="leaves: $leaf_count")
+end
 
 # ╔═╡ c53e43e9-dc81-4b74-b6bd-41f13791f488
 call() do
@@ -364,37 +387,8 @@ call() do
 	end
 end
 
-# ╔═╡ 648fb8ab-b156-4c75-b0e0-16c8c7f151ec
-md"""
-### `get_split`
-
-$(@doc get_split)
-"""
-
 # ╔═╡ 53cf3fc9-788c-4700-8b07-fe9118432c84
 proposed_split = get_split(tree, get_leaf(tree, 0.5, 0.5), m)
-
-# ╔═╡ bae11a44-67d8-4b6b-8d10-85b58e7fae63
-call() do
-	tree = deepcopy(tree)
-	leaf = get_leaf(tree, 0.5, 0.5)
-	
-	split!(leaf, axis, threshold)
-	
-	draw(tree, draw_bounds, color_dict=action_color_dict, 
-		aspectratio=:equal,
-		legend=:outertop,
-		size=(500,500))
-	leaf_count = length(Leaves(tree) |> collect)
-	plot!([], l=nothing, label="leaves: $leaf_count")
-end
-
-# ╔═╡ 9e807328-488f-4e86-ae53-71f39b2631a7
-md"""
-### `grow!`
-
-$(@doc grow!)
-"""
 
 # ╔═╡ 46f3eefe-15c7-4bae-acdb-54e485e4b5b7
 call() do
@@ -411,10 +405,8 @@ call() do
 	plot!([], l=nothing, label="leaves: $leaf_count")
 end
 
-# ╔═╡ 76f13f2a-82cb-4037-a097-394fb080bf84
-md"""
-# One Split at a Time -- Try it out!
-"""
+# ╔═╡ da493978-1444-4ec3-be36-4aa1c59170b5
+offset = get_spacing_sizes(SupportingPoints(samples_per_axis, bounds), dimensionality)
 
 # ╔═╡ 66af047f-a34f-484a-8608-8eaaed45b37d
 @bind reset_button Button("Reset")
@@ -439,9 +431,6 @@ end;
 
 # ╔═╡ 569efbf8-14da-47a3-b990-88cf223d4b82
 ["Leaf($(leaf.value))" for leaf in reactive_queue]
-
-# ╔═╡ 1fd077e6-1f9e-45bf-8b04-17e1e58afe80
-(@isdefined proposed_split2) ? proposed_split2 : nothing
 
 # ╔═╡ e21201c8-b043-4214-b8bc-9e7cc2dced6f
 begin
@@ -474,16 +463,16 @@ if try_splitting_button > 0 && reactive_leaf !== nothing
 		end
 		axis, threshold
 	end
-end;
+end; done_splitting = "Done Splitting";
 
 # ╔═╡ 7f394991-4673-4f32-8c4f-09225822ae95
 call() do
-	reset_button, try_splitting_button
+	reset_button, try_splitting_button, done_splitting
 	
 	draw(reactive_tree, draw_bounds, color_dict=action_color_dict, 
 		aspectratio=:equal,
 		legend=:outerright,
-		size=(550, 500))
+		lims=(draw_bounds.lower[1], draw_bounds.upper[1]))
 
 	if length(reactive_queue) > 0
 		bounds = get_bounds(reactive_queue[end], dimensionality)
@@ -500,6 +489,24 @@ call() do
 	leaf_count = Leaves(reactive_tree) |> collect |> length
 	plot!([], line=nothing, label="$leaf_count leaves")
 end
+
+# ╔═╡ 8b749715-66a2-4a48-9a78-0462869ea3d0
+md"""
+---
+end
+$br
+$br
+$br
+$br
+$br
+$br
+$br
+$br
+$br
+$br
+$br
+$br
+"""
 
 # ╔═╡ Cell order:
 # ╟─137adf90-a162-11ed-358b-6fc69c09feba
@@ -518,7 +525,6 @@ end
 # ╟─de7fe51c-0f75-49bb-bc6f-726a21bcd064
 # ╠═07ed71cc-a931-4785-9707-86aad883df30
 # ╟─b1276cfe-4018-4f49-8c43-3e4c622e93f3
-# ╠═dc54d6ad-c013-452c-a322-364fbcb2cfb0
 # ╠═1cb52b21-8d14-4e2e-ad63-788a56d6bcd2
 # ╟─9f9aed0a-66c3-4628-8e7f-cc59374383c9
 # ╠═a136ec18-5e84-489b-a13a-ff4ffbb1870d
@@ -530,12 +536,11 @@ end
 # ╟─f2e8855b-95b8-4fcf-bd47-85ec0fdb2a04
 # ╠═3c613061-1cd9-4b72-b419-6387c25da513
 # ╟─86e9b7f7-f1f5-4ba2-95d6-5e528b1c0ce6
-# ╠═9fa8dd4a-3ffc-4c19-858e-e6188e73175e
 # ╟─0840b06f-246a-4d62-bf07-2ab9a1cc1e26
 # ╠═50495f8a-e38f-4fdd-8c75-ca84fd9360c5
-# ╟─87e24687-5fc2-485a-ba01-41c10c10d395
 # ╟─e7609f1e-3d94-4e53-9620-dd62995cfc50
 # ╟─2d999c21-cbdd-4ca6-9866-6f763c91feba
+# ╟─b97cf160-79ab-4cf7-a321-31a86b3bccac
 # ╟─c8d182d8-537f-43d7-ab5f-1374219964e8
 # ╟─15b5d339-705e-4408-9629-2002117b8da7
 # ╠═a8a02260-61d8-4698-9b61-351adaf68f78
@@ -549,14 +554,15 @@ end
 # ╟─9e807328-488f-4e86-ae53-71f39b2631a7
 # ╟─46f3eefe-15c7-4bae-acdb-54e485e4b5b7
 # ╟─76f13f2a-82cb-4037-a097-394fb080bf84
+# ╟─87e24687-5fc2-485a-ba01-41c10c10d395
 # ╟─66af047f-a34f-484a-8608-8eaaed45b37d
 # ╟─447dc1e2-809a-4f71-b7f4-949ae2a0c4b6
 # ╟─1817421e-50b0-47b2-859d-e87aaf3064b0
-# ╟─569efbf8-14da-47a3-b990-88cf223d4b82
 # ╟─7fd058fa-20c2-4b7a-b32d-0a1f806b48ac
-# ╟─42d2f87e-ce8b-4928-9d00-b0aa70a18cb5
-# ╟─8cc5f9f3-263c-459f-ae78-f2c0e8487e86
-# ╟─1fd077e6-1f9e-45bf-8b04-17e1e58afe80
-# ╠═0a14602c-aa5e-460f-9ab3-9edd18234b5a
+# ╟─569efbf8-14da-47a3-b990-88cf223d4b82
 # ╟─e21201c8-b043-4214-b8bc-9e7cc2dced6f
-# ╠═7f394991-4673-4f32-8c4f-09225822ae95
+# ╠═42d2f87e-ce8b-4928-9d00-b0aa70a18cb5
+# ╠═0a14602c-aa5e-460f-9ab3-9edd18234b5a
+# ╟─7f394991-4673-4f32-8c4f-09225822ae95
+# ╟─8cc5f9f3-263c-459f-ae78-f2c0e8487e86
+# ╟─8b749715-66a2-4a48-9a78-0462869ea3d0
