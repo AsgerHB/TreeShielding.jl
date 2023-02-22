@@ -112,7 +112,7 @@ any_action, no_action = actions_to_int([hit, nohit]) , actions_to_int([])
 action_color_dict=Dict(
 	any_action => colorant"#ffffff", 
 	1 => colorant"#a1eaff", 
-	2 => colors.EMERALD,
+	2 => colors.AMETHYST,
 	no_action => colorant"#ff9178"
 )
 
@@ -322,7 +322,7 @@ initial_tree = call() do
 	tree = tree_from_bounds(outer_bounds)
 	inside = get_leaf(tree, 0, 0)
 
-	unsafe_states = Bounds((-1, 0), (1 + eps(), 1))
+	unsafe_states = Bounds((-1, 0), (1 + 0.001, 1))
 	replace_subtree!(inside, tree_from_bounds(unsafe_states))
 	set_safety!(tree, dimensionality, is_safe, any_action, no_action)
 end
@@ -330,16 +330,57 @@ end
 # ╔═╡ b8024843-e681-4dde-9af9-1254c0e0d732
 draw(initial_tree, outer_bounds, color_dict=action_color_dict)
 
-# ╔═╡ afd89bd1-347e-4792-8f3b-e5b372c649fe
+# ╔═╡ 454f91d1-3e42-4424-a594-3bc35528d4d8
 md"""
-# Synthesis --  Try it Out!
-
-Change the inputs and click the buttons to see how the parameters affect synthesis, one step at a time.
+# One Split at a Time -- Try it out!
 """
+
+# ╔═╡ baa640a5-7a21-483b-87a4-f112cfe48d2b
+@bind reset_button1 Button("Reset")
+
+# ╔═╡ 3e0e5c6f-e57c-41f2-9869-64f0e3bf2a8a
+begin
+	reset_button1
+	reactive_tree1 = deepcopy(initial_tree)
+end;
+
+# ╔═╡ 0c99bd95-0c3e-46b7-bd27-70ac8bb605cf
+begin
+	reset_button1
+	@bind refill_queue_button CounterButton("Refill Queue")
+end
+
+# ╔═╡ e293633b-81b9-4d82-8960-e4559f454905
+begin
+	refill_queue_button
+	reactive_queue = collect(Leaves(reactive_tree1))
+end;
+
+# ╔═╡ 24354fb4-c782-4634-81c8-d2572063a77e
+["Leaf($(leaf.value))" for leaf in reactive_queue]
+
+# ╔═╡ 08d82e7a-85bd-4e5c-bc27-32f521fbb1fc
+begin
+	reset_button1
+	@bind try_splitting_button CounterButton("Try Splitting")
+end
+
+# ╔═╡ c067c6df-2f1b-408d-aacd-104554038102
+begin
+	reset_button1, try_splitting_button
+	if length(reactive_queue) == 0
+		[push!(reactive_queue, leaf) for leaf in collect(Leaves(reactive_tree1))]
+	end
+	reactive_leaf = pop!(reactive_queue)
+	if length(reactive_queue) == 0
+		[push!(reactive_queue, leaf) for leaf in collect(Leaves(reactive_tree1))]
+	end
+	"Next: Leaf($(reactive_queue[end].value))"
+end
 
 # ╔═╡ 57be14bb-d748-4432-8608-106c44c38f83
 md"""
-
+### Set the parameters -- Try it Out
 Try setting a different number of samples per axis: 
 
 `samples_per_axis =` $(@bind samples_per_axis NumberField(3:30, default=3))
@@ -356,6 +397,52 @@ And configure min granularity. The value is set as the number of leading zeros t
 
 # ╔═╡ f878ebd6-b261-4151-8aae-521b6736b28a
 m = ShieldingModel(simulation_function, Action, dimensionality, samples_per_axis; min_granularity, margin, splitting_tolerance)
+
+# ╔═╡ 42b0bcee-b931-4bad-9b4b-268f6b3d260c
+if try_splitting_button > 0 && reactive_leaf !== nothing
+	call() do
+		axis, threshold = get_split(reactive_tree1, reactive_leaf, (@set m.verbose = true))
+		if threshold != nothing
+			split!(reactive_leaf, axis, threshold)
+		end
+		axis, threshold
+	end
+end; done_splitting = "Done Splitting";
+
+# ╔═╡ 573a7989-6a88-47b7-8d2b-17cc605b76ea
+call() do
+	reset_button1, try_splitting_button, done_splitting
+	
+	draw(reactive_tree1, outer_bounds, color_dict=action_color_dict,
+		legend=:outerright,
+		xlims=(outer_bounds.lower[1], outer_bounds.upper[1]),
+		ylims=(outer_bounds.lower[2], outer_bounds.upper[2]),
+	)
+
+	if length(reactive_queue) > 0
+		bounds = get_bounds(reactive_queue[end], dimensionality)
+		plot!(TreeShielding.rectangle(bounds ∩ outer_bounds), 
+			label="next in queue",
+			linewidth=4,
+			linecolor=colors.PETER_RIVER,
+			color=colors.CONCRETE,
+			fillalpha=0.3)
+
+		if bounded(bounds)
+			scatter_allowed_actions!(reactive_tree1::Tree, bounds, m)
+		end
+	end
+
+	leaf_count = Leaves(reactive_tree1) |> collect |> length
+	plot!([], line=nothing, label="$leaf_count leaves")
+end
+
+# ╔═╡ afd89bd1-347e-4792-8f3b-e5b372c649fe
+md"""
+# Synthesis --  Try it Out!
+
+Change the inputs and click the buttons to see how the parameters affect synthesis, one step at a time.
+"""
 
 # ╔═╡ fb359eb9-2ce4-466a-9de8-0a0d691f78b9
 m; @bind reset_button Button("Reset")
@@ -435,17 +522,25 @@ begin
 	
 	p1 = draw(reactive_tree, outer_bounds, 
 		color_dict=action_color_dict,
-		line=nothing)
+		#line=nothing
+	)
 	
 	plot!(legend=:outerright)
 
 	if show_supporting_points
 		p = (partition_x, partition_y)
-		scatter_allowed_actions!(reactive_tree, borked_bounds, (@set m.samples_per_axis = 8))
+		scatter_allowed_actions!(reactive_tree, borked_bounds,  m)
 		#scatter!(p, m=(4, :rtriangle, :white), msw=1, label=nothing, )
 	end
+
+	plot!(xlims=(borked_bounds.lower[1] - 0.5, borked_bounds.upper[1] + 0.5),
+	      ylims=(borked_bounds.lower[2] - 0.5, borked_bounds.upper[2] + 0.5),)
+	
 	plot!(xlabel="v", ylabel="p")
 end
+
+# ╔═╡ e0013651-12ed-4c81-ad05-2eb8f47a720c
+Leaves(reactive_tree) |> collect |> length
 
 # ╔═╡ 0837b974-a284-488d-9d6c-b21eb4a6aecf
 l = get_leaf(reactive_tree, 
@@ -466,6 +561,56 @@ TreeShielding.compute_safety(reactive_tree, SupportingPoints(m.samples_per_axis,
 
 # ╔═╡ 970c3bf6-36c3-4934-8b4a-704e76864143
 get_safety_bounds(reactive_tree, b, m)
+
+# ╔═╡ 24a8d389-0747-4c97-a410-f2afc065cd05
+call() do
+	tree = reactive_tree
+	bounds = b
+	
+	no_action = actions_to_int([])
+	dimensionality = get_dim(bounds)
+
+	min_safe = [Inf for _ in 1:dimensionality]
+	max_safe = [-Inf for _ in 1:dimensionality]
+	min_unsafe = [Inf for _ in 1:dimensionality]
+	max_unsafe = [-Inf for _ in 1:dimensionality]
+
+	for point in SupportingPoints(m.samples_per_axis, bounds)
+		safe = false
+
+		for action in m.action_space
+			point′ = m.simulation_function(point, action)
+			if get_value(tree, point′) != no_action
+				safe = true
+			end
+		end
+
+		if safe
+			for axis in 1:dimensionality
+				if min_safe[axis] > point[axis]
+					min_safe[axis] = point[axis]
+				end
+				if max_safe[axis] < point[axis]
+					max_safe[axis] = point[axis]
+				end
+			end
+		else
+			for axis in 1:dimensionality
+				if min_unsafe[axis] > point[axis]
+					min_unsafe[axis] = point[axis]
+				end
+				if max_unsafe[axis] < point[axis]
+					max_unsafe[axis] = point[axis]
+				end
+			end
+		end
+
+		@info point, safe
+	end
+
+	safe, unsafe = Bounds(min_safe, max_safe), Bounds(min_unsafe, max_unsafe)
+    return safe, unsafe
+end
 
 # ╔═╡ ec1628b6-9dd3-43a6-aa10-01f9743ce0ea
 go_clock; action_color_dict[l.value]
@@ -513,12 +658,13 @@ if finished_tree !== nothing
 end
 
 # ╔═╡ 629440a0-3ec7-4204-9f27-6575334aae3c
-begin
+if finished_tree !== nothing
 	finished_tree_buffer = IOBuffer()
 	robust_serialize(finished_tree_buffer, finished_tree)
 end
 
 # ╔═╡ b338748b-0801-474f-9a79-5d794e88d15c
+finished_tree !== nothing &&
 DownloadButton(finished_tree_buffer, "finished.tree")
 
 # ╔═╡ 60d28d01-7209-477f-b3db-97a5b96dc642
@@ -595,21 +741,33 @@ md"""
 # ╠═40b843de-e367-49d7-8a50-d2cefe4e3939
 # ╠═c8b40bd6-a8f3-42e8-bcbb-5bddd452dab0
 # ╠═b8024843-e681-4dde-9af9-1254c0e0d732
+# ╟─454f91d1-3e42-4424-a594-3bc35528d4d8
+# ╟─baa640a5-7a21-483b-87a4-f112cfe48d2b
+# ╟─3e0e5c6f-e57c-41f2-9869-64f0e3bf2a8a
+# ╟─0c99bd95-0c3e-46b7-bd27-70ac8bb605cf
+# ╟─e293633b-81b9-4d82-8960-e4559f454905
+# ╟─24354fb4-c782-4634-81c8-d2572063a77e
+# ╟─08d82e7a-85bd-4e5c-bc27-32f521fbb1fc
+# ╟─c067c6df-2f1b-408d-aacd-104554038102
+# ╟─573a7989-6a88-47b7-8d2b-17cc605b76ea
+# ╟─57be14bb-d748-4432-8608-106c44c38f83
+# ╟─42b0bcee-b931-4bad-9b4b-268f6b3d260c
 # ╟─afd89bd1-347e-4792-8f3b-e5b372c649fe
 # ╟─fb359eb9-2ce4-466a-9de8-0a0d691f78b9
 # ╟─142d1db7-183e-45a5-b219-30120ffe437b
-# ╟─57be14bb-d748-4432-8608-106c44c38f83
 # ╟─129fbdb0-88a5-4f3d-82e0-56df43c7a46c
 # ╟─e7fbb9bb-63b5-4f6a-bb27-7ea1613d6740
 # ╟─0e18b756-f8a9-4821-8b85-30c908f7e3af
 # ╠═cd190e4a-9e48-4e6a-8058-1bcb105d9c0b
 # ╠═165ba9e0-7409-4f5d-b10b-4223fe589ac6
+# ╠═e0013651-12ed-4c81-ad05-2eb8f47a720c
 # ╠═0837b974-a284-488d-9d6c-b21eb4a6aecf
 # ╠═7f560461-bfc7-4419-8a27-670b09830052
 # ╠═f3edc169-94ff-4560-874c-05aab6f8782c
 # ╠═f204e821-45d4-4518-8cd6-4a6ab3963460
 # ╠═970c3bf6-36c3-4934-8b4a-704e76864143
 # ╠═ef651fce-cdca-4ca1-9f08-e94fd25df4a4
+# ╠═24a8d389-0747-4c97-a410-f2afc065cd05
 # ╠═ec1628b6-9dd3-43a6-aa10-01f9743ce0ea
 # ╟─0039a51e-26ed-4ad2-aeda-117436295ca1
 # ╠═47e04910-d9e9-430f-8cec-bfd584c991e2
