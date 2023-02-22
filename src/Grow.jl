@@ -84,12 +84,55 @@ function get_safety_bounds(tree, bounds, m::ShieldingModel)
     return safe, unsafe
 end
 
-function get_dividing_bounds(tree::Tree, bounds::Bounds, axis, direction::Direction, m::ShieldingModel)
-	safe, unsafe = get_safety_bounds(tree, bounds, m)
+function get_equivalence_bounds(tree, bounds, m::ShieldingModel)
+
+	no_action = actions_to_int([])
+	dimensionality = get_dim(bounds)
+
+	min_safe = Dict(a => [Inf for _ in 1:dimensionality] for a in m.action_space)
+	max_safe = Dict(a => [-Inf for _ in 1:dimensionality] for a in m.action_space)
+	min_unsafe = Dict(a => [Inf for _ in 1:dimensionality] for a in m.action_space)
+	max_unsafe = Dict(a => [-Inf for _ in 1:dimensionality] for a in m.action_space)
+
+	for point in SupportingPoints(m.samples_per_axis, bounds)
+		
+		for action in m.action_space
+			point′ = m.simulation_function(point, action)
+			safe = get_value(tree, point′) != no_action
+
+			if safe
+				for axis in 1:dimensionality
+					if min_safe[action][axis] > point[axis]
+						min_safe[action][axis] = point[axis]
+					end
+					if max_safe[action][axis] < point[axis]
+						max_safe[action][axis] = point[axis]
+					end
+				end
+			else
+				for axis in 1:dimensionality
+					if min_unsafe[action][axis] > point[axis]
+						min_unsafe[action][axis] = point[axis]
+					end
+					if max_unsafe[action][axis] < point[axis]
+						max_unsafe[action][axis] = point[axis]
+					end
+				end
+			end
+		end
+	end
+
+	safe = Dict(a => Bounds(min_safe[a], max_safe[a]) for a in m.action_space)
+	unsafe = Dict(a => Bounds(min_unsafe[a], max_unsafe[a]) for a in m.action_space)
+    return safe, unsafe
+end
+
+function get_dividing_bounds(tree::Tree, bounds::Bounds, axis, action, direction::Direction, m::ShieldingModel)
+	safe, unsafe = get_equivalence_bounds(tree, bounds, m)
 	
-	m.verbose && @info @sprintf "safe:   ]%-+0.05f; %-+0.05f] \nunsafe: ]%-+0.05f; %-+0.05f]" safe.lower[axis] safe.upper[axis] unsafe.lower[axis] unsafe.upper[axis]
-	if !bounded(safe) || !bounded(unsafe)
-		m.verbose && @info "No dividing_bounds exist for this partition."
+	m.verbose && @info @sprintf "action: %s\nsafe:   ]%-+0.05f; %-+0.05f] \nunsafe: ]%-+0.05f; %-+0.05f]" "$action" safe[action].lower[axis] safe[action].upper[axis] unsafe[action].lower[axis] unsafe[action].upper[axis]
+	if !bounded(safe[action]) || !bounded(unsafe[action])
+		m.verbose && @info "No dividing_bounds exist for $action."
 		return nothing
 	end
 
@@ -101,33 +144,34 @@ function get_dividing_bounds(tree::Tree, bounds::Bounds, axis, direction::Direct
 	dividing_bounds = deepcopy(bounds)
 	
 	if direction == safe_below_threshold && 
-		(unsafe.lower[axis]  - offset[axis] > safe.lower[axis] ||
-		 unsafe.lower[axis]  - offset[axis] ≈ safe.lower[axis])
+		(unsafe[action].lower[axis]  - offset[axis] > safe[action].lower[axis] ||
+		unsafe[action].lower[axis]  - offset[axis] ≈ safe[action].lower[axis])
 		
-		threshold = unsafe.lower[axis] - offset[axis]
+		threshold = unsafe[action].lower[axis] - offset[axis]
 		gt_is_safe = false
 		
 		dividing_bounds.lower[axis] = threshold
 		dividing_bounds.upper[axis] = threshold + offset[axis]
 		
 	elseif direction == safe_above_threshold &&
-		(unsafe.upper[axis]  + offset[axis] < safe.upper[axis] ||
-		 unsafe.upper[axis]  + offset[axis] ≈ safe.upper[axis])
+		(unsafe[action].upper[axis]  + offset[axis] < safe[action].upper[axis] ||
+		unsafe[action].upper[axis]  + offset[axis] ≈ safe[action].upper[axis])
 		
-		threshold = unsafe.upper[axis] + offset[axis]
+		threshold = unsafe[action].upper[axis] + offset[axis]
 		gt_is_safe = true
 		
 		dividing_bounds.lower[axis] = threshold - offset[axis]
 		dividing_bounds.upper[axis] = threshold
 	else
+		m.verbose && @info "No dividing_bounds exist for $action."
 		return nothing
 	end
 
 	return dividing_bounds
 end
 
-function get_threshold(tree::Tree, bounds::Bounds, axis, direction::Direction, m::ShieldingModel)
-	dividing_bounds = get_dividing_bounds(tree, bounds, axis, direction, m)
+function get_threshold(tree::Tree, bounds::Bounds, axis, action, direction::Direction, m::ShieldingModel)
+	dividing_bounds = get_dividing_bounds(tree, bounds, axis, action, direction, m)
 
 	if dividing_bounds === nothing
 		m.verbose && @info "Skipping split at axis $axis since no dividing bounds were found."
@@ -139,7 +183,7 @@ function get_threshold(tree::Tree, bounds::Bounds, axis, direction::Direction, m
 	while dividing_bounds.upper[axis] - dividing_bounds.lower[axis] > m.splitting_tolerance
 		(iterations += 1) >= 100 &&	(@warn "Maximum iterations exceeded while refining threshold"; break)
 		
-		dividing_bounds = get_dividing_bounds(tree, dividing_bounds, axis, direction, m)
+		dividing_bounds = get_dividing_bounds(tree, dividing_bounds, axis, action, direction, m)
 	end
 
 	m.verbose && @info "Found dividing bounds $dividing_bounds for axis $axis in $iterations iterations"
@@ -214,10 +258,13 @@ function get_split(root::Tree, leaf::Leaf, m::ShieldingModel)
 			m.verbose && @info "Already split down to min_granularity"
 			continue
 		end
-		for direction in instances(Direction)
-			threshold = get_threshold(root, bounds, axis, direction, m)
-			if threshold !== nothing
-				@goto break_outer # Break out of both for-loops
+		for action in m.action_space
+			for direction in instances(Direction)
+				m.verbose && @info "Trying direction $direction"
+				threshold = get_threshold(root, bounds, axis, action, direction, m)
+				if threshold !== nothing
+					@goto break_outer # Break out of both for-loops
+				end
 			end
 		end
 	end

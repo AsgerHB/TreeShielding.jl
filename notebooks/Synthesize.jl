@@ -141,7 +141,7 @@ This corresponds to the below safety property. It is defined both for a single `
 """
 
 # ╔═╡ 4f33f9a0-9a7a-426b-8022-43a87bb3d188
-earliest = 0.2
+earliest = 0.3
 
 # ╔═╡ 957a7a75-0ac0-4c2e-9359-f9ad915e88be
 begin
@@ -178,9 +178,10 @@ begin
 	
 	x_min, y_min = rwmechanics.x_min, rwmechanics.t_min
 	x_max, y_max = rwmechanics.x_max, rwmechanics.t_max
-	split!(get_leaf(initial_tree, x_min - 1, y_max), 2, y_max)
-	split!(get_leaf(initial_tree, x_max + 1, y_max), 2, y_max)
-	split!(get_leaf(initial_tree, x_max + 1, y_max/2), 2, earliest)
+	split!(get_leaf(initial_tree, x_min - 0.1, y_max), 2, y_max)
+	split!(get_leaf(initial_tree, x_max + 0.1, y_max), 2, y_max)
+	split!(get_leaf(initial_tree, x_max + 0.1, y_max - 0.1), 2, earliest)
+	split!(get_leaf(initial_tree, x_max - 0.1, y_max - 0.1), 2, (x_max - x_min)/2)
 end
 
 # ╔═╡ 7c4dba76-5ce9-4db7-b5d5-421c5ef981d3

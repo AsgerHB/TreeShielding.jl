@@ -214,140 +214,8 @@ Get ready to read some cursed code.
 # ╔═╡ a8a02260-61d8-4698-9b61-351adaf68f78
 bounds = get_bounds(get_leaf(tree, 0.5, 0.5), dimensionality)
 
-# ╔═╡ 0840b06f-246a-4d62-bf07-2ab9a1cc1e26
-md"""
-### `get_safety_bounds`
-
-$(@doc get_safety_bounds)
-"""
-
-# ╔═╡ 87e24687-5fc2-485a-ba01-41c10c10d395
-md"""
-### Parameters -- Try it Out!
-!!! info "Tip"
-	This cell controls multiple figures. Move it around to gain a better view.
-
-Try setting a different number of samples per axis: 
-
-`samples_per_axis =` $(@bind samples_per_axis NumberField(3:30, default=16))
-
-`min_granularity =` $(@bind min_granularity NumberField(0:1E-15:1, default=1E-5))
-
-`margin =` $(@bind margin NumberField(0:0.001:1, default=0.02))
-
-`splitting_tolerance =` $(@bind splitting_tolerance NumberField(0:1E-10:1, default=1E-5))
-"""
-
-# ╔═╡ 3c613061-1cd9-4b72-b419-6387c25da513
-m = ShieldingModel(simulation_function, Pace, dimensionality, samples_per_axis; min_granularity, margin, splitting_tolerance)
-
-# ╔═╡ 50495f8a-e38f-4fdd-8c75-ca84fd9360c5
-bounds_safe, bounds_unsafe = 
-	get_safety_bounds(tree, bounds, m)
-
-# ╔═╡ 14fd4f19-2ef9-403a-8020-63f11f294267
-call() do
-	leaf = get_leaf(tree, 0.5, 0.5)
-	bounds = get_bounds(leaf, dimensionality)
-	p1 = draw(tree, draw_bounds, color_dict=action_color_dict,legend=:outerright)
-	plot!(size=(800,600))
-
-	plot!(TreeShielding.rectangle(bounds_safe), 
-		label="safe", 
-		fill=nothing, 
-		lw=6,
-		lc=colors.WET_ASPHALT)
-
-	plot!(TreeShielding.rectangle(bounds_unsafe), 
-		label="unsafe", 
-		fill=nothing, 
-		lw=4,
-		ls=:dot,
-		lc=colors.WET_ASPHALT)
-
-	scatter_allowed_actions!(tree, bounds, m)
-end
-
 # ╔═╡ 826ed80a-bdad-4a38-a50b-cb5bec6216c0
-@doc get_equivalence_bounds
-
-# ╔═╡ eee1ca51-9b3c-4e96-a68e-b1943234ec09
-function get_equivalence_bounds(tree, bounds, m::ShieldingModel)
-
-	no_action = actions_to_int([])
-	dimensionality = get_dim(bounds)
-
-	min_safe = Dict(a => [Inf for _ in 1:dimensionality] for a in m.action_space)
-	max_safe = Dict(a => [-Inf for _ in 1:dimensionality] for a in m.action_space)
-	min_unsafe = Dict(a => [Inf for _ in 1:dimensionality] for a in m.action_space)
-	max_unsafe = Dict(a => [-Inf for _ in 1:dimensionality] for a in m.action_space)
-
-	for point in SupportingPoints(m.samples_per_axis, bounds)
-		safe = false
-
-		for action in m.action_space
-			point′ = m.simulation_function(point, action)
-			if get_value(tree, point′) != no_action
-				safe = true
-			end
-
-			if safe
-				for axis in 1:dimensionality
-					if min_safe[action][axis] > point[axis]
-						min_safe[action][axis] = point[axis]
-					end
-					if max_safe[action][axis] < point[axis]
-						max_safe[action][axis] = point[axis]
-					end
-				end
-			else
-				for axis in 1:dimensionality
-					if min_unsafe[action][axis] > point[axis]
-						min_unsafe[action][axis] = point[axis]
-					end
-					if max_unsafe[action][axis] < point[axis]
-						max_unsafe[action][axis] = point[axis]
-					end
-				end
-			end
-		end
-	end
-
-	safe = Dict(a => Bounds(min_safe[a], max_safe[a]) for a in m.action_space)
-	unsafe = Dict(a => Bounds(min_unsafe[a], max_unsafe[a]) for a in m.action_space)
-    return safe, unsafe
-end
-
-# ╔═╡ 0197dfd6-e689-4aad-8af0-a0cbfa48dfa7
-bounds_actions_safe, bounds_actions_unsafe = 
-	get_equivalence_bounds(tree, bounds, m)
-
-# ╔═╡ e7609f1e-3d94-4e53-9620-dd62995cfc50
-call() do
-	leaf = get_leaf(tree, 0.5, 0.5)
-	bounds = get_bounds(leaf, dimensionality)
-	p1 = draw(tree, draw_bounds, color_dict=action_color_dict,legend=:outerright)
-	plot!(size=(800,600))
-
-	for (a, c) in [(RW.slow, colors.NEPHRITIS), (RW.fast, colors.SUNFLOWER)]
-		plot!(TreeShielding.rectangle(bounds_actions_safe[a]), 
-			label="$a safe", 
-			fill=nothing, 
-			lw=6,
-			lc=c)
-	end
-	
-	for (a, c) in [(RW.slow, colors.NEPHRITIS), (RW.fast, colors.SUNFLOWER)]
-		plot!(TreeShielding.rectangle(bounds_actions_unsafe[a]), 
-			label="$a unsafe", 
-			fill=nothing, 
-			lw=4,
-			ls=:dot,
-			lc=c)
-	end
-	
-	scatter_allowed_actions!(tree, bounds, m)
-end
+@doc TreeShielding.get_equivalence_bounds
 
 # ╔═╡ 2d999c21-cbdd-4ca6-9866-6f763c91feba
 md"""
@@ -363,6 +231,87 @@ Also it is possible to control the number of refinement steps in the figures.
 `refinement_steps =` $(@bind refinement_steps NumberField(0:9, default=3))
 """
 
+# ╔═╡ 15b5d339-705e-4408-9629-2002117b8da7
+md"""
+### `get_threshold`
+
+$(@doc get_threshold)
+"""
+
+# ╔═╡ 3621e6d2-cfac-43d4-8622-4f99eb4d4090
+md"""
+And note there is no threshold where all points below it are safe.
+"""
+
+# ╔═╡ 648fb8ab-b156-4c75-b0e0-16c8c7f151ec
+md"""
+### `get_split`
+
+$(@doc get_split)
+"""
+
+# ╔═╡ 9e807328-488f-4e86-ae53-71f39b2631a7
+md"""
+### `grow!`
+
+$(@doc grow!)
+"""
+
+# ╔═╡ 76f13f2a-82cb-4037-a097-394fb080bf84
+md"""
+# One Split at a Time -- Try it out!
+"""
+
+# ╔═╡ 87e24687-5fc2-485a-ba01-41c10c10d395
+md"""
+### Parameters -- Try it Out!
+!!! info "Tip"
+	This cell controls multiple figures. Move it around to gain a better view.
+
+Try setting a different number of samples per axis: 
+
+`samples_per_axis =` $(@bind samples_per_axis NumberField(3:30, default=16))
+
+`min_granularity =` $(@bind min_granularity NumberField(0:1E-15:1, default=1E-5))
+
+`margin =` $(@bind margin NumberField(0:0.001:1, default=0.00))
+
+`splitting_tolerance =` $(@bind splitting_tolerance NumberField(0:1E-10:1, default=1E-5))
+"""
+
+# ╔═╡ 3c613061-1cd9-4b72-b419-6387c25da513
+m = ShieldingModel(simulation_function, Pace, dimensionality, samples_per_axis; min_granularity, margin, splitting_tolerance)
+
+# ╔═╡ 0197dfd6-e689-4aad-8af0-a0cbfa48dfa7
+safe, unsafe = TreeShielding.get_equivalence_bounds(tree, bounds, m)
+
+# ╔═╡ e7609f1e-3d94-4e53-9620-dd62995cfc50
+call() do
+	leaf = get_leaf(tree, 0.5, 0.5)
+	bounds = get_bounds(leaf, dimensionality)
+	p1 = draw(tree, draw_bounds, color_dict=action_color_dict,legend=:outerright)
+	plot!(size=(800,600))
+
+	for (a, c) in [(RW.slow, colors.NEPHRITIS), (RW.fast, colors.SUNFLOWER)]
+		plot!(TreeShielding.rectangle(safe[a]), 
+			label="$a safe", 
+			fill=nothing, 
+			lw=6,
+			lc=c)
+	end
+	
+	for (a, c) in [(RW.slow, colors.NEPHRITIS), (RW.fast, colors.SUNFLOWER)]
+		plot!(TreeShielding.rectangle(unsafe[a]), 
+			label="$a unsafe", 
+			fill=nothing, 
+			lw=4,
+			ls=:dot,
+			lc=c)
+	end
+	
+	scatter_allowed_actions!(tree, bounds, m)
+end
+
 # ╔═╡ c8d182d8-537f-43d7-ab5f-1374219964e8
 call() do
 	axis = 1
@@ -376,43 +325,25 @@ call() do
 	dividing_bounds = bounds
 	for i in 0:refinement_steps
 		dividing_bounds = 
-			get_dividing_bounds(tree, dividing_bounds, axis, safe_above_threshold, m)
+			get_dividing_bounds(tree, dividing_bounds, axis, RW.fast, safe_above_threshold, m)
 	
 		plot!(TreeShielding.rectangle(dividing_bounds), lw=0, alpha=0.3, label="$i refinements")
 	end
 	p1
 end
 
-# ╔═╡ 15b5d339-705e-4408-9629-2002117b8da7
-md"""
-### `get_threshold`
-
-$(@doc get_threshold)
-"""
-
-# ╔═╡ da493978-1444-4ec3-be36-4aa1c59170b5
-offset = get_spacing_sizes(SupportingPoints(samples_per_axis, bounds), dimensionality)
-
-# ╔═╡ 3e8defcb-c420-46a8-8abc-78ab228abef6
-@bind axis NumberField(1:m.dimensionality)
-
 # ╔═╡ 2a382ef9-700a-4350-9a95-ff7f1a8f6f22
 md"""
-For the **first** axis, find a threshold such that all points **above** it are safe.
+For the first axis, (`axis=1`) and the *fast* action, (action=`RW.fast`) find a threshold such that all points above it (`direction=safe_above_threshold`) are safe.
 
 There exists an exact threshold, but we approximate it to within `m.splitting_tolerance =` $(m.splitting_tolerance)
 """
 
 # ╔═╡ 3e6a861b-cbb9-4972-adee-46996faf68f3
-threshold = get_threshold(tree, bounds, 1, safe_above_threshold, m)
-
-# ╔═╡ 3621e6d2-cfac-43d4-8622-4f99eb4d4090
-md"""
-And note there is no threshold where all points below it are safe.
-"""
+threshold = get_threshold(tree, bounds, 1, RW.fast, safe_above_threshold, m)
 
 # ╔═╡ bafe51aa-d791-4d36-939b-159a062a2dd4
-get_threshold(tree, bounds, 1, safe_below_threshold, m)
+get_threshold(tree, bounds, 1, RW.fast, safe_below_threshold, m)
 
 # ╔═╡ c53e43e9-dc81-4b74-b6bd-41f13791f488
 call() do
@@ -422,29 +353,13 @@ call() do
 	plot!(size=(800,600))
 	draw_support_points!(tree, (0.5, 0.5), RW.fast, m)
 
-	if threshold === nothing 
-		return p1
-	end
 	dividing_bounds = bounds
-	if axis == 1
-		vline!([threshold], 
-			line=(:dot, 5), 
-			label="threshold", 
-			color=colors.WET_ASPHALT)
-	else
-		hline!([threshold], 
-			line=(:dot, 5), 
-			label="threshold", 
-			color=colors.WET_ASPHALT)
-	end
+	vline!([threshold], 
+		line=(:dot, 5), 
+		label="threshold", 
+		color=colors.WET_ASPHALT)
+
 end
-
-# ╔═╡ 648fb8ab-b156-4c75-b0e0-16c8c7f151ec
-md"""
-### `get_split`
-
-$(@doc get_split)
-"""
 
 # ╔═╡ 53cf3fc9-788c-4700-8b07-fe9118432c84
 proposed_split = get_split(tree, get_leaf(tree, 0.5, 0.5), m)
@@ -453,6 +368,7 @@ proposed_split = get_split(tree, get_leaf(tree, 0.5, 0.5), m)
 call() do
 	tree = deepcopy(tree)
 	leaf = get_leaf(tree, 0.5, 0.5)
+	axis, threshold = proposed_split
 	
 	split!(leaf, axis, threshold)
 	
@@ -463,13 +379,6 @@ call() do
 	leaf_count = length(Leaves(tree) |> collect)
 	plot!([], l=nothing, label="leaves: $leaf_count")
 end
-
-# ╔═╡ 9e807328-488f-4e86-ae53-71f39b2631a7
-md"""
-### `grow!`
-
-$(@doc grow!)
-"""
 
 # ╔═╡ 46f3eefe-15c7-4bae-acdb-54e485e4b5b7
 call() do
@@ -483,13 +392,13 @@ call() do
 		legend=:outertop,
 		size=(500,500))
 	leaf_count = length(Leaves(tree) |> collect)
+
+	scatter_allowed_actions!(tree, bounds, m)
 	plot!([], l=nothing, label="leaves: $leaf_count")
 end
 
-# ╔═╡ 76f13f2a-82cb-4037-a097-394fb080bf84
-md"""
-# One Split at a Time -- Try it out!
-"""
+# ╔═╡ da493978-1444-4ec3-be36-4aa1c59170b5
+offset = get_spacing_sizes(SupportingPoints(samples_per_axis, bounds), dimensionality)
 
 # ╔═╡ 66af047f-a34f-484a-8608-8eaaed45b37d
 @bind reset_button Button("Reset")
@@ -619,31 +528,26 @@ $br
 # ╠═3c613061-1cd9-4b72-b419-6387c25da513
 # ╟─86e9b7f7-f1f5-4ba2-95d6-5e528b1c0ce6
 # ╠═a8a02260-61d8-4698-9b61-351adaf68f78
-# ╟─0840b06f-246a-4d62-bf07-2ab9a1cc1e26
-# ╠═50495f8a-e38f-4fdd-8c75-ca84fd9360c5
-# ╟─87e24687-5fc2-485a-ba01-41c10c10d395
-# ╟─14fd4f19-2ef9-403a-8020-63f11f294267
 # ╠═826ed80a-bdad-4a38-a50b-cb5bec6216c0
 # ╠═0197dfd6-e689-4aad-8af0-a0cbfa48dfa7
 # ╟─e7609f1e-3d94-4e53-9620-dd62995cfc50
-# ╠═eee1ca51-9b3c-4e96-a68e-b1943234ec09
 # ╟─2d999c21-cbdd-4ca6-9866-6f763c91feba
 # ╟─b97cf160-79ab-4cf7-a321-31a86b3bccac
 # ╠═c8d182d8-537f-43d7-ab5f-1374219964e8
 # ╟─15b5d339-705e-4408-9629-2002117b8da7
 # ╠═da493978-1444-4ec3-be36-4aa1c59170b5
-# ╠═3e8defcb-c420-46a8-8abc-78ab228abef6
 # ╟─2a382ef9-700a-4350-9a95-ff7f1a8f6f22
 # ╠═3e6a861b-cbb9-4972-adee-46996faf68f3
 # ╟─3621e6d2-cfac-43d4-8622-4f99eb4d4090
 # ╠═bafe51aa-d791-4d36-939b-159a062a2dd4
-# ╠═c53e43e9-dc81-4b74-b6bd-41f13791f488
+# ╟─c53e43e9-dc81-4b74-b6bd-41f13791f488
 # ╟─648fb8ab-b156-4c75-b0e0-16c8c7f151ec
 # ╠═53cf3fc9-788c-4700-8b07-fe9118432c84
 # ╠═bae11a44-67d8-4b6b-8d10-85b58e7fae63
 # ╟─9e807328-488f-4e86-ae53-71f39b2631a7
 # ╟─46f3eefe-15c7-4bae-acdb-54e485e4b5b7
 # ╟─76f13f2a-82cb-4037-a097-394fb080bf84
+# ╟─87e24687-5fc2-485a-ba01-41c10c10d395
 # ╟─66af047f-a34f-484a-8608-8eaaed45b37d
 # ╟─447dc1e2-809a-4f71-b7f4-949ae2a0c4b6
 # ╟─1817421e-50b0-47b2-859d-e87aaf3064b0

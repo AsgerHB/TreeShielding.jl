@@ -33,37 +33,4 @@ function synthesize!(tree::Tree, m::ShieldingModel)
     end
 
     m.verbose && @info "Safe strategy synthesised. Making more permissive."
-
-    make_permissive!(tree, m)
-end
-
-function make_permissive!(tree::Tree, m)
-
-    # For every action in turn, grow the tree assuming it is not available.
-    # This seperates the safe partitions into the ones where this action is required,
-    # and where more actions are allowed.
-    for action in m.action_space
-        action_space′ = filter(a -> a != action, m.action_space)
-
-        m′ = ShieldingModel(m.simulation_function,
-            action_space′,
-            m.dimensionality,
-            m.samples_per_axis,
-            min_granularity=m.min_granularity,
-            max_iterations=m.max_iterations,
-            margin=m.margin)
-
-        grown_to = grow!(tree, m′)
-
-            m.verbose && @info "Grown to $grown_to leaves"
-    end
-        
-    # One last update
-    updates = update!(tree, m)
-
-    m.verbose && @info "Updated $updates leaves"
-        
-    pruned_to = prune!(tree)
-
-    m.verbose && @info "Pruned to $pruned_to leaves"
 end
