@@ -34,7 +34,7 @@ end
 # ╔═╡ 8377c2de-6078-463a-911d-29d1dd0e4138
 begin
 	@revise using TreeShielding
-	using TreeShielding.RW
+	using TreeShielding.BB
 end
 
 # ╔═╡ 82e532dd-8ec1-458f-b4d6-59cea44dc2b6
@@ -85,9 +85,6 @@ end
 # ╔═╡ 56f10aa2-c768-4936-9a70-76d6b0ec21a1
 call(f) = f()
 
-# ╔═╡ 39cd11b7-2428-47ae-b8ec-90459bb03636
-dimensionality = 2
-
 # ╔═╡ 1feb5107-1587-495d-8024-160f9cc68447
 md"""
 # The ShieldingModel
@@ -95,18 +92,8 @@ md"""
 Everything is rolled up into a convenient little ball that is easy to toss around between functions. This ball is called `ShieldingModel`
 """
 
-# ╔═╡ 3cdda0dd-59f8-4d6f-b37a-cdc923b242c0
-md"""
-## Bouncing Ball Functions
-
-The ball it bounce.
-"""
-
-# ╔═╡ 3167e418-c88c-45ba-aea9-710ba48a7c97
-@enum Action hit nohit
-
-# ╔═╡ 31b93679-82d4-49e5-b47b-45873e4f8452
-any_action, no_action = actions_to_int([hit, nohit]) , actions_to_int([])
+# ╔═╡ 4f55da12-5f81-484f-970a-691336e6e58f
+no_action, any_action = actions_to_int([]), actions_to_int(instances(Action))
 
 # ╔═╡ 3bf7051c-a644-427b-bbba-14a69d98f4f5
 action_color_dict=Dict(
@@ -116,156 +103,15 @@ action_color_dict=Dict(
 	no_action => colorant"#ff9178"
 )
 
-# ╔═╡ 9590d625-ad3d-480a-ab1d-a27133457163
-function simulate_point(mechanics, v, p, action; min_v_on_impact=1, unlucky=false)
-	t_hit, g, β1, ϵ1, β2, ϵ2, v_hit, p_hit  = mechanics
-    v0, p0 = v, p
-    
-    if action == hit && p >= p_hit # Hitting the ball changes the velocity
-        if v < 0
-            v0 = min(v, v_hit)
-        else
-			if unlucky
-            	v0 = -(β2 - ϵ2)*v + v_hit
-			else
-				v0 = -rand(β2 - ϵ2:0.01:β2 + ϵ2)*v + v_hit
-			end
-        end
-    end
-    
-    new_v = g * t_hit + v0
-    new_p = 0.5 * g * t_hit^2 + v0*t_hit + p0
-    
-    if new_p <= 0 # It went through the floor, meaning that a bounce occurs
-        t_impact = (-v0 - sqrt(v0^2 - 2*g*p0))/g 
-        t_remaining = t_hit - t_impact      # Time left this timestep after bounce occurs
-        new_v = g * t_impact + v0        # Gravity pull before impact
-		# Impact
-		if unlucky
-        	new_v = -(β1 - ϵ1)*new_v
-		else
-        	new_v = -rand(β1 - ϵ1:0.01:β1 + ϵ1)*new_v 
-		end
-		new_p = 0
+# ╔═╡ 39cd11b7-2428-47ae-b8ec-90459bb03636
+dimensionality = 2
 
-		mechanics′ = (t_hit=t_remaining, g, β1, ϵ1, β2, ϵ2, v_hit, p_hit)
-		if new_v >= min_v_on_impact
-	        new_v, new_p = simulate_point(mechanics′, new_v, new_p, action, min_v_on_impact=min_v_on_impact, unlucky=unlucky)
-		else
-			new_v, new_p = 0, 0
-		end
-    end
-    
-    new_v, new_p
-end
+# ╔═╡ 3cdda0dd-59f8-4d6f-b37a-cdc923b242c0
+md"""
+## Bouncing Ball Functions
 
-# ╔═╡ 8329227c-cbb8-4114-9215-445d604d4a20
-function simulate_sequence(mechanics, v0, p0, 
-						   policy, duration; 
-						   unlucky=false, 
-						   min_v_on_impact=1)
-	t_hit, g, β1, ϵ1, β2, ϵ2, v_hit, p_hit  = mechanics
-    velocities::Vector{Real}, positions::Vector{Real}, times = [v0], [p0], [0.0]
-    v, p, t = v0, p0, 0
-    while times[end] <= duration - t_hit
-        action = policy(v, p)
-        v, p = simulate_point(mechanics, v, p, action, 
-								unlucky=unlucky,
-								min_v_on_impact=min_v_on_impact)
-		t += t_hit
-        push!(velocities, v)
-        push!(positions, p)
-        push!(times, t)
-    end
-    velocities, positions, times
-end
-
-# ╔═╡ 1b3f5644-d382-4e61-b3c0-41e0797a0f18
-function evaluate(mechanics, policy, duration;
-		unlucky=false,
-		runs=1000,
-		cost_hit=1)
-	t_hit, g, β1, ϵ1, β2, ϵ2, v_hit, p_hit  = mechanics
-	costs = []
-	for run in 1:runs
-		v, p = 0, rand(7:10)
-		cost = 0
-		for i in 1:ceil(duration/t_hit)
-			action = policy(v, p)
-			cost += action == "hit" ? 1 : 0
-			v, p = simulate_point(mechanics, v, p, action, unlucky=unlucky)
-		end
-		push!(costs, cost)
-	end
-	sum(costs)/runs
-end
-
-# ╔═╡ aab5def9-ff39-422b-af11-c3064a5af9c2
-function check_safety(mechanics, policy, duration;
-		runs=1000)
-	t_hit, g, β1, ϵ1, β2, ϵ2, v_hit, p_hit  = mechanics
-	deaths = 0
-	for run in 1:runs
-		v, p = 0, rand(7:10)
-		for i in 1:ceil(duration/t_hit)
-			action = policy(v, p)
-			v, p = simulate_point(mechanics, v, p, action)
-		end
-		if v == 0 && p == 0
-			deaths += 1
-		end
-	end
-	deaths
-end
-
-# ╔═╡ ef1f2639-617f-4811-8c20-4ebff79f7513
-function animate_trace(vs, ps, ts; fps=10, plotargs...)
-	
-	pmax = maximum(ps)
-	tmax = maximum(ts)
-	vmin = minimum(vs)
-	vmax = maximum(vs)
-	layout = 2
-	animation = @animate for (i, _) in enumerate(ts)
-		p1 = plot(vs[1:i], ps[1:i],
-				  xlims=(vmin, vmax), 
-				  ylims=(0, pmax),
-				  xlabel="v",
-				  ylabel="p",
-				  color=colors.WET_ASPHALT,
-			  	  linewidth=2,
-			  	  markersize=2,
-			  	  markeralpha=1,
-			  	  markershape=:circle)
-		hline!([ps[i]], color=colors.NEPHRITIS)
-		p2 = plot(ts[1:i], ps[1:i],
-				  xlims=(0, tmax), 
-				  ylims=(0, pmax),
-				  xlabel="t",
-				  ylabel="p",
-				  color=colors.WET_ASPHALT,
-			  	  linewidth=2,
-			  	  markersize=2,
-			  	  markeralpha=1,
-			  	  markershape=:circle)
-		hline!([ps[i]], color=colors.NEPHRITIS)
-		plot(p1, p2, 
-			layout=layout, 
-			size=(800, 400), 
-			legend=nothing
-			;plotargs...)
-	end
-	
-	gif(animation, joinpath(tempdir(), "trace.gif"), fps = fps, show_msg=false)
-end
-
-# ╔═╡ b622488e-45be-47fb-8484-4be6b5fe913a
-# Default mechancis
-bbmechanics = (t_hit = 0.1, g = -9.81, β1 = 0.91, ϵ1 = 0.06, β2 = 0.95, ϵ2 = 0.05, v_hit = -4.0, p_hit = 4.0)
-
-# ╔═╡ 108d281f-e0d7-4b3f-bc6d-ed542aa27aa1
-random_policy(hit_chance) = 
-	(_, _) -> sample([hit nohit], Weights([hit_chance, 1-hit_chance]), 1)[1]
+The ball it bounce.
+"""
 
 # ╔═╡ 96155a32-5e05-4632-9fe8-e843970e3089
 animate_trace(simulate_sequence(bbmechanics, 0, 7, random_policy(0.1), 10)...)
@@ -293,9 +139,6 @@ simulation_function((0, 7), hit)
 
 # ╔═╡ cd82ff88-3e88-4a94-b414-abca02a55217
 simulation_function((0.1, 0), hit)
-
-# ╔═╡ 0aaab7d9-9733-4c67-aef8-89ffbc245845
-
 
 # ╔═╡ 33aae1b2-cffb-44f7-9b19-5c5b682473ed
 md"""
@@ -688,24 +531,13 @@ md"""
 # ╠═3bf7051c-a644-427b-bbba-14a69d98f4f5
 # ╠═56f10aa2-c768-4936-9a70-76d6b0ec21a1
 # ╠═39cd11b7-2428-47ae-b8ec-90459bb03636
-# ╟─1feb5107-1587-495d-8024-160f9cc68447
 # ╠═f878ebd6-b261-4151-8aae-521b6736b28a
 # ╟─3cdda0dd-59f8-4d6f-b37a-cdc923b242c0
-# ╠═3167e418-c88c-45ba-aea9-710ba48a7c97
-# ╠═31b93679-82d4-49e5-b47b-45873e4f8452
-# ╠═9590d625-ad3d-480a-ab1d-a27133457163
-# ╟─8329227c-cbb8-4114-9215-445d604d4a20
-# ╠═1b3f5644-d382-4e61-b3c0-41e0797a0f18
-# ╠═aab5def9-ff39-422b-af11-c3064a5af9c2
-# ╟─ef1f2639-617f-4811-8c20-4ebff79f7513
-# ╟─b622488e-45be-47fb-8484-4be6b5fe913a
-# ╠═108d281f-e0d7-4b3f-bc6d-ed542aa27aa1
 # ╠═96155a32-5e05-4632-9fe8-e843970e3089
 # ╟─7e0de76c-8a0e-46aa-a098-b5f0e8fd32b5
 # ╠═1cc57555-e687-4b84-9568-c7eb903f57ef
 # ╠═d772354b-b855-4d4e-b768-2200c03cc0d6
 # ╠═cd82ff88-3e88-4a94-b414-abca02a55217
-# ╠═0aaab7d9-9733-4c67-aef8-89ffbc245845
 # ╟─33aae1b2-cffb-44f7-9b19-5c5b682473ed
 # ╠═f86a0e8b-9d76-4e68-91cf-927595c27387
 # ╠═caa90ceb-0435-40b7-a97d-74919b040002

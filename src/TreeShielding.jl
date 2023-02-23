@@ -49,4 +49,11 @@ export rwmechanics, Pace, simulate, draw_next_step!, draw_walk!, take_walk, eval
 include("RWExample.jl")
 end#module
 
+module BB
+using Plots
+using StatsBase
+export bbmechanics, Action, hit, nohit, simulate_point, simulate_sequence, evaluate, check_safety, animate_trace, random_policy
+include("BBExample.jl")
+end#module
+
 end#module
