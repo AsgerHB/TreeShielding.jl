@@ -200,6 +200,24 @@ function evaluate(mechanics, policy, duration;
 	sum(costs)/runs
 end
 
+# ╔═╡ aab5def9-ff39-422b-af11-c3064a5af9c2
+function check_safety(mechanics, policy, duration;
+		runs=1000)
+	t_hit, g, β1, ϵ1, β2, ϵ2, v_hit, p_hit  = mechanics
+	deaths = 0
+	for run in 1:runs
+		v, p = 0, rand(7:10)
+		for i in 1:ceil(duration/t_hit)
+			action = policy(v, p)
+			v, p = simulate_point(mechanics, v, p, action)
+		end
+		if v == 0 && p == 0
+			deaths += 1
+		end
+	end
+	deaths
+end
+
 # ╔═╡ ef1f2639-617f-4811-8c20-4ebff79f7513
 function animate_trace(vs, ps, ts; fps=10, plotargs...)
 	
@@ -315,7 +333,7 @@ md"""
 """
 
 # ╔═╡ 40b843de-e367-49d7-8a50-d2cefe4e3939
-outer_bounds = Bounds((-15, 0), (15, 6))
+outer_bounds = Bounds((-15, 0), (15, 10))
 
 # ╔═╡ c8b40bd6-a8f3-42e8-bcbb-5bddd452dab0
 initial_tree = call() do
@@ -385,6 +403,8 @@ Try setting a different number of samples per axis:
 
 `samples_per_axis =` $(@bind samples_per_axis NumberField(3:30, default=3))
 
+`max_iterations =` $(@bind max_iterations NumberField(1:1000, default=20))
+
 And configure min granularity. The value is set as the number of leading zeros to the first digit.
 
 `min_granularity =` $(@bind min_granularity NumberField(0:1E-10:1, default=1E-8))
@@ -396,7 +416,7 @@ And configure min granularity. The value is set as the number of leading zeros t
 """
 
 # ╔═╡ f878ebd6-b261-4151-8aae-521b6736b28a
-m = ShieldingModel(simulation_function, Action, dimensionality, samples_per_axis; min_granularity, margin, splitting_tolerance)
+m = ShieldingModel(simulation_function, Action, dimensionality, samples_per_axis; max_iterations, min_granularity, margin, splitting_tolerance)
 
 # ╔═╡ 42b0bcee-b931-4bad-9b4b-268f6b3d260c
 if try_splitting_button > 0 && reactive_leaf !== nothing
@@ -483,6 +503,9 @@ md"""
 `show_supporting_points:`
 $(@bind show_supporting_points CheckBox(default=true))
 
+`zoom_in`
+$(@bind zoom_in CheckBox(default=false))
+
 `a =` $(@bind a Select(instances(Action) |> collect, default=nohit))
 
 Position: 
@@ -493,6 +516,8 @@ $(@bind partition_y
 """
 
 # ╔═╡ cd190e4a-9e48-4e6a-8058-1bcb105d9c0b
+# ╠═╡ disabled = true
+#=╠═╡
 # Cell that does grow/update until it is about to create a vertical red bar
 begin
 	borked_bounds = nothing
@@ -515,6 +540,23 @@ begin
 	@info "Didn't bork."
 	@label break_all
 end
+  ╠═╡ =#
+
+# ╔═╡ e0013651-12ed-4c81-ad05-2eb8f47a720c
+Leaves(reactive_tree) |> collect |> length
+
+# ╔═╡ 0837b974-a284-488d-9d6c-b21eb4a6aecf
+#=╠═╡
+l = get_leaf(reactive_tree, 
+	borked_bounds.upper[1] - 0.0000001, 
+	borked_bounds.upper[2] - 0.0000001)
+  ╠═╡ =#
+
+# ╔═╡ 29f7f0ce-e3e6-4071-bdfe-a6da3994dd85
+l = get_leaf(reactive_tree, partition_x, partition_y)
+
+# ╔═╡ ef651fce-cdca-4ca1-9f08-e94fd25df4a4
+go_clock; b = get_bounds(l, m.dimensionality)
 
 # ╔═╡ 165ba9e0-7409-4f5d-b10b-4223fe589ac6
 begin
@@ -522,36 +564,24 @@ begin
 	
 	p1 = draw(reactive_tree, outer_bounds, 
 		color_dict=action_color_dict,
-		#line=nothing
+		line=nothing
 	)
 	
 	plot!(legend=:outerright)
 
 	if show_supporting_points
 		p = (partition_x, partition_y)
-		scatter_allowed_actions!(reactive_tree, borked_bounds,  m)
-		#scatter!(p, m=(4, :rtriangle, :white), msw=1, label=nothing, )
+		scatter_allowed_actions!(reactive_tree, b,  m)
+		scatter!(p, m=(4, :rtriangle, :white), msw=1, label=nothing, )
 	end
 
-	plot!(xlims=(borked_bounds.lower[1] - 0.5, borked_bounds.upper[1] + 0.5),
-	      ylims=(borked_bounds.lower[2] - 0.5, borked_bounds.upper[2] + 0.5),)
+	if zoom_in
+		plot!(xlims=(b.lower[1] - 0.5, b.upper[1] + 0.5),
+		      ylims=(b.lower[2] - 0.5, b.upper[2] + 0.5),)
+	end
 	
 	plot!(xlabel="v", ylabel="p")
 end
-
-# ╔═╡ e0013651-12ed-4c81-ad05-2eb8f47a720c
-Leaves(reactive_tree) |> collect |> length
-
-# ╔═╡ 0837b974-a284-488d-9d6c-b21eb4a6aecf
-l = get_leaf(reactive_tree, 
-	borked_bounds.upper[1] - 0.0001, 
-	borked_bounds.upper[2] - 0.0001)
-
-# ╔═╡ f204e821-45d4-4518-8cd6-4a6ab3963460
-go_clock; get_split(reactive_tree, l, (@set m.verbose=true))
-
-# ╔═╡ ef651fce-cdca-4ca1-9f08-e94fd25df4a4
-go_clock; b = get_bounds(l, m.dimensionality)
 
 # ╔═╡ 7f560461-bfc7-4419-8a27-670b09830052
 TreeShielding.get_allowed_actions(reactive_tree, b, (@set m.verbose = true))
@@ -559,58 +589,8 @@ TreeShielding.get_allowed_actions(reactive_tree, b, (@set m.verbose = true))
 # ╔═╡ f3edc169-94ff-4560-874c-05aab6f8782c
 TreeShielding.compute_safety(reactive_tree, SupportingPoints(m.samples_per_axis, b), m)
 
-# ╔═╡ 970c3bf6-36c3-4934-8b4a-704e76864143
-get_safety_bounds(reactive_tree, b, m)
-
-# ╔═╡ 24a8d389-0747-4c97-a410-f2afc065cd05
-call() do
-	tree = reactive_tree
-	bounds = b
-	
-	no_action = actions_to_int([])
-	dimensionality = get_dim(bounds)
-
-	min_safe = [Inf for _ in 1:dimensionality]
-	max_safe = [-Inf for _ in 1:dimensionality]
-	min_unsafe = [Inf for _ in 1:dimensionality]
-	max_unsafe = [-Inf for _ in 1:dimensionality]
-
-	for point in SupportingPoints(m.samples_per_axis, bounds)
-		safe = false
-
-		for action in m.action_space
-			point′ = m.simulation_function(point, action)
-			if get_value(tree, point′) != no_action
-				safe = true
-			end
-		end
-
-		if safe
-			for axis in 1:dimensionality
-				if min_safe[axis] > point[axis]
-					min_safe[axis] = point[axis]
-				end
-				if max_safe[axis] < point[axis]
-					max_safe[axis] = point[axis]
-				end
-			end
-		else
-			for axis in 1:dimensionality
-				if min_unsafe[axis] > point[axis]
-					min_unsafe[axis] = point[axis]
-				end
-				if max_unsafe[axis] < point[axis]
-					max_unsafe[axis] = point[axis]
-				end
-			end
-		end
-
-		@info point, safe
-	end
-
-	safe, unsafe = Bounds(min_safe, max_safe), Bounds(min_unsafe, max_unsafe)
-    return safe, unsafe
-end
+# ╔═╡ f204e821-45d4-4518-8cd6-4a6ab3963460
+go_clock; get_split(reactive_tree, l, (@set m.verbose=true))
 
 # ╔═╡ ec1628b6-9dd3-43a6-aa10-01f9743ce0ea
 go_clock; action_color_dict[l.value]
@@ -640,7 +620,7 @@ finished_tree = call() do
 	else
 		return nothing
 	end
-end
+end;
 
 # ╔═╡ c42af80d-bb1e-42f7-9131-1080639cbd6a
 md"""
@@ -677,26 +657,21 @@ for v in -15:0.01:15
 	end
 end
 
-# ╔═╡ 8d1cc07c-a529-4135-b92a-c24845009461
-bad_leaf = get_leaf(finished_tree, .96, 9.99);
+# ╔═╡ 3caf3b3d-42e9-42e8-8fc8-62cc6cb08d3a
+function shielded(a, p) 
+	allowed = int_to_actions(Action, get_value(finished_tree, p))
+	if length(allowed) == 0 || a ∈ allowed
+		a
+	else
+		rand(allowed)
+	end
+end
 
-# ╔═╡ 8918db4a-8814-46f9-b74f-7e48205f9df1
-get_bounds(bad_leaf, dimensionality)
+# ╔═╡ 51e0f06e-d317-4325-8473-76b195457469
+shielded(random_policy(0.05)(7, 0), (7, 0))
 
-# ╔═╡ bda061b8-f809-4924-b60d-4f2eff419ef9
-bad_leaf.value = 3
-
-# ╔═╡ 7a1911c2-9eb1-41ea-8894-e4c53117d8eb
-get_split(bad_leaf, (@set m.verbose=true))
-
-# ╔═╡ 752b7b36-df02-4581-913b-9902c750b1b2
-get_dividing_bounds(finished_tree, 
-		get_bounds(bad_leaf, dimensionality), 
-		simulation_function, 
-		Action, 
-		spa, 
-		2,
-		min_granularity)
+# ╔═╡ a0ecb865-b8f6-471c-b32b-80e376792ecd
+check_safety(bbmechanics, (x, y) -> shielded(nohit, (x, y)), 120, runs=1000)
 
 # ╔═╡ 25d4797d-293d-449d-984f-c1d7d830dfaa
 md"""
@@ -718,9 +693,10 @@ md"""
 # ╟─3cdda0dd-59f8-4d6f-b37a-cdc923b242c0
 # ╠═3167e418-c88c-45ba-aea9-710ba48a7c97
 # ╠═31b93679-82d4-49e5-b47b-45873e4f8452
-# ╟─9590d625-ad3d-480a-ab1d-a27133457163
+# ╠═9590d625-ad3d-480a-ab1d-a27133457163
 # ╟─8329227c-cbb8-4114-9215-445d604d4a20
-# ╟─1b3f5644-d382-4e61-b3c0-41e0797a0f18
+# ╠═1b3f5644-d382-4e61-b3c0-41e0797a0f18
+# ╠═aab5def9-ff39-422b-af11-c3064a5af9c2
 # ╟─ef1f2639-617f-4811-8c20-4ebff79f7513
 # ╟─b622488e-45be-47fb-8484-4be6b5fe913a
 # ╠═108d281f-e0d7-4b3f-bc6d-ed542aa27aa1
@@ -762,12 +738,11 @@ md"""
 # ╠═165ba9e0-7409-4f5d-b10b-4223fe589ac6
 # ╠═e0013651-12ed-4c81-ad05-2eb8f47a720c
 # ╠═0837b974-a284-488d-9d6c-b21eb4a6aecf
+# ╠═29f7f0ce-e3e6-4071-bdfe-a6da3994dd85
+# ╠═ef651fce-cdca-4ca1-9f08-e94fd25df4a4
 # ╠═7f560461-bfc7-4419-8a27-670b09830052
 # ╠═f3edc169-94ff-4560-874c-05aab6f8782c
 # ╠═f204e821-45d4-4518-8cd6-4a6ab3963460
-# ╠═970c3bf6-36c3-4934-8b4a-704e76864143
-# ╠═ef651fce-cdca-4ca1-9f08-e94fd25df4a4
-# ╠═24a8d389-0747-4c97-a410-f2afc065cd05
 # ╠═ec1628b6-9dd3-43a6-aa10-01f9743ce0ea
 # ╟─0039a51e-26ed-4ad2-aeda-117436295ca1
 # ╠═47e04910-d9e9-430f-8cec-bfd584c991e2
@@ -778,9 +753,7 @@ md"""
 # ╠═629440a0-3ec7-4204-9f27-6575334aae3c
 # ╠═b338748b-0801-474f-9a79-5d794e88d15c
 # ╠═60d28d01-7209-477f-b3db-97a5b96dc642
-# ╠═8d1cc07c-a529-4135-b92a-c24845009461
-# ╠═8918db4a-8814-46f9-b74f-7e48205f9df1
-# ╠═bda061b8-f809-4924-b60d-4f2eff419ef9
-# ╠═7a1911c2-9eb1-41ea-8894-e4c53117d8eb
-# ╠═752b7b36-df02-4581-913b-9902c750b1b2
+# ╠═3caf3b3d-42e9-42e8-8fc8-62cc6cb08d3a
+# ╠═51e0f06e-d317-4325-8473-76b195457469
+# ╠═a0ecb865-b8f6-471c-b32b-80e376792ecd
 # ╟─25d4797d-293d-449d-984f-c1d7d830dfaa

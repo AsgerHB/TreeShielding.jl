@@ -151,4 +151,5 @@ function scatter_allowed_actions!(tree, bounds, m)
             label="unsafe",
             legend=:outerright)
     end
+    plot!()
 end
