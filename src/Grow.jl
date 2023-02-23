@@ -186,7 +186,7 @@ function get_threshold(tree::Tree, bounds::Bounds, axis, action, direction::Dire
 		dividing_bounds = get_dividing_bounds(tree, dividing_bounds, axis, action, direction, m)
 	end
 
-	m.verbose && @info "Found dividing bounds $dividing_bounds for axis $axis in $iterations iterations"
+	m.verbose && @info "Found dividing bounds $dividing_bounds $iterations iterations" axis direction
 
 	# It is not known whether the points inside dividing_bounds are safe
 	# But it is known that all points to one side of dividing_bounds are.
@@ -195,7 +195,7 @@ function get_threshold(tree::Tree, bounds::Bounds, axis, action, direction::Dire
 	# then the uppper bound is the last set of points known to be safe. Otherwise it is the lower.
 	threshold = direction == safe_above_threshold ? dividing_bounds.upper[axis] : dividing_bounds.lower[axis]
 	
-	m.verbose && @info "Resolved to threshold $threshold"
+	m.verbose && @info "Resolved to threshold $threshold" axis direction
 
 	# Apply safety margin
 	if 	direction == safe_above_threshold
@@ -204,26 +204,27 @@ function get_threshold(tree::Tree, bounds::Bounds, axis, action, direction::Dire
 		threshold = max(threshold - m.margin, bounds.lower[axis])
 	end
 	
-	m.verbose && @info "Applied safety margin.   Threshold is now $threshold."
+	m.verbose && @info "Applied safety margin.   Threshold is now $threshold."  axis direction threshold margin=m.margin
 
 	# Apply min_granularity
 	threshold = min(threshold, bounds.upper[axis] - m.min_granularity)
 	threshold = max(threshold, bounds.lower[axis] + m.min_granularity)
 	m.verbose && @info "Applied min_granularity. Threshold is now $threshold."
+	m.verbose && @info "Applied min_granularity. Threshold is now $threshold." axis direction threshold min_granularity=m.min_granularity
 
 	# Check against min_granularity
 	# Because maybe the partition was already as small as could be.
 	if bounds.upper[axis] - threshold < m.min_granularity || 
 	   threshold - bounds.lower[axis] < m.min_granularity
 		
-		m.verbose && @info "Skipping split ($axis, $threshold) since it exceeds min_granularity $(m.min_granularity)."
+		m.verbose && @info "Skipping split since it exceeds min_granularity" axis direction threshold min_granularity=m.min_granularity
         return nothing
 	end
 	
 	# We don't want to split right on top of a previous split
 	if ≈(threshold, bounds.lower[axis], atol=m.splitting_tolerance) || 
 	   ≈(threshold, bounds.upper[axis], atol=m.splitting_tolerance)
-	   m.verbose && @info "Skipping split since it's on top of a previous one"
+	   m.verbose && @info "Skipping split since it's on top of a previous one"  axis direction threshold bounds
 		return nothing
 	end
 
@@ -255,7 +256,7 @@ function get_split(root::Tree, leaf::Leaf, m::ShieldingModel)
 		m.verbose && @info "Trying axis $i"
 		axis = i
 		if bounds.upper[axis] - bounds.lower[axis] <= m.min_granularity
-			m.verbose && @info "Already split down to min_granularity"
+			m.verbose && @info "Split would be less than min_granularity" min_granularity=m.min_granularity
 			continue
 		end
 		for action in m.action_space
