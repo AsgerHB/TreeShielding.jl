@@ -62,7 +62,8 @@ function test_get_threshold(;samples_per_axis=9,
     ### Act ##
     bounds = get_bounds(get_leaf(tree, point), dimensionality)
     axis = 2
-    _, threshold = get_threshold(tree, bounds, axis, m)
+    direction = safe_below_threshold
+    threshold = get_threshold(tree, bounds, axis, RW.fast, direction, m)
 
     ### Assert ##
 
@@ -70,14 +71,11 @@ function test_get_threshold(;samples_per_axis=9,
     
     bounds_above.lower[axis] = threshold
     bounds_below.upper[axis] = threshold
-
-    supporting_points = SupportingPoints(spa_when_testing, bounds_above)
-    safety_above = compute_safety(tree, supporting_points, m)
     
     supporting_points = SupportingPoints(spa_when_testing, bounds_below)
     safety_below = compute_safety(tree, supporting_points, m)
 
-    @test all([safe for (_, safe) in safety_above]) || all([safe for (_, safe) in safety_below])
+    @test all([safe for (_, safe) in safety_below])
 end
 
 
@@ -145,11 +143,11 @@ end
             margin = 0
         )
 
-        try_finding_threshold(expected) =  get_split(tree, leaf, model(expected))
+        try_getting_split(expected) =  get_split(tree, leaf, model(expected))
 
         expected = 0.10
 
-        axis, result = try_finding_threshold(expected)
+        axis, result = try_getting_split(expected)
 
         @test result ≈ expected     atol=splitting_tolerance
         @test axis == 1
@@ -157,7 +155,7 @@ end
 
         expected = 0.3
 
-        axis, result = try_finding_threshold(expected)
+        axis, result = try_getting_split(expected)
 
         @test result ≈ expected     atol=splitting_tolerance
         @test axis == 1
@@ -165,7 +163,7 @@ end
 
         expected = 0.9
 
-        axis, result = try_finding_threshold(expected)
+        axis, result = try_getting_split(expected)
 
         @test result ≈ expected     atol=splitting_tolerance
         @test axis == 1
@@ -173,7 +171,7 @@ end
 
         expected = 50.
 
-        axis, result = try_finding_threshold(expected)
+        axis, result = try_getting_split(expected)
 
         @test result ≈ expected     atol=splitting_tolerance
         @test axis == 1
@@ -181,14 +179,14 @@ end
 
         expected = 99.
 
-        axis, result = try_finding_threshold(expected)
+        axis, result = try_getting_split(expected)
 
         @test result ≈ expected     atol=splitting_tolerance
         @test axis == 1
             
     end
 
-    @testset "get_threshold, linear" begin
+    @testset "get_split, linear" begin
         safe, unsafe = (1, 1), (-1, -1)
         
         is_safe(p) = p != unsafe
@@ -228,11 +226,11 @@ end
             margin = 0
         )
 
-        try_finding_threshold(expected) =  get_split(tree, leaf, model(expected))
+        try_getting_split(expected) =  get_split(tree, leaf, model(expected))
 
         expected = 0.10
 
-        axis, result = try_finding_threshold(expected)
+        axis, result = try_getting_split(expected)
 
         @test result ≈ expected     atol=splitting_tolerance
         @test axis == 1
@@ -240,7 +238,7 @@ end
 
         expected = 0.3
 
-        axis, result = try_finding_threshold(expected)
+        axis, result = try_getting_split(expected)
 
         @test result ≈ expected     atol=splitting_tolerance
         @test axis == 1
@@ -248,7 +246,7 @@ end
 
         expected = 0.9
 
-        axis, result = try_finding_threshold(expected)
+        axis, result = try_getting_split(expected)
 
         @test result ≈ expected     atol=splitting_tolerance
         @test axis == 1
@@ -256,7 +254,7 @@ end
 
         expected = 50.
 
-        axis, result = try_finding_threshold(expected)
+        axis, result = try_getting_split(expected)
 
         @test result ≈ expected     atol=splitting_tolerance
         @test axis == 1
@@ -264,7 +262,7 @@ end
 
         expected = 99.
 
-        axis, result = try_finding_threshold(expected)
+        axis, result = try_getting_split(expected)
 
         @test result ≈ expected     atol=splitting_tolerance
         @test axis == 1
