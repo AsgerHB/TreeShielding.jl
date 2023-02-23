@@ -13,7 +13,6 @@ The state space must be properly bounded (see function `bounded`) since partitio
 function synthesize!(tree::Tree, m::ShieldingModel)
 
     previous_leaf_count = 0 # value not required when loop is entered.
-    updates_made = 0
     change_occured = true
     while change_occured
         grown_to = grow!(tree, m)
@@ -31,6 +30,4 @@ function synthesize!(tree::Tree, m::ShieldingModel)
         change_occured = updates > 0 || previous_leaf_count != pruned_to
         previous_leaf_count = pruned_to
     end
-
-    m.verbose && @info "Safe strategy synthesised. Making more permissive."
 end

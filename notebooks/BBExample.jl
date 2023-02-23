@@ -239,6 +239,57 @@ begin
 	"Next: Leaf($(reactive_queue[end].value))"
 end
 
+# ╔═╡ afd89bd1-347e-4792-8f3b-e5b372c649fe
+md"""
+# Synthesis --  Try it Out!
+
+Change the inputs and click the buttons to see how the parameters affect synthesis, one step at a time.
+"""
+
+# ╔═╡ 0e18b756-f8a9-4821-8b85-30c908f7e3af
+md"""
+`show_supporting_points:`
+$(@bind show_supporting_points CheckBox(default=true))
+
+`zoom_in`
+$(@bind zoom_in CheckBox(default=false))
+
+`a =` $(@bind a Select(instances(Action) |> collect, default=nohit))
+
+Position: 
+$(@bind partition_x 
+	NumberField(outer_bounds.lower[1]:0.01:outer_bounds.upper[1], default=0.9))
+$(@bind partition_y 
+	NumberField(outer_bounds.lower[2]:0.01:outer_bounds.upper[2], default=0.9))
+"""
+
+# ╔═╡ cd190e4a-9e48-4e6a-8058-1bcb105d9c0b
+# ╠═╡ disabled = true
+#=╠═╡
+# Cell that does grow/update until it is about to create a vertical red bar
+begin
+	borked_bounds = nothing
+	for i in 1:100
+		grow!(reactive_tree, m)
+		updates = TreeShielding.get_updates(reactive_tree, m)
+	
+		for update in updates
+			if get_bounds(update.leaf, m.dimensionality).upper[2] == outer_bounds.upper[2] &&
+				update.new_value == 0
+
+				global borked_bounds = get_bounds(update.leaf, m.dimensionality)
+				@warn "It's about to bork. $(borked_bounds)"
+				
+				@goto break_all
+			end
+		end
+		TreeShielding.apply_updates!(updates)
+	end
+	@info "Didn't bork."
+	@label break_all
+end
+  ╠═╡ =#
+
 # ╔═╡ 57be14bb-d748-4432-8608-106c44c38f83
 md"""
 ### Set the parameters -- Try it Out
@@ -300,13 +351,6 @@ call() do
 	plot!([], line=nothing, label="$leaf_count leaves")
 end
 
-# ╔═╡ afd89bd1-347e-4792-8f3b-e5b372c649fe
-md"""
-# Synthesis --  Try it Out!
-
-Change the inputs and click the buttons to see how the parameters affect synthesis, one step at a time.
-"""
-
 # ╔═╡ fb359eb9-2ce4-466a-9de8-0a0d691f78b9
 m; @bind reset_button Button("Reset")
 
@@ -341,52 +385,23 @@ else
 	"done"
 end
 
-# ╔═╡ 0e18b756-f8a9-4821-8b85-30c908f7e3af
-md"""
-`show_supporting_points:`
-$(@bind show_supporting_points CheckBox(default=true))
-
-`zoom_in`
-$(@bind zoom_in CheckBox(default=false))
-
-`a =` $(@bind a Select(instances(Action) |> collect, default=nohit))
-
-Position: 
-$(@bind partition_x 
-	NumberField(outer_bounds.lower[1]:0.01:outer_bounds.upper[1], default=0.9))
-$(@bind partition_y 
-	NumberField(outer_bounds.lower[2]:0.01:outer_bounds.upper[2], default=0.9))
-"""
-
-# ╔═╡ cd190e4a-9e48-4e6a-8058-1bcb105d9c0b
-# ╠═╡ disabled = true
-#=╠═╡
+# ╔═╡ c7c48e96-77d5-4c98-a420-39c929130704
 # Cell that does grow/update until it is about to create a vertical red bar
 begin
-	borked_bounds = nothing
-	for i in 1:100
+	for i in 1:10
 		grow!(reactive_tree, m)
 		updates = TreeShielding.get_updates(reactive_tree, m)
-	
-		for update in updates
-			if get_bounds(update.leaf, m.dimensionality).upper[2] == outer_bounds.upper[2] &&
-				update.new_value == 0
-
-				global borked_bounds = get_bounds(update.leaf, m.dimensionality)
-				@warn "It's about to bork. $(borked_bounds)"
-				
-				@goto break_all
-			end
+		if length(updates) == 0
+			@info "All done."
+			break
 		end
 		TreeShielding.apply_updates!(updates)
 	end
-	@info "Didn't bork."
-	@label break_all
+	@info "More work to do."
 end
-  ╠═╡ =#
 
 # ╔═╡ e0013651-12ed-4c81-ad05-2eb8f47a720c
-Leaves(reactive_tree) |> collect |> length
+reset_button, go_clock; Leaves(reactive_tree) |> collect |> length
 
 # ╔═╡ 0837b974-a284-488d-9d6c-b21eb4a6aecf
 #=╠═╡
@@ -422,6 +437,8 @@ begin
 		plot!(xlims=(b.lower[1] - 0.5, b.upper[1] + 0.5),
 		      ylims=(b.lower[2] - 0.5, b.upper[2] + 0.5),)
 	end
+
+	hline!([bbmechanics.p_hit], c=colors.WET_ASPHALT, label="phit")
 	
 	plot!(xlabel="v", ylabel="p")
 end
@@ -434,6 +451,24 @@ TreeShielding.compute_safety(reactive_tree, SupportingPoints(m.samples_per_axis,
 
 # ╔═╡ f204e821-45d4-4518-8cd6-4a6ab3963460
 go_clock; get_split(reactive_tree, l, (@set m.verbose=true))
+
+# ╔═╡ 6bcff92a-941f-491c-99d1-2b50a4a94231
+default = 2.55850
+
+# ╔═╡ 6569a86b-4001-4e99-849e-c92ebcea47dd
+m.min_granularity
+
+# ╔═╡ 5a7e7e50-7485-4479-9873-98b2729e2f74
+lower = 2.55839
+
+# ╔═╡ 4e82ec51-6a75-456d-a801-721331c6c156
+default - lower
+
+# ╔═╡ 7889f07f-0234-48d0-87cc-4830e62e68b1
+updated = max(default, lower + min_granularity)
+
+# ╔═╡ 8a13e8b2-3e8a-471b-9f71-22fe3dc0e46b
+updated - lower
 
 # ╔═╡ ec1628b6-9dd3-43a6-aa10-01f9743ce0ea
 go_clock; action_color_dict[l.value]
@@ -451,28 +486,22 @@ Automation is a wonderful thing.
 # ╔═╡ 1d3ec97f-1818-48dc-9357-35da2a8d6a9d
 m; @bind synthesize_button CounterButton("Synthesize")
 
-# ╔═╡ c92d8cf4-0908-4c7c-8d3d-3dd07972219e
-finished_tree = call() do
-	if synthesize_button > 0
-	
-		tree = deepcopy(initial_tree)
-		
-		synthesize!(tree, m)
+# ╔═╡ ecf49f25-1ea4-48be-a391-c8f4c1012c6f
+safety_strategy = deepcopy(initial_tree);
 
-		return tree
-	else
-		return nothing
-	end
-end;
+# ╔═╡ c92d8cf4-0908-4c7c-8d3d-3dd07972219e
+if synthesize_button > 0
+	synthesize!(safety_strategy, m)
+end
 
 # ╔═╡ c42af80d-bb1e-42f7-9131-1080639cbd6a
 md"""
-Leaves: $(Leaves(finished_tree) |> collect |> length)
+Leaves: $(Leaves(safety_strategy) |> collect |> length)
 """
 
 # ╔═╡ f113308a-1d72-41e9-ba54-71576994a664
-if finished_tree !== nothing
-	draw(finished_tree, 
+if safety_strategy !== nothing
+	draw(safety_strategy, 
 		Bounds(outer_bounds.lower, (outer_bounds.upper[1], outer_bounds.upper[2]+2)), 
 		color_dict=action_color_dict,
 		line=nothing,
@@ -481,45 +510,46 @@ if finished_tree !== nothing
 end
 
 # ╔═╡ 629440a0-3ec7-4204-9f27-6575334aae3c
-if finished_tree !== nothing
-	finished_tree_buffer = IOBuffer()
-	robust_serialize(finished_tree_buffer, finished_tree)
+if safety_strategy !== nothing
+	safety_strategy_buffer = IOBuffer()
+	robust_serialize(safety_strategy_buffer, safety_strategy)
 end
 
 # ╔═╡ b338748b-0801-474f-9a79-5d794e88d15c
-finished_tree !== nothing &&
-DownloadButton(finished_tree_buffer, "finished.tree")
-
-# ╔═╡ 60d28d01-7209-477f-b3db-97a5b96dc642
-for v in -15:0.01:15
-	finished_tree === nothing && break
-	p = 9.99
-	if get_value(finished_tree, v, p) == 0
-		@show v, p
-		break
-	end
-end
+safety_strategy !== nothing &&
+DownloadButton(safety_strategy_buffer, "safety strategy.tree")
 
 # ╔═╡ 3caf3b3d-42e9-42e8-8fc8-62cc6cb08d3a
-function shielded(a, p) 
-	allowed = int_to_actions(Action, get_value(finished_tree, p))
-	if length(allowed) == 0 || a ∈ allowed
-		a
-	else
-		rand(allowed)
-	end
+function shield(tree::Tree, policy)
+    return (p) -> begin
+		a = policy(p)
+        allowed = int_to_actions(Action, get_value(tree, p))
+        if a ∈ allowed
+            return a
+        elseif length(allowed) > 0
+            return rand(allowed)
+        else
+            return hit
+        end
+    end
 end
 
+# ╔═╡ 18d7baa2-4af2-4c06-a0ba-cc8d1a16da97
+hits_rarely = random_policy(0.05)
+
 # ╔═╡ 51e0f06e-d317-4325-8473-76b195457469
-shielded(random_policy(0.05)(7, 0), (7, 0))
+shield(safety_strategy, hits_rarely)((7, 0))
 
 # ╔═╡ a0ecb865-b8f6-471c-b32b-80e376792ecd
-check_safety(bbmechanics, (x, y) -> shielded(nohit, (x, y)), 120, runs=1000)
+check_safety(bbmechanics, (x, y) -> shield(safety_strategy, hits_rarely), 120, runs=1000)
 
 # ╔═╡ 25d4797d-293d-449d-984f-c1d7d830dfaa
 md"""
 # Scratchpad
 """
+
+# ╔═╡ eba405af-7cf2-4a19-85ba-6750e3ccdef0
+
 
 # ╔═╡ Cell order:
 # ╠═82e532dd-8ec1-458f-b4d6-59cea44dc2b6
@@ -530,6 +560,8 @@ md"""
 # ╟─ef615614-6e22-455b-b9aa-74b1dfbb4f61
 # ╠═3bf7051c-a644-427b-bbba-14a69d98f4f5
 # ╠═56f10aa2-c768-4936-9a70-76d6b0ec21a1
+# ╟─1feb5107-1587-495d-8024-160f9cc68447
+# ╠═4f55da12-5f81-484f-970a-691336e6e58f
 # ╠═39cd11b7-2428-47ae-b8ec-90459bb03636
 # ╠═f878ebd6-b261-4151-8aae-521b6736b28a
 # ╟─3cdda0dd-59f8-4d6f-b37a-cdc923b242c0
@@ -558,7 +590,6 @@ md"""
 # ╟─08d82e7a-85bd-4e5c-bc27-32f521fbb1fc
 # ╟─c067c6df-2f1b-408d-aacd-104554038102
 # ╟─573a7989-6a88-47b7-8d2b-17cc605b76ea
-# ╟─57be14bb-d748-4432-8608-106c44c38f83
 # ╟─42b0bcee-b931-4bad-9b4b-268f6b3d260c
 # ╟─afd89bd1-347e-4792-8f3b-e5b372c649fe
 # ╟─fb359eb9-2ce4-466a-9de8-0a0d691f78b9
@@ -567,7 +598,9 @@ md"""
 # ╟─e7fbb9bb-63b5-4f6a-bb27-7ea1613d6740
 # ╟─0e18b756-f8a9-4821-8b85-30c908f7e3af
 # ╠═cd190e4a-9e48-4e6a-8058-1bcb105d9c0b
-# ╠═165ba9e0-7409-4f5d-b10b-4223fe589ac6
+# ╠═c7c48e96-77d5-4c98-a420-39c929130704
+# ╟─165ba9e0-7409-4f5d-b10b-4223fe589ac6
+# ╟─57be14bb-d748-4432-8608-106c44c38f83
 # ╠═e0013651-12ed-4c81-ad05-2eb8f47a720c
 # ╠═0837b974-a284-488d-9d6c-b21eb4a6aecf
 # ╠═29f7f0ce-e3e6-4071-bdfe-a6da3994dd85
@@ -575,17 +608,25 @@ md"""
 # ╠═7f560461-bfc7-4419-8a27-670b09830052
 # ╠═f3edc169-94ff-4560-874c-05aab6f8782c
 # ╠═f204e821-45d4-4518-8cd6-4a6ab3963460
+# ╠═6bcff92a-941f-491c-99d1-2b50a4a94231
+# ╠═6569a86b-4001-4e99-849e-c92ebcea47dd
+# ╠═5a7e7e50-7485-4479-9873-98b2729e2f74
+# ╠═4e82ec51-6a75-456d-a801-721331c6c156
+# ╠═7889f07f-0234-48d0-87cc-4830e62e68b1
+# ╠═8a13e8b2-3e8a-471b-9f71-22fe3dc0e46b
 # ╠═ec1628b6-9dd3-43a6-aa10-01f9743ce0ea
 # ╟─0039a51e-26ed-4ad2-aeda-117436295ca1
 # ╠═47e04910-d9e9-430f-8cec-bfd584c991e2
 # ╟─1d3ec97f-1818-48dc-9357-35da2a8d6a9d
+# ╠═ecf49f25-1ea4-48be-a391-c8f4c1012c6f
 # ╠═c92d8cf4-0908-4c7c-8d3d-3dd07972219e
 # ╟─c42af80d-bb1e-42f7-9131-1080639cbd6a
 # ╠═f113308a-1d72-41e9-ba54-71576994a664
 # ╠═629440a0-3ec7-4204-9f27-6575334aae3c
 # ╠═b338748b-0801-474f-9a79-5d794e88d15c
-# ╠═60d28d01-7209-477f-b3db-97a5b96dc642
 # ╠═3caf3b3d-42e9-42e8-8fc8-62cc6cb08d3a
+# ╠═18d7baa2-4af2-4c06-a0ba-cc8d1a16da97
 # ╠═51e0f06e-d317-4325-8473-76b195457469
 # ╠═a0ecb865-b8f6-471c-b32b-80e376792ecd
 # ╟─25d4797d-293d-449d-984f-c1d7d830dfaa
+# ╠═eba405af-7cf2-4a19-85ba-6750e3ccdef0
