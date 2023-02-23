@@ -1,7 +1,8 @@
 @enum Action hit nohit
 
-function simulate_point(mechanics, v, p, action; min_v_on_impact=1, unlucky=false)
+function simulate_point(mechanics, point, action; min_v_on_impact=1, unlucky=false)
 	t_hit, g, β1, ϵ1, β2, ϵ2, v_hit, p_hit  = mechanics
+    v, p = point
     v0, p0 = v, p
     
     if action == hit && p >= p_hit # Hitting the ball changes the velocity
@@ -33,7 +34,7 @@ function simulate_point(mechanics, v, p, action; min_v_on_impact=1, unlucky=fals
 
 		mechanics′ = (t_hit=t_remaining, g, β1, ϵ1, β2, ϵ2, v_hit, p_hit)
 		if new_v >= min_v_on_impact
-	        new_v, new_p = simulate_point(mechanics′, new_v, new_p, action, min_v_on_impact=min_v_on_impact, unlucky=unlucky)
+	        new_v, new_p = simulate_point(mechanics′,( new_v, new_p), action, min_v_on_impact=min_v_on_impact, unlucky=unlucky)
 		else
 			new_v, new_p = 0, 0
 		end
@@ -42,16 +43,17 @@ function simulate_point(mechanics, v, p, action; min_v_on_impact=1, unlucky=fals
     new_v, new_p
 end
 
-function simulate_sequence(mechanics, v0, p0, 
+function simulate_sequence(mechanics, initial_point, 
 						   policy, duration; 
 						   unlucky=false, 
 						   min_v_on_impact=1)
 	t_hit, g, β1, ϵ1, β2, ϵ2, v_hit, p_hit  = mechanics
+    v0, p0 = initial_point
     velocities::Vector{Real}, positions::Vector{Real}, times = [v0], [p0], [0.0]
     v, p, t = v0, p0, 0
     while times[end] <= duration - t_hit
-        action = policy(v, p)
-        v, p = simulate_point(mechanics, v, p, action, 
+        action = policy((v, p))
+        v, p = simulate_point(mechanics, (v, p), action, 
 								unlucky=unlucky,
 								min_v_on_impact=min_v_on_impact)
 		t += t_hit
@@ -74,7 +76,7 @@ function evaluate(mechanics, policy, duration;
 		for i in 1:ceil(duration/t_hit)
 			action = policy(v, p)
 			cost += action == "hit" ? 1 : 0
-			v, p = simulate_point(mechanics, v, p, action, unlucky=unlucky)
+			v, p = simulate_point(mechanics, (v, p), action, unlucky=unlucky)
 		end
 		push!(costs, cost)
 	end
@@ -87,8 +89,8 @@ function check_safety(mechanics, policy, duration; runs=1000)
 	for run in 1:runs
 		v, p = 0, rand(7:10)
 		for i in 1:ceil(duration/t_hit)
-			action = policy(v, p)
-			v, p = simulate_point(mechanics, v, p, action)
+			action = policy((v, p))
+			v, p = simulate_point(mechanics, (v, p), action)
 		end
 		if v == 0 && p == 0
 			deaths += 1
@@ -97,7 +99,7 @@ function check_safety(mechanics, policy, duration; runs=1000)
 	deaths
 end
 
-function animate_trace(vs, ps, ts; fps=10, plotargs...)
+function animate_trace(vs, ps, ts; fps=10, left_background=plot(), right_background=plot(), plotargs...)
 	
 	pmax = maximum(ps)
 	tmax = maximum(ts)
@@ -107,7 +109,9 @@ function animate_trace(vs, ps, ts; fps=10, plotargs...)
 
 	animation = @animate for (i, _) in enumerate(ts)
 
-		p1 = plot(vs[1:i], ps[1:i],
+		p1 = plot(left_background)
+
+        plot!(vs[1:i], ps[1:i],
 				  xlims=(vmin, vmax), 
 				  ylims=(0, pmax),
 				  xlabel="v",
@@ -120,7 +124,9 @@ function animate_trace(vs, ps, ts; fps=10, plotargs...)
 
 		hline!([ps[i]], color=colorant"#27ae60")
 
-		p2 = plot(ts[1:i], ps[1:i],
+		p2 = plot(right_background)
+
+        plot!(ts[1:i], ps[1:i],
 				  xlims=(0, tmax), 
 				  ylims=(0, pmax),
 				  xlabel="t",

@@ -250,18 +250,6 @@ md"""
 $(@doc get_split)
 """
 
-# ╔═╡ 9e807328-488f-4e86-ae53-71f39b2631a7
-md"""
-### `grow!`
-
-$(@doc grow!)
-"""
-
-# ╔═╡ 76f13f2a-82cb-4037-a097-394fb080bf84
-md"""
-# One Split at a Time -- Try it out!
-"""
-
 # ╔═╡ 87e24687-5fc2-485a-ba01-41c10c10d395
 md"""
 ### Parameters -- Try it Out!
@@ -380,6 +368,16 @@ call() do
 	plot!([], l=nothing, label="leaves: $leaf_count")
 end
 
+# ╔═╡ da493978-1444-4ec3-be36-4aa1c59170b5
+offset = get_spacing_sizes(SupportingPoints(samples_per_axis, bounds), dimensionality)
+
+# ╔═╡ 9e807328-488f-4e86-ae53-71f39b2631a7
+md"""
+### `grow!`
+
+$(@doc grow!)
+"""
+
 # ╔═╡ 46f3eefe-15c7-4bae-acdb-54e485e4b5b7
 call() do
 	tree = deepcopy(tree)
@@ -397,8 +395,10 @@ call() do
 	plot!([], l=nothing, label="leaves: $leaf_count")
 end
 
-# ╔═╡ da493978-1444-4ec3-be36-4aa1c59170b5
-offset = get_spacing_sizes(SupportingPoints(samples_per_axis, bounds), dimensionality)
+# ╔═╡ 76f13f2a-82cb-4037-a097-394fb080bf84
+md"""
+# One Split at a Time -- Try it out!
+"""
 
 # ╔═╡ 66af047f-a34f-484a-8608-8eaaed45b37d
 @bind reset_button Button("Reset")
@@ -453,7 +453,7 @@ if try_splitting_button > 0 && reactive_leaf !== nothing
 		if threshold != nothing
 			split!(reactive_leaf, axis, threshold)
 		end
-		axis, threshold
+		@info "Found result", axis, threshold
 	end
 end; done_splitting = "Done Splitting";
 
@@ -544,10 +544,10 @@ $br
 # ╟─648fb8ab-b156-4c75-b0e0-16c8c7f151ec
 # ╠═53cf3fc9-788c-4700-8b07-fe9118432c84
 # ╠═bae11a44-67d8-4b6b-8d10-85b58e7fae63
+# ╟─87e24687-5fc2-485a-ba01-41c10c10d395
 # ╟─9e807328-488f-4e86-ae53-71f39b2631a7
 # ╟─46f3eefe-15c7-4bae-acdb-54e485e4b5b7
 # ╟─76f13f2a-82cb-4037-a097-394fb080bf84
-# ╟─87e24687-5fc2-485a-ba01-41c10c10d395
 # ╟─66af047f-a34f-484a-8608-8eaaed45b37d
 # ╟─447dc1e2-809a-4f71-b7f4-949ae2a0c4b6
 # ╟─1817421e-50b0-47b2-859d-e87aaf3064b0
@@ -557,5 +557,5 @@ $br
 # ╠═42d2f87e-ce8b-4928-9d00-b0aa70a18cb5
 # ╠═0a14602c-aa5e-460f-9ab3-9edd18234b5a
 # ╟─7f394991-4673-4f32-8c4f-09225822ae95
-# ╟─8cc5f9f3-263c-459f-ae78-f2c0e8487e86
+# ╠═8cc5f9f3-263c-459f-ae78-f2c0e8487e86
 # ╟─8b749715-66a2-4a48-9a78-0462869ea3d0

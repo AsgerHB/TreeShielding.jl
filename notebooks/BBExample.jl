@@ -114,7 +114,7 @@ The ball it bounce.
 """
 
 # ╔═╡ 96155a32-5e05-4632-9fe8-e843970e3089
-animate_trace(simulate_sequence(bbmechanics, 0, 7, random_policy(0.1), 10)...)
+animate_trace(simulate_sequence(bbmechanics, (0, 7), random_policy(0.1), 10)...)
 
 # ╔═╡ 7e0de76c-8a0e-46aa-a098-b5f0e8fd32b5
 md"""
@@ -131,8 +131,8 @@ The kwarg `unlucky=true` will tell the function to pick the worst-case outcome, 
 """
 
 # ╔═╡ 1cc57555-e687-4b84-9568-c7eb903f57ef
-simulation_function(s, a) = 
-	simulate_point(bbmechanics, s..., a, unlucky=true, min_v_on_impact=1)
+simulation_function(p, a) = 
+	simulate_point(bbmechanics, p, a, unlucky=true, min_v_on_impact=1)
 
 # ╔═╡ d772354b-b855-4d4e-b768-2200c03cc0d6
 simulation_function((0, 7), hit)
@@ -301,12 +301,12 @@ Try setting a different number of samples per axis:
 
 And configure min granularity. The value is set as the number of leading zeros to the first digit.
 
-`min_granularity =` $(@bind min_granularity NumberField(0:1E-10:1, default=1E-8))
+`min_granularity =` $(@bind min_granularity NumberField(0:1E-10:1, default=1E-3))
 
 
-`margin =` $(@bind margin NumberField(0:0.001:1, default=0.00))
+`margin =` $(@bind margin NumberField(0:1E-10:1, default=1.0E-5))
 
-`splitting_tolerance =` $(@bind splitting_tolerance NumberField(0:1E-10:1, default=1E-5))
+`splitting_tolerance =` $(@bind splitting_tolerance NumberField(0:1E-10:1, default=1E-6))
 """
 
 # ╔═╡ f878ebd6-b261-4151-8aae-521b6736b28a
@@ -385,19 +385,19 @@ else
 	"done"
 end
 
-# ╔═╡ c7c48e96-77d5-4c98-a420-39c929130704
-# Cell that does grow/update until it is about to create a vertical red bar
-begin
-	for i in 1:10
-		grow!(reactive_tree, m)
-		updates = TreeShielding.get_updates(reactive_tree, m)
-		if length(updates) == 0
-			@info "All done."
-			break
-		end
+# ╔═╡ e2c0924f-bb05-466c-aceb-8ef3c9b947c9
+# Cell that grows the tree a couple times, to help determine how the parameters shake out
+
+for i in 1:10
+	grow!(reactive_tree, m)
+	updates = TreeShielding.get_updates(reactive_tree, m)
+
+	if length(updates) > 0
 		TreeShielding.apply_updates!(updates)
+	else 
+		@info "Done."
+		break
 	end
-	@info "More work to do."
 end
 
 # ╔═╡ e0013651-12ed-4c81-ad05-2eb8f47a720c
@@ -452,24 +452,6 @@ TreeShielding.compute_safety(reactive_tree, SupportingPoints(m.samples_per_axis,
 # ╔═╡ f204e821-45d4-4518-8cd6-4a6ab3963460
 go_clock; get_split(reactive_tree, l, (@set m.verbose=true))
 
-# ╔═╡ 6bcff92a-941f-491c-99d1-2b50a4a94231
-default = 2.55850
-
-# ╔═╡ 6569a86b-4001-4e99-849e-c92ebcea47dd
-m.min_granularity
-
-# ╔═╡ 5a7e7e50-7485-4479-9873-98b2729e2f74
-lower = 2.55839
-
-# ╔═╡ 4e82ec51-6a75-456d-a801-721331c6c156
-default - lower
-
-# ╔═╡ 7889f07f-0234-48d0-87cc-4830e62e68b1
-updated = max(default, lower + min_granularity)
-
-# ╔═╡ 8a13e8b2-3e8a-471b-9f71-22fe3dc0e46b
-updated - lower
-
 # ╔═╡ ec1628b6-9dd3-43a6-aa10-01f9743ce0ea
 go_clock; action_color_dict[l.value]
 
@@ -500,24 +482,23 @@ Leaves: $(Leaves(safety_strategy) |> collect |> length)
 """
 
 # ╔═╡ f113308a-1d72-41e9-ba54-71576994a664
-if safety_strategy !== nothing
-	draw(safety_strategy, 
+synthesize_button; draw(safety_strategy, 
 		Bounds(outer_bounds.lower, (outer_bounds.upper[1], outer_bounds.upper[2]+2)), 
 		color_dict=action_color_dict,
 		line=nothing,
 		xlabel="v",
 		ylabel="p")
-end
 
 # ╔═╡ 629440a0-3ec7-4204-9f27-6575334aae3c
-if safety_strategy !== nothing
+begin
+	synthesize_button
 	safety_strategy_buffer = IOBuffer()
 	robust_serialize(safety_strategy_buffer, safety_strategy)
 end
 
 # ╔═╡ b338748b-0801-474f-9a79-5d794e88d15c
 safety_strategy !== nothing &&
-DownloadButton(safety_strategy_buffer, "safety strategy.tree")
+DownloadButton(safety_strategy_buffer.data, "safety strategy.tree")
 
 # ╔═╡ 3caf3b3d-42e9-42e8-8fc8-62cc6cb08d3a
 function shield(tree::Tree, policy)
@@ -527,29 +508,103 @@ function shield(tree::Tree, policy)
         if a ∈ allowed
             return a
         elseif length(allowed) > 0
-            return rand(allowed)
+			a′ = rand(allowed)
+            return a′
         else
             return hit
         end
     end
 end
 
+# ╔═╡ 25d4797d-293d-449d-984f-c1d7d830dfaa
+md"""
+# Testing the Strategy
+"""
+
+# ╔═╡ b12eb0a2-136c-4409-8fa6-81d659a1d2f6
+@bind refresh_button Button("Refresh")
+
+# ╔═╡ 364ce463-f572-40a0-8566-4b91a4307c43
+@bind selected_tree Select([safety_strategy => :safety_strategy, reactive_tree => :reactive_tree])
+
+# ╔═╡ 301a434e-d5d9-44c6-8ea1-b26a89a433cd
+refresh_button; selected_tree_plot = draw(selected_tree, 
+	Bounds(outer_bounds.lower, (outer_bounds.upper[1], outer_bounds.upper[2]+2)), 
+	color_dict=action_color_dict,
+	line=nothing,
+	xlabel="v",
+	ylabel="p")
+
 # ╔═╡ 18d7baa2-4af2-4c06-a0ba-cc8d1a16da97
 hits_rarely = random_policy(0.05)
 
+# ╔═╡ c93c0468-278b-429b-a447-ab8cda4cb768
+shielded_hits_rarely = shield(selected_tree, hits_rarely)
+
 # ╔═╡ 51e0f06e-d317-4325-8473-76b195457469
-shield(safety_strategy, hits_rarely)((7, 0))
+shielded_hits_rarely((7, 0))
+
+# ╔═╡ c4d28b60-7028-4eb0-9178-32cc9e40d8fd
+refresh_button, go_clock, synthesize_button; @bind runs NumberField(1:100000, default=100)
+
+# ╔═╡ a0795c57-53cb-4562-b05f-9db7a1c7cfe1
+# TODO: Delete this cell again
+function check_safety(mechanics, policy, duration; runs=1000)
+	t_hit, g, β1, ϵ1, β2, ϵ2, v_hit, p_hit  = mechanics
+	deaths = 0
+	for run in 1:runs
+		v, p = 0, rand(7:10)
+		for i in 1:ceil(duration/t_hit)
+			action = policy((v, p))
+			v, p = simulate_point(mechanics, (v, p), action)
+		end
+		if v == 0 && p == 0
+			deaths += 1
+		end
+	end
+	deaths
+end
+
+# ╔═╡ f9ca8159-0b31-4e00-bd7b-89c788295589
+check_safety(bbmechanics, 
+		hits_rarely, 
+		120, 
+		runs=50)
 
 # ╔═╡ a0ecb865-b8f6-471c-b32b-80e376792ecd
-check_safety(bbmechanics, (x, y) -> shield(safety_strategy, hits_rarely), 120, runs=1000)
+begin
+	refresh_button, go_clock, synthesize_button 
+	
+	safety_violations = check_safety(bbmechanics, 
+		shielded_hits_rarely, 
+		120, 
+		runs=runs)
 
-# ╔═╡ 25d4797d-293d-449d-984f-c1d7d830dfaa
-md"""
-# Scratchpad
-"""
+	if safety_violations > 0
+		Markdown.parse("""
+		!!! danger "Not Safe"
+			There were $safety_violations safety violations in $runs runs. 
+		""")
+	else
+		Markdown.parse("""
+		!!! success "Seems Safe"
+			No safety violations observed in $runs runs.
+		""")
+	end
+end
 
 # ╔═╡ eba405af-7cf2-4a19-85ba-6750e3ccdef0
+call() do
+	refresh_button
+	shielded_lazy = shield(selected_tree, _ -> nohit)
+	
+	animate_trace(simulate_sequence(bbmechanics, 
+		(0, 7), 
+		shielded_hits_rarely, 10)...)
+end
 
+# ╔═╡ 57a03baf-2b14-4822-9c16-d8d2bbfd0162
+hit
 
 # ╔═╡ Cell order:
 # ╠═82e532dd-8ec1-458f-b4d6-59cea44dc2b6
@@ -598,7 +653,7 @@ md"""
 # ╟─e7fbb9bb-63b5-4f6a-bb27-7ea1613d6740
 # ╟─0e18b756-f8a9-4821-8b85-30c908f7e3af
 # ╠═cd190e4a-9e48-4e6a-8058-1bcb105d9c0b
-# ╠═c7c48e96-77d5-4c98-a420-39c929130704
+# ╠═e2c0924f-bb05-466c-aceb-8ef3c9b947c9
 # ╟─165ba9e0-7409-4f5d-b10b-4223fe589ac6
 # ╟─57be14bb-d748-4432-8608-106c44c38f83
 # ╠═e0013651-12ed-4c81-ad05-2eb8f47a720c
@@ -608,12 +663,6 @@ md"""
 # ╠═7f560461-bfc7-4419-8a27-670b09830052
 # ╠═f3edc169-94ff-4560-874c-05aab6f8782c
 # ╠═f204e821-45d4-4518-8cd6-4a6ab3963460
-# ╠═6bcff92a-941f-491c-99d1-2b50a4a94231
-# ╠═6569a86b-4001-4e99-849e-c92ebcea47dd
-# ╠═5a7e7e50-7485-4479-9873-98b2729e2f74
-# ╠═4e82ec51-6a75-456d-a801-721331c6c156
-# ╠═7889f07f-0234-48d0-87cc-4830e62e68b1
-# ╠═8a13e8b2-3e8a-471b-9f71-22fe3dc0e46b
 # ╠═ec1628b6-9dd3-43a6-aa10-01f9743ce0ea
 # ╟─0039a51e-26ed-4ad2-aeda-117436295ca1
 # ╠═47e04910-d9e9-430f-8cec-bfd584c991e2
@@ -621,12 +670,20 @@ md"""
 # ╠═ecf49f25-1ea4-48be-a391-c8f4c1012c6f
 # ╠═c92d8cf4-0908-4c7c-8d3d-3dd07972219e
 # ╟─c42af80d-bb1e-42f7-9131-1080639cbd6a
-# ╠═f113308a-1d72-41e9-ba54-71576994a664
+# ╟─f113308a-1d72-41e9-ba54-71576994a664
 # ╠═629440a0-3ec7-4204-9f27-6575334aae3c
 # ╠═b338748b-0801-474f-9a79-5d794e88d15c
 # ╠═3caf3b3d-42e9-42e8-8fc8-62cc6cb08d3a
-# ╠═18d7baa2-4af2-4c06-a0ba-cc8d1a16da97
-# ╠═51e0f06e-d317-4325-8473-76b195457469
-# ╠═a0ecb865-b8f6-471c-b32b-80e376792ecd
 # ╟─25d4797d-293d-449d-984f-c1d7d830dfaa
+# ╠═b12eb0a2-136c-4409-8fa6-81d659a1d2f6
+# ╠═364ce463-f572-40a0-8566-4b91a4307c43
+# ╟─301a434e-d5d9-44c6-8ea1-b26a89a433cd
+# ╠═18d7baa2-4af2-4c06-a0ba-cc8d1a16da97
+# ╠═c93c0468-278b-429b-a447-ab8cda4cb768
+# ╠═51e0f06e-d317-4325-8473-76b195457469
+# ╠═c4d28b60-7028-4eb0-9178-32cc9e40d8fd
+# ╠═a0795c57-53cb-4562-b05f-9db7a1c7cfe1
+# ╠═f9ca8159-0b31-4e00-bd7b-89c788295589
+# ╟─a0ecb865-b8f6-471c-b32b-80e376792ecd
 # ╠═eba405af-7cf2-4a19-85ba-6750e3ccdef0
+# ╠═57a03baf-2b14-4822-9c16-d8d2bbfd0162

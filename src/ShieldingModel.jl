@@ -8,6 +8,7 @@
  - `margin` This value will be added to a threshold after it is computed, as an extra margin for error.
  - `max_iterations` Max iterations when growing the tree. Mostly there as an emergency stop, and ideally should never be hit.
  - `splitting_tolerance` Desired precision while splitting. 
+ - `verbose` Print detailed runtime information using the `@Info` macro. Not recommended for calls to `synthesize!` or `grow!`.
 """
 struct ShieldingModel
     simulation_function::Function
@@ -54,6 +55,10 @@ struct ShieldingModel
 
         if action_space isa Type
             action_space = instances(action_space)
+        end
+
+        if margin > min_granularity
+            @warn "Margin should not be greater than minimum granularity.\nThis can cause infinite growth." margin min_granularity
         end
         
         new(simulation_function,
