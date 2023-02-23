@@ -207,15 +207,15 @@ function get_threshold(tree::Tree, bounds::Bounds, axis, action, direction::Dire
 	m.verbose && @info "Applied safety margin.   Threshold is now $threshold."  axis direction threshold margin=m.margin
 
 	# Apply min_granularity
-	threshold = min(threshold, bounds.upper[axis] - m.min_granularity)
-	threshold = max(threshold, bounds.lower[axis] + m.min_granularity)
-	m.verbose && @info "Applied min_granularity. Threshold is now $threshold."
+	min_granularity_boost = 1.05 # Just to be absolutely sure that the double-precision result will be greater than min_granularity
+	threshold = min(threshold, bounds.upper[axis] - m.min_granularity*min_granularity_boost)
+	threshold = max(threshold, bounds.lower[axis] + m.min_granularity*min_granularity_boost)
 	m.verbose && @info "Applied min_granularity. Threshold is now $threshold." axis direction threshold min_granularity=m.min_granularity
 
 	# Check against min_granularity
 	# Because maybe the partition was already as small as could be.
 	if bounds.upper[axis] - threshold < m.min_granularity || 
-	   threshold - bounds.lower[axis] < m.min_granularity
+       threshold - bounds.lower[axis] < m.min_granularity
 		
 		m.verbose && @info "Skipping split since it exceeds min_granularity" axis direction threshold min_granularity=m.min_granularity
         return nothing
@@ -255,7 +255,7 @@ function get_split(root::Tree, leaf::Leaf, m::ShieldingModel)
 	for i in 1:m.dimensionality
 		m.verbose && @info "Trying axis $i"
 		axis = i
-		if bounds.upper[axis] - bounds.lower[axis] <= m.min_granularity
+		if bounds.upper[axis] - bounds.lower[axis] <= m.min_granularity*2
 			m.verbose && @info "Split would be less than min_granularity" min_granularity=m.min_granularity
 			continue
 		end
