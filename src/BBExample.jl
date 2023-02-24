@@ -1,6 +1,6 @@
 @enum Action hit nohit
 
-function simulate_point(mechanics, point, action; min_v_on_impact=1, unlucky=false)
+function simulate_point(mechanics, point, action; min_v_on_impact=1)
 	t_hit, g, β1, ϵ1, β2, ϵ2, v_hit, p_hit  = mechanics
     v, p = point
     v0, p0 = v, p
@@ -9,11 +9,7 @@ function simulate_point(mechanics, point, action; min_v_on_impact=1, unlucky=fal
         if v < 0
             v0 = min(v, v_hit)
         else
-			if unlucky
-            	v0 = -(β2 - ϵ2)*v + v_hit
-			else
-				v0 = -rand(β2 - ϵ2:0.01:β2 + ϵ2)*v + v_hit
-			end
+			v0 = -rand(β2 - ϵ2:0.01:β2 + ϵ2)*v + v_hit
         end
     end
     
@@ -25,16 +21,12 @@ function simulate_point(mechanics, point, action; min_v_on_impact=1, unlucky=fal
         t_remaining = t_hit - t_impact      # Time left this timestep after bounce occurs
         new_v = g * t_impact + v0        # Gravity pull before impact
 		# Impact
-		if unlucky
-        	new_v = -(β1 - ϵ1)*new_v
-		else
-        	new_v = -rand(β1 - ϵ1:0.01:β1 + ϵ1)*new_v 
-		end
+		new_v = -rand(β1 - ϵ1:0.01:β1 + ϵ1)*new_v 
 		new_p = 0
 
 		mechanics′ = (t_hit=t_remaining, g, β1, ϵ1, β2, ϵ2, v_hit, p_hit)
 		if new_v >= min_v_on_impact
-	        new_v, new_p = simulate_point(mechanics′,( new_v, new_p), action, min_v_on_impact=min_v_on_impact, unlucky=unlucky)
+	        new_v, new_p = simulate_point(mechanics′,( new_v, new_p), action, min_v_on_impact=min_v_on_impact)
 		else
 			new_v, new_p = 0, 0
 		end
@@ -45,7 +37,6 @@ end
 
 function simulate_sequence(mechanics, initial_point, 
 						   policy, duration; 
-						   unlucky=false, 
 						   min_v_on_impact=1)
 	t_hit, g, β1, ϵ1, β2, ϵ2, v_hit, p_hit  = mechanics
     v0, p0 = initial_point
@@ -54,7 +45,6 @@ function simulate_sequence(mechanics, initial_point,
     while times[end] <= duration - t_hit
         action = policy((v, p))
         v, p = simulate_point(mechanics, (v, p), action, 
-								unlucky=unlucky,
 								min_v_on_impact=min_v_on_impact)
 		t += t_hit
         push!(velocities, v)
@@ -65,7 +55,6 @@ function simulate_sequence(mechanics, initial_point,
 end
 
 function evaluate(mechanics, policy, duration;
-		unlucky=false,
 		runs=1000,
 		cost_hit=1)
 	t_hit, g, β1, ϵ1, β2, ϵ2, v_hit, p_hit  = mechanics
@@ -76,7 +65,7 @@ function evaluate(mechanics, policy, duration;
 		for i in 1:ceil(duration/t_hit)
 			action = policy(v, p)
 			cost += action == "hit" ? 1 : 0
-			v, p = simulate_point(mechanics, (v, p), action, unlucky=unlucky)
+			v, p = simulate_point(mechanics, (v, p), action)
 		end
 		push!(costs, cost)
 	end
