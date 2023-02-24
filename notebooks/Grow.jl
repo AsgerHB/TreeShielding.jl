@@ -443,9 +443,6 @@ begin
 	"Next: Leaf($(reactive_queue[end].value))"
 end
 
-# ╔═╡ 0a14602c-aa5e-460f-9ab3-9edd18234b5a
-get_safety_bounds(reactive_tree, get_bounds(reactive_leaf, m.dimensionality), m)
-
 # ╔═╡ 8cc5f9f3-263c-459f-ae78-f2c0e8487e86
 if try_splitting_button > 0 && reactive_leaf !== nothing
 	call() do
@@ -555,7 +552,6 @@ $br
 # ╟─569efbf8-14da-47a3-b990-88cf223d4b82
 # ╟─e21201c8-b043-4214-b8bc-9e7cc2dced6f
 # ╠═42d2f87e-ce8b-4928-9d00-b0aa70a18cb5
-# ╠═0a14602c-aa5e-460f-9ab3-9edd18234b5a
 # ╟─7f394991-4673-4f32-8c4f-09225822ae95
 # ╠═8cc5f9f3-263c-459f-ae78-f2c0e8487e86
 # ╟─8b749715-66a2-4a48-9a78-0462869ea3d0

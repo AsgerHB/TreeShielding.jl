@@ -28,62 +28,6 @@ function compute_safety(tree::Tree, points, m)
 	result
 end
 
-"""
-    get_safety_bounds(tree, bounds, m::ShieldingModel)
-
-From a set of `SupportingPoints` defined by the arguments, return bounds which cover safe and unsafe areas within the initial set of `bounds`.
-
-**Returns:** A `(safe, unsafe)` tuple of bounds, which cover (but might not exclusively contain) all safe and unsafe points.
-
-***Args:**
- - `tree` Tree defining safe and unsafe regions.
- - `bounds` The set of bounds used for the `SupportingPoints`. Presumably they represent a leaf.
-"""
-function get_safety_bounds(tree, bounds, m::ShieldingModel)
-
-	no_action = actions_to_int([])
-	dimensionality = get_dim(bounds)
-
-	min_safe = [Inf for _ in 1:dimensionality]
-	max_safe = [-Inf for _ in 1:dimensionality]
-	min_unsafe = [Inf for _ in 1:dimensionality]
-	max_unsafe = [-Inf for _ in 1:dimensionality]
-
-	for point in SupportingPoints(m.samples_per_axis, bounds)
-		safe = false
-
-		for action in m.action_space
-			point′ = m.simulation_function(point, action)
-			if get_value(tree, point′) != no_action
-				safe = true
-			end
-		end
-
-		if safe
-			for axis in 1:dimensionality
-				if min_safe[axis] > point[axis]
-					min_safe[axis] = point[axis]
-				end
-				if max_safe[axis] < point[axis]
-					max_safe[axis] = point[axis]
-				end
-			end
-		else
-			for axis in 1:dimensionality
-				if min_unsafe[axis] > point[axis]
-					min_unsafe[axis] = point[axis]
-				end
-				if max_unsafe[axis] < point[axis]
-					max_unsafe[axis] = point[axis]
-				end
-			end
-		end
-	end
-
-	safe, unsafe = Bounds(min_safe, max_safe), Bounds(min_unsafe, max_unsafe)
-    return safe, unsafe
-end
-
 function get_equivalence_bounds(tree, bounds, m::ShieldingModel)
 
 	no_action = actions_to_int([])
