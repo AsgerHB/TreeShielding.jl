@@ -68,3 +68,10 @@ Base.iterate(s::SupportingPoints, state) = begin
     
     sample, (spacings, indices)
 end
+
+function all_supporting_points(bounds::Bounds, m::ShieldingModel)
+    return Iterators.product(
+        SupportingPoints(m.samples_per_axis, bounds),
+        SupportingPoints(m.samples_per_axis, m.random_variable_bounds)
+    )
+end

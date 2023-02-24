@@ -30,44 +30,40 @@ rwmechanics = RWMechanics()
 
 @enum Pace slow fast
 
-function simulate(m::RWMechanics, x, t, a; unlucky=false)
+function simulate(m::RWMechanics, x, t, a, random_outcomes)
     if x > m.x_max # game has ended.
         return x, t
     end
 
 	x′, t′ =  x, t
-	if unlucky
-		if a == fast
-			x′ = x + m.δ_fast - m.ϵ
-			t′ = t + m.τ_fast + m.ϵ
-		else
-			x′ = x + m.δ_slow - m.ϵ
-			t′ = t + m.τ_slow + m.ϵ
-		end
+
+	if a == fast
+		x′ = x + m.δ_fast + random_outcomes[1]
+		t′ = t + m.τ_fast + random_outcomes[2]
 	else
-		if a == fast
-			x′ = x + rand(m.δ_fast - m.ϵ:0.005:m.δ_fast + m.ϵ )
-			t′ = t + rand(m.τ_fast - m.ϵ:0.005:m.τ_fast + m.ϵ )
-		else
-			x′ = x + rand(m.δ_slow - m.ϵ:0.005:m.δ_slow + m.ϵ )
-			t′ = t + rand(m.τ_slow - m.ϵ:0.005:m.τ_slow + m.ϵ )
-		end
-	end	
+		x′ = x + m.δ_slow + random_outcomes[1]
+		t′ = t + m.τ_slow + random_outcomes[2]
+	end
 	
 	x′, t′
 end
 
 
+function simulate(m::RWMechanics, x, t, a)
+	random_outcomes = (rand(-m.ϵ:0.005:m.ϵ), rand(m.ϵ:0.005:m.ϵ))
+	simulate(m::RWMechanics, x, t, a, random_outcomes)
+end
+
+
 function take_walk(m::RWMechanics, 
 					policy::Function;
-                    cost_function=(x, t, a) -> a == fast ? 2 : 1,
-					unlucky=false)
+                    cost_function=(x, t, a) -> a == fast ? 2 : 1)
 	xs, ts, actions = [m.x_min], [m.t_min], []
 	total_cost = 0
 
 	while last(xs) < m.x_max && last(ts) < m.t_max
 		a = policy(last(xs), last(ts))
-		x, t = simulate(m, last(xs), last(ts), a, unlucky=unlucky)
+		x, t = simulate(m, last(xs), last(ts), a)
 		total_cost += cost_function(last(xs), last(ts), a)
 		push!(xs, x)
 		push!(ts, t)

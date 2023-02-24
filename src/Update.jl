@@ -22,9 +22,9 @@ function get_allowed_actions(tree::Tree,
     no_actions = actions_to_int([])
 
     allowed = Set(m.action_space)
-    for p in SupportingPoints(m.samples_per_axis, bounds)
+    for (p, r) in all_supporting_points(bounds, m)
         for a in m.action_space
-            p′ = m.simulation_function(p, a)
+            p′ = m.simulation_function(p, r, a)
             if get_value(tree, p′) == no_actions
                 # m.verbose && @info "$a is unsafe at $p."
                 delete!(allowed, a)

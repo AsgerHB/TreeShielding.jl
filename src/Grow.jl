@@ -14,13 +14,13 @@ For each point, use the `simulation_function` to check if it would end up in an 
  - `action_space` The possible actions to provide `simulation_function`. 
  - `points` This is the set of points.
 """
-function compute_safety(tree::Tree, points, m)
+function compute_safety(tree::Tree, bounds::Bounds, m)
     unsafe_value = actions_to_int([]) # The value for states where no actions are allowed.
 	result = []
-	for p in points
+	for (p, r) in all_supporting_points(bounds, m)
         safe = false
         for a in m.action_space
-            p′ = m.simulation_function(p, a)
+            p′ = m.simulation_function(p, r, a)
             safe = safe || (get_value(tree, p′) != unsafe_value)
         end
         push!(result, (p, safe))
@@ -41,8 +41,11 @@ function get_equivalence_bounds(tree, bounds, m::ShieldingModel)
 	for point in SupportingPoints(m.samples_per_axis, bounds)
 		
 		for action in m.action_space
-			point′ = m.simulation_function(point, action)
-			safe = get_value(tree, point′) != no_action
+			safe = true
+			for random_variables in SupportingPoints(m.samples_per_axis, m.random_variable_bounds)
+				point′ = m.simulation_function(point, random_variables, action)
+				safe = safe && get_value(tree, point′) != no_action
+			end
 
 			if safe
 				for axis in 1:dimensionality

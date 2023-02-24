@@ -15,14 +15,14 @@ include("Trees.jl")
 export robust_serialize, robust_deserialize
 include("RobustSerialization.jl")
 
+export ShieldingModel
+include("ShieldingModel.jl")
+
 export SupportingPoints, get_spacing_sizes
 include("SuppotingPoints.jl")
 
 export actions_to_int, int_to_actions
 include("ActionConversion.jl")
-
-export ShieldingModel
-include("ShieldingModel.jl")
 
 export Direction, safe_below_threshold, safe_above_threshold, get_split, compute_safety, get_dividing_bounds, get_threshold, try_splitting!, grow! 
 include("Grow.jl")

@@ -108,10 +108,12 @@ end
 function draw_support_points!(tree::Tree,  bounds::Bounds, action, m::ShieldingModel)
     supporting_points = SupportingPoints(m.samples_per_axis, bounds)
     scatter_supporting_points!(supporting_points)
-    outcomes = map(p -> m.simulation_function(p, action), supporting_points)
-    scatter_outcomes!(outcomes)
+    m.simulation_function((1, 1), (1, 1), RW.fast)
+	outcomes = map((p_r) -> m.simulation_function(p_r..., action), TreeShielding.all_supporting_points(bounds, m))
+    outcomes = reshape(outcomes, (:,1))
+    scatter_outcomes!(outcomes |> unzip)
 
-    points_safe = compute_safety(tree, supporting_points, m)
+    points_safe = compute_safety(tree, bounds, m)
     
     unsafe_points = [p for (p, safe) in points_safe if !safe]
     scatter!(unsafe_points, m=(:x, 5, colors.ALIZARIN), msw=3, label="unsafe")
@@ -123,15 +125,19 @@ function scatter_allowed_actions!(tree, bounds, m)
 	unsafe = []
 
 	for p in SupportingPoints(m.samples_per_axis, bounds)
-		safe = false
+		point_safe = false
 		for (i, a) in enumerate(m.action_space)
-			p′ = m.simulation_function(p, a)
-			if get_value(get_leaf(tree, p′)) != no_action
+            action_safe = true
+            for r in SupportingPoints(m.samples_per_axis, m.random_variable_bounds)
+                p′ = m.simulation_function(p, r, a)
+                action_safe = action_safe && get_value(get_leaf(tree, p′)) != no_action
+            end
+			if action_safe
 				push!(actions[i], p)
-				safe = true
+				point_safe = true
 			end
 		end
-		if !safe
+		if !point_safe
 			push!(unsafe, p)
 		end
 	end

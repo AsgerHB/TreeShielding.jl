@@ -113,23 +113,33 @@ begin
 	draw_walk!(take_walk(rwmechanics, (_, _) -> rand([RW.slow, RW.fast]))...)
 end
 
-# ╔═╡ b7410cc3-d5b7-497b-88c8-1f525c646b3e
+# ╔═╡ c011233c-476d-4dcc-862c-151e49f75faf
 md"""
-The function for taking a single step needs to be wrapped up, so that it only takes the arguments `point` and `action`.
+### The Random Factor
 
-The kwarg `unlucky=true` will tell the function to pick the worst-case outcome, i.e. the one where the ball preserves the least amount of power on impact. 
+The actions are affected by a random factor $\pm \epsilon$ in each dimension. This is captured in the below bounds, which make up part of the model. This will be used as part of the reachability simulation.
+"""
 
-!!! info "TODO"
-	Model random outcomes as an additional dimension, removing the need for assumptions about a "worst-case" outcome.
+# ╔═╡ bb4516e9-1f18-4b5f-a29f-06fc4449de07
+ϵ = rwmechanics.ϵ
+
+# ╔═╡ 55ef89de-76c4-48c7-953b-44e2034409c6
+random_variable_bounds = Bounds((-ϵ,  -ϵ), (ϵ, ϵ))
+
+# ╔═╡ 7d07f8c2-3bde-4506-b7d3-f2b4a6b7aba9
+md"""
+### The Simulation Function
+
+The function for taking a single step needs to be wrapped up, so that it has the signature `(point::AbstractVector, action, random_variables::AbstractVector) -> updated_point`. 
 """
 
 # ╔═╡ f698931f-0f24-4f82-8a09-f521bb1b4d2d
-simulation_function(point, action) = RW.simulate(
+simulation_function(point, random_variables, action) = RW.simulate(
 	rwmechanics, 
 	point[1], 
 	point[2], 
 	action,
-	unlucky=true)
+	random_variables)
 
 # ╔═╡ c235f874-a7dc-4090-9733-7a92263b6d32
 md"""
@@ -204,30 +214,25 @@ md"""
 Change the inputs and click the buttons to see how the parameters affect synthesis, one step at a time.
 """
 
-# ╔═╡ de03955c-7064-401f-b20b-14302273da8b
+# ╔═╡ 503b61c8-e437-42ab-a7d0-de4d47030d50
 md"""
-Try changing the number of samples per axis, to see how this affects the growth of the tree.
+### Parameters -- Try it Out!
+!!! info "Tip"
+	This cell controls multiple figures. Move it around to gain a better view.
 
-`spa =` $(@bind spa NumberField(1:20, default=15))
+Try setting a different number of samples per axis: 
 
-And likewise try to adjust the minimum granularity. Defined as the number of leading zeros to the one.
+`samples_per_axis =` $(@bind samples_per_axis NumberField(3:30, default=5))
 
-`min_granularity_decimals` $(@bind min_granularity_decimals NumberField(1:15, 3))
+`min_granularity =` $(@bind min_granularity NumberField(0:1E-15:1, default=1E-5))
 
-`max_iterations` $(@bind max_iterations NumberField(1:20, default=20))
+`margin =` $(@bind margin NumberField(0:0.001:1, default=0.00))
 
-`margin` $(@bind margin NumberField(0:0.0001:1, default=0))
-
-`splitting_tolerance` $(@bind splitting_tolerance NumberField(0.0001:0.0001:1))
-
-`verbose` $(@bind verbose CheckBox())
+`splitting_tolerance =` $(@bind splitting_tolerance NumberField(0:1E-10:1, default=1E-5))
 """
 
-# ╔═╡ d020392b-ede6-4517-8e56-5ddcb1f33fea
-min_granularity = 10.0^(-min_granularity_decimals - 1)
-
 # ╔═╡ a52e9520-f4df-4e88-bb39-e516f37335ea
-m = ShieldingModel(simulation_function, Pace, dimensionality, spa; min_granularity, max_iterations, margin, splitting_tolerance, verbose)
+m = ShieldingModel(simulation_function, Pace, dimensionality, samples_per_axis, random_variable_bounds; min_granularity, margin, splitting_tolerance)
 
 # ╔═╡ e3ba9c22-6e2c-4d90-9823-93f871c036b4
 get_bounds(get_leaf(initial_tree, x_max + 1, y_max/2), m.dimensionality)
@@ -311,20 +316,6 @@ else
 	reactivity3 = "pruned"
 end
 
-# ╔═╡ 8306fbf0-c537-4f92-9e18-c2b006d7499e
-begin
-	reactivity1, reactivity2, reactivity3
-	p1 = draw(reactive_tree, draw_bounds, color_dict=action_color_dict)
-	plot!(legend=:outerright)
-
-	if show_supporting_points
-		p = (partition_x, partition_y)
-		draw_support_points!(reactive_tree, p, a, m)
-		scatter!(p, m=(4, :rtriangle, :white), msw=1, label=nothing, )
-	end
-	plot!(aspectratio=:equal)
-end
-
 # ╔═╡ 897c4e0a-2544-4e7a-b270-8212189f84c0
 leaf = get_leaf(reactive_tree, partition_x, partition_y)
 
@@ -333,6 +324,20 @@ axis, threshold = get_split(reactive_tree, leaf, m)
 
 # ╔═╡ 455c7e81-2875-48fe-95c2-2dd92ed3f013
 bounds = get_bounds(leaf, m.dimensionality)
+
+# ╔═╡ 8306fbf0-c537-4f92-9e18-c2b006d7499e
+begin
+	reactivity1, reactivity2, reactivity3
+	p1 = draw(reactive_tree, draw_bounds, color_dict=action_color_dict)
+	plot!(legend=:outerright)
+
+	if show_supporting_points
+		p = (partition_x, partition_y)
+		scatter_allowed_actions!(reactive_tree, bounds, m)
+		scatter!(p, m=(4, :rtriangle, :white), msw=1, label=nothing, )
+	end
+	plot!(aspectratio=:equal)
+end
 
 # ╔═╡ e76c943b-acbd-4e97-92b2-f035c574a66a
 bounds_gt = call() do
@@ -353,20 +358,6 @@ TreeShielding.get_allowed_actions(reactive_tree, bounds_lt, m)
 
 # ╔═╡ 271cf6fd-1c9e-4d8e-8f8e-c0b4b9fde9dd
 TreeShielding.get_allowed_actions(reactive_tree, bounds_gt, m)
-
-# ╔═╡ 47c35443-498d-4dba-87b4-cc329fa534dc
-call() do
-	plot(legend=:outerright)
-    supporting_points = SupportingPoints(m.samples_per_axis, bounds)
-    scatter_supporting_points!(supporting_points)
-    outcomes = map(p -> m.simulation_function(p, a), supporting_points)
-    scatter_outcomes!(outcomes)
-
-    return points_safe = compute_safety(tree, supporting_points, m)
-    
-    unsafe_points = [p for (p, safe) in points_safe if !safe]
-    scatter!(unsafe_points, m=(:x, 5, colors.ALIZARIN), msw=3, label="unsafe")
-end
 
 # ╔═╡ b167ada8-dc47-491c-b8f1-6b8dae176307
 md"""
@@ -443,8 +434,11 @@ end
 # ╠═80c812df-9b1c-4fd8-9100-b58fdfc24ff9
 # ╠═7cd5e7bb-36d1-4aea-8384-969d98eaec1a
 # ╠═fb29bd97-0a65-4142-83d0-fcfe60360080
-# ╟─b7410cc3-d5b7-497b-88c8-1f525c646b3e
-# ╠═f698931f-0f24-4f82-8a09-f521bb1b4d2d
+# ╟─c011233c-476d-4dcc-862c-151e49f75faf
+# ╠═bb4516e9-1f18-4b5f-a29f-06fc4449de07
+# ╠═55ef89de-76c4-48c7-953b-44e2034409c6
+# ╟─7d07f8c2-3bde-4506-b7d3-f2b4a6b7aba9
+# ╟─f698931f-0f24-4f82-8a09-f521bb1b4d2d
 # ╟─c235f874-a7dc-4090-9733-7a92263b6d32
 # ╠═4f33f9a0-9a7a-426b-8022-43a87bb3d188
 # ╠═957a7a75-0ac0-4c2e-9359-f9ad915e88be
@@ -458,8 +452,7 @@ end
 # ╠═777f87fd-f497-49f8-9deb-e708c990cdd1
 # ╠═3b86ac41-4d87-4498-a1ca-c8c327ceb347
 # ╟─3bf43a31-1739-4b94-944c-0226cc3851cb
-# ╟─de03955c-7064-401f-b20b-14302273da8b
-# ╟─d020392b-ede6-4517-8e56-5ddcb1f33fea
+# ╟─503b61c8-e437-42ab-a7d0-de4d47030d50
 # ╠═a52e9520-f4df-4e88-bb39-e516f37335ea
 # ╟─e21002c4-f772-4c55-9014-6551b41d7ef4
 # ╟─5cfd2617-c1d8-4228-b7ca-cde9c3d68a4c
@@ -478,11 +471,10 @@ end
 # ╠═887add25-5e17-4688-9b87-239d1276f140
 # ╠═5ff44f02-8c19-404d-baf6-421566a5f322
 # ╠═271cf6fd-1c9e-4d8e-8f8e-c0b4b9fde9dd
-# ╠═47c35443-498d-4dba-87b4-cc329fa534dc
 # ╟─b167ada8-dc47-491c-b8f1-6b8dae176307
 # ╟─8c9d74e1-7ccb-4623-9169-69501e8af721
 # ╠═955ef68a-5a87-43d2-96bb-5b31f2d8e92a
 # ╟─8af94312-e7f8-4b44-8190-ad0d2b5ce6d7
 # ╠═039a6f5c-2934-4345-a381-56f8c3c33483
 # ╟─6823a7d1-f404-46b1-9490-862aeba553a7
-# ╠═0e68f636-cf63-4df8-b9ca-c597701334a9
+# ╟─0e68f636-cf63-4df8-b9ca-c597701334a9
