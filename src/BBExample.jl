@@ -1,6 +1,6 @@
 @enum Action hit nohit
 
-function simulate_point(mechanics, point, action; min_v_on_impact=1)
+function simulate_point(mechanics, point, random_variable, action; min_v_on_impact=1)
 	t_hit, g, β1, ϵ1, β2, ϵ2, v_hit, p_hit  = mechanics
     v, p = point
     v0, p0 = v, p
@@ -9,7 +9,7 @@ function simulate_point(mechanics, point, action; min_v_on_impact=1)
         if v < 0
             v0 = min(v, v_hit)
         else
-			v0 = -rand(β2 - ϵ2:0.01:β2 + ϵ2)*v + v_hit
+			v0 = -(β2 + random_variable[1]*ϵ2)*v + v_hit
         end
     end
     
@@ -21,7 +21,7 @@ function simulate_point(mechanics, point, action; min_v_on_impact=1)
         t_remaining = t_hit - t_impact      # Time left this timestep after bounce occurs
         new_v = g * t_impact + v0        # Gravity pull before impact
 		# Impact
-		new_v = -rand(β1 - ϵ1:0.01:β1 + ϵ1)*new_v 
+		new_v = -(β1 + random_variable[1]*ϵ1)*new_v 
 		new_p = 0
 
 		mechanics′ = (t_hit=t_remaining, g, β1, ϵ1, β2, ϵ2, v_hit, p_hit)
@@ -34,6 +34,13 @@ function simulate_point(mechanics, point, action; min_v_on_impact=1)
     
     new_v, new_p
 end
+
+
+function simulate_point(mechanics, point, action; min_v_on_impact=1)
+	r = rand(Uniform(-1, 1))
+	simulate_point(mechanics, point, r, action; min_v_on_impact=min_v_on_impact)
+end
+
 
 function simulate_sequence(mechanics, initial_point, 
 						   policy, duration; 

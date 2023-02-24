@@ -106,6 +106,25 @@ action_color_dict=Dict(
 # ╔═╡ 39cd11b7-2428-47ae-b8ec-90459bb03636
 dimensionality = 2
 
+# ╔═╡ ecd44dfb-36c6-41ca-bb9c-4b73f00b4c40
+md"""
+### The Random Factor
+
+The bouncing ball will retain a random amount of energy when it bounces. This amount of energy is different depending on wheter it is bouncing off the floor, or if it is bouncing back after being hit with the bat.
+
+However, both events cannot happen at the same time-step, so a random value between -1 and 1 is used. This value can be converted to the appropriate range when needed.
+"""
+
+# ╔═╡ 2887090b-71f7-4be8-abf7-04eeeca14559
+random_variable_bounds = Bounds((-1,), (1,))
+
+# ╔═╡ 490b1897-3357-4529-9780-33122b1dbd62
+md"""
+### The Simulation Function
+
+The function for taking a single step needs to be wrapped up, so that it has the signature `(point::AbstractVector, action, random_variables::AbstractVector) -> updated_point`. 
+"""
+
 # ╔═╡ 3cdda0dd-59f8-4d6f-b37a-cdc923b242c0
 md"""
 ## Bouncing Ball Functions
@@ -131,14 +150,17 @@ The kwarg `unlucky=true` will tell the function to pick the worst-case outcome, 
 """
 
 # ╔═╡ 1cc57555-e687-4b84-9568-c7eb903f57ef
-simulation_function(p, a) = 
-	simulate_point(bbmechanics, p, a, unlucky=true, min_v_on_impact=1)
+simulation_function(p, r, a) = 
+	simulate_point(bbmechanics, p, r, a, min_v_on_impact=1)
 
 # ╔═╡ d772354b-b855-4d4e-b768-2200c03cc0d6
-simulation_function((0, 7), hit)
+simulation_function((0, 7), 0.5, hit)
 
 # ╔═╡ cd82ff88-3e88-4a94-b414-abca02a55217
-simulation_function((0.1, 0), hit)
+simulation_function((0.1, 0), 0.5, hit)
+
+# ╔═╡ 0ed0c202-227f-4432-b23d-03163ebcffbe
+rand(0.0:eps():1.0)
 
 # ╔═╡ 33aae1b2-cffb-44f7-9b19-5c5b682473ed
 md"""
@@ -263,33 +285,6 @@ $(@bind partition_y
 	NumberField(outer_bounds.lower[2]:0.01:outer_bounds.upper[2], default=0.9))
 """
 
-# ╔═╡ cd190e4a-9e48-4e6a-8058-1bcb105d9c0b
-# ╠═╡ disabled = true
-#=╠═╡
-# Cell that does grow/update until it is about to create a vertical red bar
-begin
-	borked_bounds = nothing
-	for i in 1:100
-		grow!(reactive_tree, m)
-		updates = TreeShielding.get_updates(reactive_tree, m)
-	
-		for update in updates
-			if get_bounds(update.leaf, m.dimensionality).upper[2] == outer_bounds.upper[2] &&
-				update.new_value == 0
-
-				global borked_bounds = get_bounds(update.leaf, m.dimensionality)
-				@warn "It's about to bork. $(borked_bounds)"
-				
-				@goto break_all
-			end
-		end
-		TreeShielding.apply_updates!(updates)
-	end
-	@info "Didn't bork."
-	@label break_all
-end
-  ╠═╡ =#
-
 # ╔═╡ 57be14bb-d748-4432-8608-106c44c38f83
 md"""
 ### Set the parameters -- Try it Out
@@ -310,7 +305,7 @@ And configure min granularity. The value is set as the number of leading zeros t
 """
 
 # ╔═╡ f878ebd6-b261-4151-8aae-521b6736b28a
-m = ShieldingModel(simulation_function, Action, dimensionality, samples_per_axis; max_iterations, min_granularity, margin, splitting_tolerance)
+m = ShieldingModel(simulation_function, Action, dimensionality, samples_per_axis, random_variable_bounds; max_iterations, min_granularity, margin, splitting_tolerance)
 
 # ╔═╡ 42b0bcee-b931-4bad-9b4b-268f6b3d260c
 if try_splitting_button > 0 && reactive_leaf !== nothing
@@ -402,13 +397,6 @@ end
 
 # ╔═╡ e0013651-12ed-4c81-ad05-2eb8f47a720c
 reset_button, go_clock; Leaves(reactive_tree) |> collect |> length
-
-# ╔═╡ 0837b974-a284-488d-9d6c-b21eb4a6aecf
-#=╠═╡
-l = get_leaf(reactive_tree, 
-	borked_bounds.upper[1] - 0.0000001, 
-	borked_bounds.upper[2] - 0.0000001)
-  ╠═╡ =#
 
 # ╔═╡ 29f7f0ce-e3e6-4071-bdfe-a6da3994dd85
 l = get_leaf(reactive_tree, partition_x, partition_y)
@@ -548,22 +536,7 @@ shielded_hits_rarely((7, 0))
 refresh_button, go_clock, synthesize_button; @bind runs NumberField(1:100000, default=100)
 
 # ╔═╡ a0795c57-53cb-4562-b05f-9db7a1c7cfe1
-# TODO: Delete this cell again
-function check_safety(mechanics, policy, duration; runs=1000)
-	t_hit, g, β1, ϵ1, β2, ϵ2, v_hit, p_hit  = mechanics
-	deaths = 0
-	for run in 1:runs
-		v, p = 0, rand(7:10)
-		for i in 1:ceil(duration/t_hit)
-			action = policy((v, p))
-			v, p = simulate_point(mechanics, (v, p), action)
-		end
-		if v == 0 && p == 0
-			deaths += 1
-		end
-	end
-	deaths
-end
+
 
 # ╔═╡ f9ca8159-0b31-4e00-bd7b-89c788295589
 check_safety(bbmechanics, 
@@ -618,6 +591,9 @@ hit
 # ╟─1feb5107-1587-495d-8024-160f9cc68447
 # ╠═4f55da12-5f81-484f-970a-691336e6e58f
 # ╠═39cd11b7-2428-47ae-b8ec-90459bb03636
+# ╟─ecd44dfb-36c6-41ca-bb9c-4b73f00b4c40
+# ╠═2887090b-71f7-4be8-abf7-04eeeca14559
+# ╟─490b1897-3357-4529-9780-33122b1dbd62
 # ╠═f878ebd6-b261-4151-8aae-521b6736b28a
 # ╟─3cdda0dd-59f8-4d6f-b37a-cdc923b242c0
 # ╠═96155a32-5e05-4632-9fe8-e843970e3089
@@ -625,6 +601,7 @@ hit
 # ╠═1cc57555-e687-4b84-9568-c7eb903f57ef
 # ╠═d772354b-b855-4d4e-b768-2200c03cc0d6
 # ╠═cd82ff88-3e88-4a94-b414-abca02a55217
+# ╠═0ed0c202-227f-4432-b23d-03163ebcffbe
 # ╟─33aae1b2-cffb-44f7-9b19-5c5b682473ed
 # ╠═f86a0e8b-9d76-4e68-91cf-927595c27387
 # ╠═caa90ceb-0435-40b7-a97d-74919b040002
