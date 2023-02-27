@@ -2,7 +2,7 @@
     @enum Action fi fo
     safe, unsafe = actions_to_int(instances(Action)), actions_to_int([])
 
-    function simulation_function(p, a)
+    function simulation_function(p, _, a)
         if a == fi
             if p[1] >= 0
                 return 1
@@ -35,8 +35,9 @@
 
     dimensionality = 1
     samples_per_axis = 3
+    random_variable_bounds = Bounds((), ())
 
-    m = ShieldingModel(simulation_function, Action, dimensionality, samples_per_axis)
+    m = ShieldingModel(simulation_function, Action, dimensionality, samples_per_axis, random_variable_bounds)
 
     # Act #
     @test update!(tree, m) == 2

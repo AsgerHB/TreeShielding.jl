@@ -9,19 +9,22 @@ such that all supporting points to one side of the threshold are safe.
 """
 function test_get_threshold(;samples_per_axis=9,
     min_granularity=0.00001,
-    margin=0.01)
+    margin=0.00)
 
     spa_when_testing = 20 
 
     ### Setting up the Random walk problem ###
     dimensionality = 2
 
-    simulation_function(point, action) = simulate(
+    simulation_function(point, random_outcomes, action) = simulate(
         rwmechanics,
         point[1], 
         point[2], 
         action,
-        unlucky=true)
+        random_outcomes)
+
+    ϵ = rwmechanics.ϵ
+    random_variable_bounds = Bounds((-ϵ, -ϵ), (ϵ, ϵ))
 
     any_action, no_action = 
 	    actions_to_int(instances(Pace)), actions_to_int([])
@@ -48,18 +51,19 @@ function test_get_threshold(;samples_per_axis=9,
 
     action_space = instances(Pace)
 
-    point = (0.5, 0.5) # The middle of the playfield.
-
+    
     m = ShieldingModel(simulation_function, 
         action_space, 
         dimensionality,
-        samples_per_axis;
+        samples_per_axis,
+        random_variable_bounds;
         min_granularity,
         margin)
 
         
         
-    ### Act ##
+        ### Act ##
+    point = (0.5, 0.5) # The middle of the playfield.
     bounds = get_bounds(get_leaf(tree, point), dimensionality)
     axis = 2
     direction = safe_below_threshold
@@ -72,8 +76,7 @@ function test_get_threshold(;samples_per_axis=9,
     bounds_above.lower[axis] = threshold
     bounds_below.upper[axis] = threshold
     
-    supporting_points = SupportingPoints(spa_when_testing, bounds_below)
-    safety_below = compute_safety(tree, supporting_points, m)
+    safety_below = compute_safety(tree, bounds_below, m)
 
     @test all([safe for (_, safe) in safety_below])
 end
@@ -84,17 +87,17 @@ end
         test_get_threshold(
             samples_per_axis=9,
             min_granularity=0.0000,
-            margin=0.01)
+            margin=0.00)
         
         test_get_threshold(
             samples_per_axis = 9,
-            min_granularity = 0.0000,
+            min_granularity = 0.001,
             margin = 0.00001)#
         
         test_get_threshold(
             samples_per_axis = 3,#
-            min_granularity = 0.0000,
-            margin = 0.01)
+            min_granularity = 0.00001,
+            margin = 0.000005)
         
         test_get_threshold(
             samples_per_axis = 9,
@@ -103,8 +106,8 @@ end
         
         test_get_threshold(
             samples_per_axis = 9,
-            min_granularity = 0.00001,
-            margin = 0.01)
+            min_granularity = 0.001,
+            margin = 0.0001)
     end
 
     @enum Actions greeble grooble # This is not just me being silly :3 Julia doesn't like having two enums with the same names.
@@ -120,7 +123,7 @@ end
 
         # Function to make simulation_functions
         # greeble is unsafe if p[1] is below the threshold. grooble will always be less safe than greeble.
-        unsafe_at_threshold(t) = (p, a) -> a == greeble ? (p[1] < t ? unsafe : safe) : (p[1] < t*2 ? unsafe : safe)
+        unsafe_at_threshold(t) = (p, _, a) -> a == greeble ? (p[1] < t ? unsafe : safe) : (p[1] < t*2 ? unsafe : safe)
 
         tree = Node(1, -0.99,
             Leaf(no_action),
@@ -133,11 +136,13 @@ end
         
         
         samples_per_axis = 8
+        random_variable_bounds = Bounds((), ())
         splitting_tolerance = 1E-5
         model(expected) = ShieldingModel(unsafe_at_threshold(expected), 
             Actions, 
             dimensionality,
-            samples_per_axis;
+            samples_per_axis,
+            random_variable_bounds;
             min_granularity = 1E-10,
             splitting_tolerance,
             margin = 0
@@ -199,7 +204,7 @@ end
         # greeble is always unsafe if p[1] is below the threshold.  Otherwise it is safe depending on the values of p[2]
         # grooble will always be less safe than greeble.
         function unsafe_at_threshold(t) 
-            (p, a) -> if a == greeble 
+            (p, _, a) -> if a == greeble 
                 (p[1] < (t - p[2]) ? unsafe : safe)
             elseif a == grooble
                 (p[1] < (t - 2*p[2]) ? unsafe : safe)
@@ -216,11 +221,13 @@ end
         leaf = get_leaf(tree, safe) # Safe leaf with bounds ( [-0.99, 100[,  [0, 100[ )
 
         samples_per_axis = 8
+        random_variable_bounds = Bounds((), ())
         splitting_tolerance = 1E-5
         model(expected) = ShieldingModel(unsafe_at_threshold(expected), 
             Actions, 
             dimensionality,
-            samples_per_axis;
+            samples_per_axis,
+            random_variable_bounds;
             min_granularity = 1E-10,
             splitting_tolerance,
             margin = 0
