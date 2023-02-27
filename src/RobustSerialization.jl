@@ -17,7 +17,8 @@ end
 
 function robust_deserialize(file_name)
 	list = deserialize(file_name)
-	convert_to_tree(list)
+	_, tree = convert_to_tree(list)
+	return tree
 end
 
 function convert_to_tree(list, index=1)
