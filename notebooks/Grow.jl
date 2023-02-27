@@ -239,6 +239,8 @@ md"""
 Also it is possible to control the number of refinement steps in the figures.
 
 `refinement_steps =` $(@bind refinement_steps NumberField(0:9, default=3))
+
+`samples_per_axis_refstep` = $(@bind samples_per_axis_refstep NumberField(3:16, default=3))
 """
 
 # ╔═╡ 15b5d339-705e-4408-9629-2002117b8da7
@@ -312,6 +314,7 @@ end
 
 # ╔═╡ c8d182d8-537f-43d7-ab5f-1374219964e8
 call() do
+	m = @set m.samples_per_axis = samples_per_axis_refstep
 	axis = 1
 	leaf = get_leaf(tree, 0.5, 0.5)
 	bounds = get_bounds(leaf, dimensionality)
@@ -340,16 +343,13 @@ There exists an exact threshold, but we approximate it to within `m.splitting_to
 # ╔═╡ 3e6a861b-cbb9-4972-adee-46996faf68f3
 threshold = get_threshold(tree, bounds, 1, RW.fast, safe_above_threshold, m)
 
-# ╔═╡ bafe51aa-d791-4d36-939b-159a062a2dd4
-get_threshold(tree, bounds, 1, RW.fast, safe_below_threshold, m)
-
 # ╔═╡ c53e43e9-dc81-4b74-b6bd-41f13791f488
 call() do
 	leaf = get_leaf(tree, 0.5, 0.5)
 	bounds = get_bounds(leaf, dimensionality)
 	p1 = draw(tree, draw_bounds, color_dict=action_color_dict,legend=:outerright)
 	plot!(size=(800,600))
-	draw_support_points!(tree, (0.5, 0.5), RW.fast, m)
+	#draw_support_points!(tree, (0.5, 0.5), RW.fast, m)
 
 	dividing_bounds = bounds
 	vline!([threshold], 
@@ -358,6 +358,9 @@ call() do
 		color=colors.WET_ASPHALT)
 
 end
+
+# ╔═╡ bafe51aa-d791-4d36-939b-159a062a2dd4
+@test nothing === get_threshold(tree, bounds, 1, RW.fast, safe_below_threshold, m)
 
 # ╔═╡ 53cf3fc9-788c-4700-8b07-fe9118432c84
 proposed_split = get_split(tree, get_leaf(tree, 0.5, 0.5), m)
@@ -401,7 +404,7 @@ call() do
 		size=(500,500))
 	leaf_count = length(Leaves(tree) |> collect)
 
-	scatter_allowed_actions!(tree, bounds, m)
+	scatter_allowed_actions!(tree, bounds, (@set m.samples_per_axis = 12))
 	plot!([], l=nothing, label="leaves: $leaf_count")
 end
 
@@ -477,8 +480,8 @@ call() do
 		bounds = get_bounds(reactive_queue[end], dimensionality)
 		plot!(TreeShielding.rectangle(bounds ∩ draw_bounds), 
 			label="next in queue",
-			linewidth=4,
-			linecolor=colors.PETER_RIVER,
+			linewidth=2,
+			linecolor=colors.CONCRETE,
 			color=colors.CONCRETE,
 			fillalpha=0.3)
 
@@ -540,17 +543,17 @@ $br
 # ╠═a8a02260-61d8-4698-9b61-351adaf68f78
 # ╠═826ed80a-bdad-4a38-a50b-cb5bec6216c0
 # ╠═0197dfd6-e689-4aad-8af0-a0cbfa48dfa7
-# ╠═e7609f1e-3d94-4e53-9620-dd62995cfc50
+# ╟─e7609f1e-3d94-4e53-9620-dd62995cfc50
 # ╟─2d999c21-cbdd-4ca6-9866-6f763c91feba
 # ╟─b97cf160-79ab-4cf7-a321-31a86b3bccac
-# ╠═c8d182d8-537f-43d7-ab5f-1374219964e8
+# ╟─c8d182d8-537f-43d7-ab5f-1374219964e8
 # ╟─15b5d339-705e-4408-9629-2002117b8da7
 # ╠═da493978-1444-4ec3-be36-4aa1c59170b5
 # ╟─2a382ef9-700a-4350-9a95-ff7f1a8f6f22
 # ╠═3e6a861b-cbb9-4972-adee-46996faf68f3
 # ╟─3621e6d2-cfac-43d4-8622-4f99eb4d4090
 # ╠═bafe51aa-d791-4d36-939b-159a062a2dd4
-# ╠═c53e43e9-dc81-4b74-b6bd-41f13791f488
+# ╟─c53e43e9-dc81-4b74-b6bd-41f13791f488
 # ╟─648fb8ab-b156-4c75-b0e0-16c8c7f151ec
 # ╠═53cf3fc9-788c-4700-8b07-fe9118432c84
 # ╠═bae11a44-67d8-4b6b-8d10-85b58e7fae63

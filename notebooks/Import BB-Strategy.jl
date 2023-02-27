@@ -46,6 +46,17 @@ md"""
 # ╔═╡ da37b8a2-7dee-4ecc-a0cd-909a571ee8b3
 call(f) = f()
 
+# ╔═╡ 7bfba5f8-dcd6-4741-9291-cd5492bf0e4f
+action_color_dict=Dict(
+	0 => colorant"#ff9178",
+	1 => colorant"#a1eaff", 
+	2 => colorant"#a1eaaa", 
+	3 => colorant"#ffffff", 
+)
+
+# ╔═╡ 91605a2d-e7f5-4eda-ab74-89e5327fa08a
+action_gradient=cgrad([action_color_dict[1], action_color_dict[2]], categorical=true)
+
 # ╔═╡ 212362c1-8dc3-4cf7-892d-0a4a65c19930
 begin
 	colors = 
@@ -75,14 +86,6 @@ begin
 	[colors...]
 end
 
-# ╔═╡ 7bfba5f8-dcd6-4741-9291-cd5492bf0e4f
-action_color_dict=Dict(
-	0 => colorant"#ff9178",
-	1 => colorant"#a1eaff", 
-	2 => colors.EMERALD,
-	3 => colorant"#ffffff", 
-)
-
 # ╔═╡ 8ccad848-e2c5-4039-8cb0-b0f93ffa6235
 md"""
 ## Select Strategy -- Action Required
@@ -101,6 +104,7 @@ draw(tree, draw_bounds,
 	color_dict=action_color_dict, 
 	xlims=(draw_bounds.lower[1], draw_bounds.upper[1]),
 	ylims=(draw_bounds.lower[2], draw_bounds.upper[2]),
+	dpi=300,
 	line=nothing,)
 
 # ╔═╡ 87f9064d-b8b5-4402-b4cb-a39a13e08a6e
@@ -119,7 +123,7 @@ function shield(tree::Tree, policy)
 			a′ = rand(allowed)
             return a′
         else
-            return hit
+            return a
         end
     end
 end
@@ -162,10 +166,15 @@ end
 call() do
 	shielded_lazy = shield(tree, _ -> nohit)
 	
-	animate_trace(simulate_sequence(bbmechanics, 
-		(0, 7), 
-		shielded_hits_rarely, 10)...)
+	background = draw(p -> Int(shielded_lazy(p)), draw_bounds, color=action_gradient, colorbar=nothing)
+	
+	animate_trace(
+		simulate_sequence(bbmechanics, (0, 7), shielded_lazy, 10)...,
+		left_background=background)
 end
+
+# ╔═╡ 7fa73b53-a860-447d-9a0c-b7a8eac5cad8
+shielded_lazy = shield(tree, _ -> nohit)
 
 # ╔═╡ Cell order:
 # ╟─35275075-889f-4c97-b8ed-407ec0249821
@@ -173,11 +182,12 @@ end
 # ╠═da37b8a2-7dee-4ecc-a0cd-909a571ee8b3
 # ╠═7e541f6d-cb20-4b7a-906a-d399af0709e6
 # ╠═7bfba5f8-dcd6-4741-9291-cd5492bf0e4f
+# ╠═91605a2d-e7f5-4eda-ab74-89e5327fa08a
 # ╟─212362c1-8dc3-4cf7-892d-0a4a65c19930
 # ╟─8ccad848-e2c5-4039-8cb0-b0f93ffa6235
 # ╠═19951daf-a6f5-48ce-bff1-eec3984a30d3
 # ╠═7083006d-123c-4f69-8899-292af7e44341
-# ╟─030f98a3-dd57-43db-86b1-f7d54b0aadd9
+# ╠═030f98a3-dd57-43db-86b1-f7d54b0aadd9
 # ╟─87f9064d-b8b5-4402-b4cb-a39a13e08a6e
 # ╠═d79fd47b-91b1-4839-9081-0124d1dff81c
 # ╠═dcf8957a-9521-49f1-b582-38ea8e22c3f6
@@ -186,4 +196,5 @@ end
 # ╠═7f25e2a3-e001-4ad6-ad82-eaea1040ef87
 # ╠═99a2989d-9962-4d6b-af0b-79818a96cbba
 # ╟─c1194290-5ea6-448e-8a05-1f4fb521fb42
-# ╟─48a165f3-a585-414a-95a6-e97b807e3a18
+# ╠═48a165f3-a585-414a-95a6-e97b807e3a18
+# ╠═7fa73b53-a860-447d-9a0c-b7a8eac5cad8

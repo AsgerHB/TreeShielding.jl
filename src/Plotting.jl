@@ -53,7 +53,7 @@ function draw(policy::Function, bounds;
     matrix = Matrix(undef, size_x, size_y)
     for i in 1:size_x
         for j in 1:size_y
-            x, y = i*G + x_min, j*G + x_min
+            x, y = i*G + x_min, j*G + y_min
             matrix[i, j] = policy((x, y))
         end
     end
@@ -141,19 +141,19 @@ function scatter_allowed_actions!(tree, bounds, m)
 			push!(unsafe, p)
 		end
 	end
-	markers = [(:ltriangle, colors.EMERALD, 10) (:circle, colors.SUNFLOWER, 4) (:star, colors.PETER_RIVER, 3)]
+	markers = [(:hline, colors.ORANGE, 6) (:vline, colors.PETER_RIVER, 6) (:circle, colors.NEPHRITIS, 7)]
 	for (i, a) in enumerate(m.action_space)
         if length(actions[i]) > 0
             scatter!(actions[i] |> unzip, 
                 marker=markers[i],
-                markerstrokewidth=0,
+                markerstrokewidth=4,
                 label=a)
         end
 	end
     if length(unsafe) > 0
         scatter!(unsafe |> unzip,
-            marker=(:x, 4, colors.ALIZARIN),
-            markerstrokewidth=3,
+            marker=(:circle, 4, colors.ALIZARIN),
+            markerstrokewidth=0,
             label="unsafe",
             legend=:outerright)
     end

@@ -45,7 +45,7 @@ include("Plotting.jl")
 
 module RW
 using Plots
-export rwmechanics, Pace, simulate, draw_next_step!, draw_walk!, take_walk, evaluate
+export rwmechanics, Pace, fast, slow, simulate, draw_next_step!, draw_walk!, take_walk, evaluate
 include("RWExample.jl")
 end#module
 

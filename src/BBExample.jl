@@ -113,6 +113,7 @@ function animate_trace(vs, ps, ts; fps=10, left_background=plot(), right_backgro
 				  xlabel="v",
 				  ylabel="p",
 				  color=colorant"#34495e",
+				  markerstrokecolor=colorant"#34495e",
 			  	  linewidth=2,
 			  	  markersize=2,
 			  	  markeralpha=1,

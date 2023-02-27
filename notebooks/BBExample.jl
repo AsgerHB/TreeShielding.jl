@@ -285,6 +285,9 @@ $(@bind partition_y
 	NumberField(outer_bounds.lower[2]:0.01:outer_bounds.upper[2], default=0.9))
 """
 
+# ╔═╡ 38dc8c6d-7181-42ca-b760-55e4ffebe0b9
+p = (partition_x, partition_y)
+
 # ╔═╡ 57be14bb-d748-4432-8608-106c44c38f83
 md"""
 ### Set the parameters -- Try it Out
@@ -416,7 +419,6 @@ begin
 	plot!(legend=:outerright)
 
 	if show_supporting_points
-		p = (partition_x, partition_y)
 		scatter_allowed_actions!(reactive_tree, b,  m)
 		scatter!(p, m=(4, :rtriangle, :white), msw=1, label=nothing, )
 	end
@@ -529,6 +531,9 @@ hits_rarely = random_policy(0.05)
 # ╔═╡ c93c0468-278b-429b-a447-ab8cda4cb768
 shielded_hits_rarely = shield(selected_tree, hits_rarely)
 
+# ╔═╡ b37c7ee0-297c-487c-ba45-368ccce8a225
+shielded_hits_rarely((1, 5))
+
 # ╔═╡ 51e0f06e-d317-4325-8473-76b195457469
 shielded_hits_rarely((7, 0))
 
@@ -580,7 +585,7 @@ end
 hit
 
 # ╔═╡ Cell order:
-# ╠═82e532dd-8ec1-458f-b4d6-59cea44dc2b6
+# ╟─82e532dd-8ec1-458f-b4d6-59cea44dc2b6
 # ╠═bdace121-c7a3-48ba-8588-0f68fabf5fea
 # ╠═8377c2de-6078-463a-911d-29d1dd0e4138
 # ╟─dbdc3329-b95d-42a1-9a98-20ff149bb062
@@ -596,6 +601,7 @@ hit
 # ╟─490b1897-3357-4529-9780-33122b1dbd62
 # ╠═f878ebd6-b261-4151-8aae-521b6736b28a
 # ╟─3cdda0dd-59f8-4d6f-b37a-cdc923b242c0
+# ╠═b37c7ee0-297c-487c-ba45-368ccce8a225
 # ╠═96155a32-5e05-4632-9fe8-e843970e3089
 # ╟─7e0de76c-8a0e-46aa-a098-b5f0e8fd32b5
 # ╠═1cc57555-e687-4b84-9568-c7eb903f57ef
@@ -629,12 +635,11 @@ hit
 # ╟─129fbdb0-88a5-4f3d-82e0-56df43c7a46c
 # ╟─e7fbb9bb-63b5-4f6a-bb27-7ea1613d6740
 # ╟─0e18b756-f8a9-4821-8b85-30c908f7e3af
-# ╠═cd190e4a-9e48-4e6a-8058-1bcb105d9c0b
+# ╠═38dc8c6d-7181-42ca-b760-55e4ffebe0b9
 # ╠═e2c0924f-bb05-466c-aceb-8ef3c9b947c9
 # ╟─165ba9e0-7409-4f5d-b10b-4223fe589ac6
 # ╟─57be14bb-d748-4432-8608-106c44c38f83
 # ╠═e0013651-12ed-4c81-ad05-2eb8f47a720c
-# ╠═0837b974-a284-488d-9d6c-b21eb4a6aecf
 # ╠═29f7f0ce-e3e6-4071-bdfe-a6da3994dd85
 # ╠═ef651fce-cdca-4ca1-9f08-e94fd25df4a4
 # ╠═7f560461-bfc7-4419-8a27-670b09830052

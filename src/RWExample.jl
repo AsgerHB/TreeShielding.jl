@@ -50,7 +50,7 @@ end
 
 
 function simulate(m::RWMechanics, x, t, a)
-	random_outcomes = (rand(-m.ϵ:0.005:m.ϵ), rand(m.ϵ:0.005:m.ϵ))
+	random_outcomes = (rand(-m.ϵ:0.005:m.ϵ), rand(-m.ϵ:0.005:m.ϵ))
 	simulate(m::RWMechanics, x, t, a, random_outcomes)
 end
 
