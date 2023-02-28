@@ -64,6 +64,10 @@ struct ShieldingModel
         if margin > min_granularity
             @warn "Margin should not be greater than minimum granularity.\nThis can cause infinite growth." margin min_granularity
         end
+
+        if splitting_tolerance > min_granularity
+            @warn "Splitting Tolerance should not be greater than minimum granularity.\nThis can cause necessary splits to be skipped." splitting_tolerance min_granularity
+        end
         
         new(simulation_function,
             action_space,
