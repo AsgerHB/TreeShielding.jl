@@ -107,6 +107,11 @@ draw(tree, draw_bounds,
 	dpi=300,
 	line=nothing,)
 
+# ╔═╡ 5785f277-2e98-494f-b777-a0e35a4fa7ca
+md"""
+**$(count(_ -> true, Leaves(tree))) leaves**
+"""
+
 # ╔═╡ 87f9064d-b8b5-4402-b4cb-a39a13e08a6e
 md"""
 ## Evaluating the safety of the shield
@@ -163,6 +168,8 @@ begin
 end
 
 # ╔═╡ 48a165f3-a585-414a-95a6-e97b807e3a18
+# ╠═╡ disabled = true
+#=╠═╡
 call() do
 	shielded_lazy = shield(tree, _ -> nohit)
 	
@@ -172,6 +179,7 @@ call() do
 		simulate_sequence(bbmechanics, (0, 7), shielded_lazy, 10)...,
 		left_background=background)
 end
+  ╠═╡ =#
 
 # ╔═╡ 7fa73b53-a860-447d-9a0c-b7a8eac5cad8
 shielded_lazy = shield(tree, _ -> nohit)
@@ -187,7 +195,8 @@ shielded_lazy = shield(tree, _ -> nohit)
 # ╟─8ccad848-e2c5-4039-8cb0-b0f93ffa6235
 # ╠═19951daf-a6f5-48ce-bff1-eec3984a30d3
 # ╠═7083006d-123c-4f69-8899-292af7e44341
-# ╠═030f98a3-dd57-43db-86b1-f7d54b0aadd9
+# ╟─030f98a3-dd57-43db-86b1-f7d54b0aadd9
+# ╟─5785f277-2e98-494f-b777-a0e35a4fa7ca
 # ╟─87f9064d-b8b5-4402-b4cb-a39a13e08a6e
 # ╠═d79fd47b-91b1-4839-9081-0124d1dff81c
 # ╠═dcf8957a-9521-49f1-b582-38ea8e22c3f6

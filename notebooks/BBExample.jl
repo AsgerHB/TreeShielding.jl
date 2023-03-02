@@ -384,6 +384,8 @@ else
 end
 
 # ╔═╡ e2c0924f-bb05-466c-aceb-8ef3c9b947c9
+# ╠═╡ disabled = true
+#=╠═╡
 # Cell that grows the tree a couple times, to help determine how the parameters shake out
 
 for i in 1:10
@@ -397,6 +399,7 @@ for i in 1:10
 		break
 	end
 end
+  ╠═╡ =#
 
 # ╔═╡ e0013651-12ed-4c81-ad05-2eb8f47a720c
 reset_button, go_clock; Leaves(reactive_tree) |> collect |> length
@@ -459,7 +462,7 @@ Automation is a wonderful thing.
 m; @bind synthesize_button CounterButton("Synthesize")
 
 # ╔═╡ ecf49f25-1ea4-48be-a391-c8f4c1012c6f
-safety_strategy = deepcopy(initial_tree);
+m; safety_strategy = deepcopy(initial_tree);
 
 # ╔═╡ c92d8cf4-0908-4c7c-8d3d-3dd07972219e
 if synthesize_button > 0
@@ -501,7 +504,7 @@ function shield(tree::Tree, policy)
 			a′ = rand(allowed)
             return a′
         else
-            return hit
+            return a
         end
     end
 end
@@ -544,19 +547,15 @@ refresh_button, go_clock, synthesize_button; @bind runs NumberField(1:100000, de
 
 
 # ╔═╡ f9ca8159-0b31-4e00-bd7b-89c788295589
-check_safety(bbmechanics, 
-		hits_rarely, 
-		120, 
-		runs=50)
-
-# ╔═╡ a0ecb865-b8f6-471c-b32b-80e376792ecd
-begin
-	refresh_button, go_clock, synthesize_button 
-	
-	safety_violations = check_safety(bbmechanics, 
+refresh_button, go_clock, synthesize_button ; safety_violations = 		
+	check_safety(bbmechanics, 
 		shielded_hits_rarely, 
 		120, 
 		runs=runs)
+
+# ╔═╡ a0ecb865-b8f6-471c-b32b-80e376792ecd
+begin
+	
 
 	if safety_violations > 0
 		Markdown.parse("""
