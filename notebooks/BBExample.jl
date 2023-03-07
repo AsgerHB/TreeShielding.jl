@@ -299,16 +299,16 @@ Try setting a different number of samples per axis:
 
 And configure min granularity. The value is set as the number of leading zeros to the first digit.
 
-`min_granularity =` $(@bind min_granularity NumberField(0:1E-10:1, default=1E-3))
+`granularity =` $(@bind granularity NumberField(0:1E-10:1, default=1E-2))
 
 
-`margin =` $(@bind margin NumberField(0:1E-10:1, default=1.0E-5))
+`margin =` $(@bind margin NumberField(0:1E-10:1, default=0))
 
-`splitting_tolerance =` $(@bind splitting_tolerance NumberField(0:1E-10:1, default=1E-6))
+`splitting_tolerance =` $(@bind splitting_tolerance NumberField(0:1E-10:1, default=1E-4))
 """
 
 # ╔═╡ f878ebd6-b261-4151-8aae-521b6736b28a
-m = ShieldingModel(simulation_function, Action, dimensionality, samples_per_axis, random_variable_bounds; max_iterations, min_granularity, margin, splitting_tolerance)
+m = ShieldingModel(simulation_function, Action, dimensionality, samples_per_axis, random_variable_bounds; max_iterations, granularity, margin, splitting_tolerance)
 
 # ╔═╡ 42b0bcee-b931-4bad-9b4b-268f6b3d260c
 if try_splitting_button > 0 && reactive_leaf !== nothing

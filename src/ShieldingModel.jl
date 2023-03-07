@@ -4,7 +4,7 @@
  - `action_space` The possible actions to provide `simulation_function`. 
  - `dimensionality` Number of axes. 
  - `samples_per_axis` Determines how many samples are taken. Grows exponentially. See `SupportingPoints`.
- - `min_granularity` Splits are not made if the resulting size of the partition would be less than `min_granularity` on the given axis
+ - `granularity` Splits are not made if the resulting size of the partition would be less than `granularity` on the given axis
  - `margin` This value will be added to a threshold after it is computed, as an extra margin for error.
  - `max_iterations` Max iterations when growing the tree. Mostly there as an emergency stop, and ideally should never be hit.
  - `splitting_tolerance` Desired precision while splitting. 
@@ -16,7 +16,7 @@ struct ShieldingModel
     dimensionality
     samples_per_axis
     random_variable_bounds::Bounds
-    min_granularity
+    granularity
     max_iterations
     margin 
     splitting_tolerance 
@@ -27,7 +27,7 @@ struct ShieldingModel
                 dimensionality,
                 samples_per_axis,
                 random_variable_bounds::Bounds; 
-                min_granularity=1E-5,
+                granularity=1E-5,
                 max_iterations=20,
                 margin=0,
                 splitting_tolerance=0.01,
@@ -39,7 +39,7 @@ struct ShieldingModel
             dimensionality,
             samples_per_axis,
             random_variable_bounds::Bounds,
-            min_granularity,
+            granularity,
             max_iterations,
             margin,
             splitting_tolerance,
@@ -51,7 +51,7 @@ struct ShieldingModel
             dimensionality,
             samples_per_axis,
             random_variable_bounds::Bounds,
-            min_granularity,
+            granularity,
             max_iterations,
             margin,
             splitting_tolerance,
@@ -61,12 +61,12 @@ struct ShieldingModel
             action_space = instances(action_space)
         end
 
-        if margin > min_granularity
-            @warn "Margin should not be greater than minimum granularity.\nThis can cause infinite growth." margin min_granularity
+        if margin > granularity
+            @warn "Margin should not be greater than minimum granularity.\nThis can cause infinite growth." margin granularity
         end
 
-        if splitting_tolerance > min_granularity
-            @warn "Splitting Tolerance should not be greater than minimum granularity.\nThis can cause necessary splits to be skipped." splitting_tolerance min_granularity
+        if splitting_tolerance > granularity
+            @warn "Splitting Tolerance should not be greater than minimum granularity.\nThis can cause necessary splits to be skipped." splitting_tolerance granularity
         end
         
         new(simulation_function,
@@ -74,7 +74,7 @@ struct ShieldingModel
             dimensionality,
             samples_per_axis,
             random_variable_bounds::Bounds,
-            min_granularity,
+            granularity,
             max_iterations,
             margin,
             splitting_tolerance,

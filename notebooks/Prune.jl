@@ -207,7 +207,7 @@ Try changing the number of samples per axis, to see how this affects the growth 
 
 And likewise try to adjust the minimum granularity. Defined as the number of leading zeros to the one.
 
-`min_granularity_decimals` $(@bind min_granularity_decimals NumberField(0:15))
+`granularity_decimals` $(@bind granularity_decimals NumberField(0:15))
 """
 
 # ╔═╡ 548f07ac-1faa-44bb-8ad4-8450a234338f
@@ -227,7 +227,7 @@ else
 end
 
 # ╔═╡ 06872fe1-52f9-43e4-9873-34276f23098d
-min_granularity = 10.0^(-min_granularity_decimals)
+granularity = 10.0^(-granularity_decimals)
 
 # ╔═╡ 15e7f68f-4bae-4301-86e7-79f757a42a13
 grow_button,
@@ -235,7 +235,7 @@ if debounce1[] == 1
 	debounce1[] += 1
 	reactivity1 = "ready"
 else
-	grow!(reactive_tree, dimensionality, foo, Action, spa, min_granularity, max_iterations=6)
+	grow!(reactive_tree, dimensionality, foo, Action, spa, granularity, max_iterations=6)
 	reactivity1 = "grown"
 end
 

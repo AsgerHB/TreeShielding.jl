@@ -272,7 +272,7 @@ Try setting a different number of samples per axis:
 
 `samples_per_axis =` $(@bind samples_per_axis NumberField(3:30, default=5))
 
-`min_granularity =` $(@bind min_granularity NumberField(0:1E-15:1, default=1E-5))
+`granularity =` $(@bind granularity NumberField(0:1E-15:1, default=1E-5))
 
 `margin =` $(@bind margin NumberField(0:0.001:1, default=0.00))
 
@@ -280,7 +280,7 @@ Try setting a different number of samples per axis:
 """
 
 # ╔═╡ 3c613061-1cd9-4b72-b419-6387c25da513
-m = ShieldingModel(simulation_function, Pace, dimensionality, samples_per_axis, random_variable_bounds; min_granularity, margin, splitting_tolerance)
+m = ShieldingModel(simulation_function, Pace, dimensionality, samples_per_axis, random_variable_bounds; granularity, margin, splitting_tolerance)
 
 # ╔═╡ 0197dfd6-e689-4aad-8af0-a0cbfa48dfa7
 safe, unsafe = TreeShielding.get_equivalence_bounds(tree, bounds, (@set m.samples_per_axis=16))

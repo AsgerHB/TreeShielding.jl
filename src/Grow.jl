@@ -131,6 +131,11 @@ function get_threshold(tree::Tree, bounds::Bounds, axis, action, direction::Dire
 		(iterations += 1) >= 100 &&	(@warn "Maximum iterations exceeded while refining threshold"; break)
 		
 		dividing_bounds = get_dividing_bounds(tree, dividing_bounds, axis, action, direction, m)
+
+		if dividing_bounds === nothing
+			m.verbose && @warn "Looks like it gave up at some point trying to refine the bounds. I am concerned with the fact that this can happen."
+			return nothing
+		end
 	end
 
 	m.verbose && @info "Found dividing bounds $dividing_bounds $iterations iterations" axis direction
@@ -153,19 +158,24 @@ function get_threshold(tree::Tree, bounds::Bounds, axis, action, direction::Dire
 	
 	m.verbose && @info "Applied safety margin.   Threshold is now $threshold."  axis direction threshold margin=m.margin
 
-	# Apply min_granularity
-	min_granularity_boost = 1.05 # Just to be absolutely sure that the double-precision result will be greater than min_granularity
-	threshold = min(threshold, bounds.upper[axis] - m.min_granularity*min_granularity_boost)
-	threshold = max(threshold, bounds.lower[axis] + m.min_granularity*min_granularity_boost)
-	m.verbose && @info "Applied min_granularity. Threshold is now $threshold." axis direction threshold min_granularity=m.min_granularity
-
-	# Check against min_granularity
-	# Because maybe the partition was already as small as could be.
-	if bounds.upper[axis] - threshold < m.min_granularity || 
-       threshold - bounds.lower[axis] < m.min_granularity
-		
-		m.verbose && @info "Skipping split since it exceeds min_granularity" axis direction threshold min_granularity=m.min_granularity
-        return nothing
+	# Apply granularity
+	if m.granularity != 0
+		# Trust me on this. 
+		if direction == safe_above_threshold
+			if threshold > 0
+				threshold = threshold - threshold%m.granularity + m.granularity
+			else
+				threshold = threshold - threshold%m.granularity
+			end
+		else
+			if threshold > 0
+				threshold = threshold - threshold%m.granularity
+			else
+				threshold = threshold - threshold%m.granularity - m.granularity
+			end
+		end
+		m.verbose && @info "Applied granularity. Threshold is now $threshold." axis direction threshold granularity=m.granularity
+		@assert (abs(threshold%m.granularity) < 1E-10) || (abs(threshold%m.granularity) ≈ m.granularity) "Somehow got $threshold which is inconsistent with granularity $(m.granularity)"
 	end
 	
 	# We don't want to split right on top of a previous split
@@ -202,8 +212,8 @@ function get_split(root::Tree, leaf::Leaf, m::ShieldingModel)
 	for i in 1:m.dimensionality
 		m.verbose && @info "Trying axis $i"
 		axis = i
-		if bounds.upper[axis] - bounds.lower[axis] <= m.min_granularity*2
-			m.verbose && @info "Split would be less than min_granularity" min_granularity=m.min_granularity
+		if bounds.upper[axis] - bounds.lower[axis] <= m.granularity*2
+			m.verbose && @info "Split would be less than granularity" granularity=m.granularity
 			continue
 		end
 		for action in m.action_space
@@ -232,7 +242,7 @@ end
 
 Grow the entire tree by calling `split_all!` on all leaves, until no more changes can be made, or `max_iterations` is exceeded.
 
-Note that the number of resulting leaves is potentially exponential in the number of iterations. Therefore, setting a suitably high `min_granularity` and a suitably low `max_iterations` is adviced.
+Note that the number of resulting leaves is potentially exponential in the number of iterations. Therefore, setting a suitably high `granularity` and a suitably low `max_iterations` is adviced.
 
 **Returns:** The number of leaves in the resulting tree.
 

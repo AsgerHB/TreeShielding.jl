@@ -1,14 +1,14 @@
 
 """
     test_get_threshold(;samples_per_axis=9,
-    min_granularity=0.00001,
+    granularity=0.00001,
     margin=0.01)
 
 Using the random walk problem, tests that the `get_threshold` function will return a threshold,
 such that all supporting points to one side of the threshold are safe. 
 """
 function test_get_threshold(;samples_per_axis=9,
-    min_granularity=0.00001,
+    granularity=0.00001,
     margin=0.00)
 
     spa_when_testing = 20 
@@ -57,7 +57,7 @@ function test_get_threshold(;samples_per_axis=9,
         dimensionality,
         samples_per_axis,
         random_variable_bounds;
-        min_granularity,
+        granularity,
         margin)
 
         
@@ -86,27 +86,27 @@ end
     @testset "RW get_threshold" begin
         test_get_threshold(
             samples_per_axis=9,
-            min_granularity=0.0000,
+            granularity=0.0000,
             margin=0.00)
         
         test_get_threshold(
             samples_per_axis = 9,
-            min_granularity = 0.001,
+            granularity = 0.001,
             margin = 0.00001)#
         
         test_get_threshold(
             samples_per_axis = 3,#
-            min_granularity = 0.00001,
+            granularity = 0.00001,
             margin = 0.000005)
         
         test_get_threshold(
             samples_per_axis = 9,
-            min_granularity = 0.01,#
+            granularity = 0.01,#
             margin = 0.01)
         
         test_get_threshold(
             samples_per_axis = 9,
-            min_granularity = 0.001,
+            granularity = 0.001,
             margin = 0.0001)
     end
 
@@ -143,7 +143,7 @@ end
             dimensionality,
             samples_per_axis,
             random_variable_bounds;
-            min_granularity = 1E-10,
+            granularity = 1E-10,
             splitting_tolerance,
             margin = 0
         )
@@ -228,7 +228,7 @@ end
             dimensionality,
             samples_per_axis,
             random_variable_bounds;
-            min_granularity = 1E-10,
+            granularity = 1E-10,
             splitting_tolerance,
             margin = 0
         )
