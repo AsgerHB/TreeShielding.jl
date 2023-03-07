@@ -43,6 +43,9 @@ md"""
 This notebook applies the package to a non-trivial example.
 """
 
+# ╔═╡ 96155a32-5e05-4632-9fe8-e843970e3089
+animate_trace(simulate_sequence(bbmechanics, (0, 7), random_policy(0.1), 10)...)
+
 # ╔═╡ dbdc3329-b95d-42a1-9a98-20ff149bb062
 md"""
 ## Preliminaries
@@ -82,6 +85,14 @@ begin
 	[colors...]
 end
 
+# ╔═╡ 3bf7051c-a644-427b-bbba-14a69d98f4f5
+action_color_dict=Dict(
+	0 => colorant"#ff9178",
+	1 => colorant"#a1eaff", 
+	2 => colorant"#a1eaaa", 
+	3 => colorant"#ffffff", 
+)
+
 # ╔═╡ 56f10aa2-c768-4936-9a70-76d6b0ec21a1
 call(f) = f()
 
@@ -91,17 +102,6 @@ md"""
 
 Everything is rolled up into a convenient little ball that is easy to toss around between functions. This ball is called `ShieldingModel`
 """
-
-# ╔═╡ 4f55da12-5f81-484f-970a-691336e6e58f
-no_action, any_action = actions_to_int([]), actions_to_int(instances(Action))
-
-# ╔═╡ 3bf7051c-a644-427b-bbba-14a69d98f4f5
-action_color_dict=Dict(
-	any_action => colorant"#ffffff", 
-	1 => colorant"#a1eaff", 
-	2 => colors.AMETHYST,
-	no_action => colorant"#ff9178"
-)
 
 # ╔═╡ 39cd11b7-2428-47ae-b8ec-90459bb03636
 dimensionality = 2
@@ -125,36 +125,12 @@ md"""
 The function for taking a single step needs to be wrapped up, so that it has the signature `(point::AbstractVector, action, random_variables::AbstractVector) -> updated_point`. 
 """
 
-# ╔═╡ 3cdda0dd-59f8-4d6f-b37a-cdc923b242c0
-md"""
-## Bouncing Ball Functions
-
-The ball it bounce.
-"""
-
-# ╔═╡ 96155a32-5e05-4632-9fe8-e843970e3089
-animate_trace(simulate_sequence(bbmechanics, (0, 7), random_policy(0.1), 10)...)
-
-# ╔═╡ 7e0de76c-8a0e-46aa-a098-b5f0e8fd32b5
-md"""
-## Wrapping up the Simulation Function
-
-The state will be saved as a `(velocity, position)` tuple.
-
-The kwarg `min_v_on_impact=1` makes the ball come to a stop `(0,0)` if it impacts the ground at less than $1^m/{}_s$
-
-The kwarg `unlucky=true` will tell the function to pick the worst-case outcome, i.e. the one where the ball preserves the least amount of power on impact. 
-
-!!! info "TODO"
-	Model random outcomes as an additional dimension, removing the need for assumptions about a "worst-case" outcome.
-"""
-
 # ╔═╡ 1cc57555-e687-4b84-9568-c7eb903f57ef
 simulation_function(p, r, a) = 
 	simulate_point(bbmechanics, p, r, a, min_v_on_impact=1)
 
 # ╔═╡ d772354b-b855-4d4e-b768-2200c03cc0d6
-simulation_function((0, 7), 0.5, hit)
+simulation_function((4, 7), -1, hit)
 
 # ╔═╡ cd82ff88-3e88-4a94-b414-abca02a55217
 simulation_function((0.1, 0), 0.5, hit)
@@ -197,6 +173,9 @@ md"""
 # Applying Everything we Learned
 """
 
+# ╔═╡ 4f55da12-5f81-484f-970a-691336e6e58f
+no_action, any_action = actions_to_int([]), actions_to_int(instances(Action))
+
 # ╔═╡ 40b843de-e367-49d7-8a50-d2cefe4e3939
 outer_bounds = Bounds((-15, 0), (15, 10))
 
@@ -205,8 +184,13 @@ initial_tree = call() do
 	tree = tree_from_bounds(outer_bounds)
 	inside = get_leaf(tree, 0, 0)
 
-	unsafe_states = Bounds((-1, 0), (1 + 0.001, 1))
-	replace_subtree!(inside, tree_from_bounds(unsafe_states))
+	unsafe_states = Bounds((-1, 0), (2, 1))
+	split!(inside, 1, unsafe_states.lower[1])
+	inside = get_leaf(tree, 0, 0)
+	split!(inside, 1, unsafe_states.upper[1])
+	inside = get_leaf(tree, 0, 0)
+	split!(inside, 2, unsafe_states.upper[2])
+	inside = get_leaf(tree, 0, 0)
 	set_safety!(tree, dimensionality, is_safe, any_action, no_action)
 end
 
@@ -324,7 +308,7 @@ end; done_splitting = "Done Splitting";
 # ╔═╡ 573a7989-6a88-47b7-8d2b-17cc605b76ea
 call() do
 	reset_button1, try_splitting_button, done_splitting
-	
+	outer_bounds = Bounds([-16, -1], [16, 11])
 	draw(reactive_tree1, outer_bounds, color_dict=action_color_dict,
 		legend=:outerright,
 		xlims=(outer_bounds.lower[1], outer_bounds.upper[1]),
@@ -335,8 +319,8 @@ call() do
 		bounds = get_bounds(reactive_queue[end], dimensionality)
 		plot!(TreeShielding.rectangle(bounds ∩ outer_bounds), 
 			label="next in queue",
-			linewidth=4,
-			linecolor=colors.PETER_RIVER,
+			linewidth=3,
+			linecolor=colors.CONCRETE,
 			color=colors.CONCRETE,
 			fillalpha=0.3)
 
@@ -383,29 +367,11 @@ else
 	"done"
 end
 
-# ╔═╡ e2c0924f-bb05-466c-aceb-8ef3c9b947c9
-# ╠═╡ disabled = true
-#=╠═╡
-# Cell that grows the tree a couple times, to help determine how the parameters shake out
-
-for i in 1:10
-	grow!(reactive_tree, m)
-	updates = TreeShielding.get_updates(reactive_tree, m)
-
-	if length(updates) > 0
-		TreeShielding.apply_updates!(updates)
-	else 
-		@info "Done."
-		break
-	end
-end
-  ╠═╡ =#
-
 # ╔═╡ e0013651-12ed-4c81-ad05-2eb8f47a720c
 reset_button, go_clock; Leaves(reactive_tree) |> collect |> length
 
 # ╔═╡ 29f7f0ce-e3e6-4071-bdfe-a6da3994dd85
-l = get_leaf(reactive_tree, partition_x, partition_y)
+go_clock; l = get_leaf(reactive_tree, partition_x, partition_y)
 
 # ╔═╡ ef651fce-cdca-4ca1-9f08-e94fd25df4a4
 go_clock; b = get_bounds(l, m.dimensionality)
@@ -438,9 +404,6 @@ end
 
 # ╔═╡ 7f560461-bfc7-4419-8a27-670b09830052
 TreeShielding.get_allowed_actions(reactive_tree, b, (@set m.verbose = true))
-
-# ╔═╡ f3edc169-94ff-4560-874c-05aab6f8782c
-TreeShielding.compute_safety(reactive_tree, SupportingPoints(m.samples_per_axis, b), m)
 
 # ╔═╡ f204e821-45d4-4518-8cd6-4a6ab3963460
 go_clock; get_split(reactive_tree, l, (@set m.verbose=true))
@@ -482,12 +445,26 @@ synthesize_button; draw(safety_strategy,
 		xlabel="v",
 		ylabel="p")
 
+# ╔═╡ 25f2d1da-50b5-4563-afb6-8603c484d39a
+m; @bind refine_button CounterButton("Refine")
+
+# ╔═╡ 0501c67b-58bb-4016-a948-96ba6960007a
+if refine_button > 0
+	m_refinement = @set m.samples_per_axis = 8
+	synthesize!(safety_strategy, m_refinement)
+end
+
+# ╔═╡ 3b28a5f4-d56e-45fa-89cc-857e7cec6783
+md"""
+### Download
+"""
+
 # ╔═╡ 629440a0-3ec7-4204-9f27-6575334aae3c
 begin
 	synthesize_button
 	safety_strategy_buffer = IOBuffer()
 	robust_serialize(safety_strategy_buffer, safety_strategy)
-end
+end;
 
 # ╔═╡ b338748b-0801-474f-9a79-5d794e88d15c
 safety_strategy !== nothing &&
@@ -529,7 +506,7 @@ refresh_button; selected_tree_plot = draw(selected_tree,
 	ylabel="p")
 
 # ╔═╡ 18d7baa2-4af2-4c06-a0ba-cc8d1a16da97
-hits_rarely = random_policy(0.05)
+hits_rarely = BB.random_policy(0.05)
 
 # ╔═╡ c93c0468-278b-429b-a447-ab8cda4cb768
 shielded_hits_rarely = shield(selected_tree, hits_rarely)
@@ -587,22 +564,18 @@ hit
 # ╟─82e532dd-8ec1-458f-b4d6-59cea44dc2b6
 # ╠═bdace121-c7a3-48ba-8588-0f68fabf5fea
 # ╠═8377c2de-6078-463a-911d-29d1dd0e4138
+# ╟─96155a32-5e05-4632-9fe8-e843970e3089
 # ╟─dbdc3329-b95d-42a1-9a98-20ff149bb062
 # ╟─5464b116-06fb-4704-bbd5-f7817dce7cbe
 # ╟─ef615614-6e22-455b-b9aa-74b1dfbb4f61
 # ╠═3bf7051c-a644-427b-bbba-14a69d98f4f5
 # ╠═56f10aa2-c768-4936-9a70-76d6b0ec21a1
 # ╟─1feb5107-1587-495d-8024-160f9cc68447
-# ╠═4f55da12-5f81-484f-970a-691336e6e58f
+# ╠═f878ebd6-b261-4151-8aae-521b6736b28a
 # ╠═39cd11b7-2428-47ae-b8ec-90459bb03636
 # ╟─ecd44dfb-36c6-41ca-bb9c-4b73f00b4c40
 # ╠═2887090b-71f7-4be8-abf7-04eeeca14559
 # ╟─490b1897-3357-4529-9780-33122b1dbd62
-# ╠═f878ebd6-b261-4151-8aae-521b6736b28a
-# ╟─3cdda0dd-59f8-4d6f-b37a-cdc923b242c0
-# ╠═b37c7ee0-297c-487c-ba45-368ccce8a225
-# ╠═96155a32-5e05-4632-9fe8-e843970e3089
-# ╟─7e0de76c-8a0e-46aa-a098-b5f0e8fd32b5
 # ╠═1cc57555-e687-4b84-9568-c7eb903f57ef
 # ╠═d772354b-b855-4d4e-b768-2200c03cc0d6
 # ╠═cd82ff88-3e88-4a94-b414-abca02a55217
@@ -615,6 +588,7 @@ hit
 # ╠═6012912a-2477-41e4-8cc7-65cea9911d8c
 # ╠═8603cb3e-6639-4664-b923-8db14c264eda
 # ╟─0a267aab-98d7-4ee5-a907-29d54e2a09f0
+# ╠═4f55da12-5f81-484f-970a-691336e6e58f
 # ╠═40b843de-e367-49d7-8a50-d2cefe4e3939
 # ╠═c8b40bd6-a8f3-42e8-bcbb-5bddd452dab0
 # ╠═b8024843-e681-4dde-9af9-1254c0e0d732
@@ -635,14 +609,12 @@ hit
 # ╟─e7fbb9bb-63b5-4f6a-bb27-7ea1613d6740
 # ╟─0e18b756-f8a9-4821-8b85-30c908f7e3af
 # ╠═38dc8c6d-7181-42ca-b760-55e4ffebe0b9
-# ╠═e2c0924f-bb05-466c-aceb-8ef3c9b947c9
 # ╟─165ba9e0-7409-4f5d-b10b-4223fe589ac6
 # ╟─57be14bb-d748-4432-8608-106c44c38f83
 # ╠═e0013651-12ed-4c81-ad05-2eb8f47a720c
 # ╠═29f7f0ce-e3e6-4071-bdfe-a6da3994dd85
 # ╠═ef651fce-cdca-4ca1-9f08-e94fd25df4a4
 # ╠═7f560461-bfc7-4419-8a27-670b09830052
-# ╠═f3edc169-94ff-4560-874c-05aab6f8782c
 # ╠═f204e821-45d4-4518-8cd6-4a6ab3963460
 # ╠═ec1628b6-9dd3-43a6-aa10-01f9743ce0ea
 # ╟─0039a51e-26ed-4ad2-aeda-117436295ca1
@@ -652,15 +624,19 @@ hit
 # ╠═c92d8cf4-0908-4c7c-8d3d-3dd07972219e
 # ╟─c42af80d-bb1e-42f7-9131-1080639cbd6a
 # ╟─f113308a-1d72-41e9-ba54-71576994a664
+# ╠═25f2d1da-50b5-4563-afb6-8603c484d39a
+# ╠═0501c67b-58bb-4016-a948-96ba6960007a
+# ╟─3b28a5f4-d56e-45fa-89cc-857e7cec6783
 # ╠═629440a0-3ec7-4204-9f27-6575334aae3c
 # ╠═b338748b-0801-474f-9a79-5d794e88d15c
 # ╠═3caf3b3d-42e9-42e8-8fc8-62cc6cb08d3a
 # ╟─25d4797d-293d-449d-984f-c1d7d830dfaa
 # ╠═b12eb0a2-136c-4409-8fa6-81d659a1d2f6
 # ╠═364ce463-f572-40a0-8566-4b91a4307c43
-# ╟─301a434e-d5d9-44c6-8ea1-b26a89a433cd
+# ╠═301a434e-d5d9-44c6-8ea1-b26a89a433cd
 # ╠═18d7baa2-4af2-4c06-a0ba-cc8d1a16da97
 # ╠═c93c0468-278b-429b-a447-ab8cda4cb768
+# ╠═b37c7ee0-297c-487c-ba45-368ccce8a225
 # ╠═51e0f06e-d317-4325-8473-76b195457469
 # ╠═c4d28b60-7028-4eb0-9178-32cc9e40d8fd
 # ╠═a0795c57-53cb-4562-b05f-9db7a1c7cfe1
