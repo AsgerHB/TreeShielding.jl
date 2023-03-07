@@ -106,12 +106,16 @@ function split!(leaf::Leaf, axis, threshold, lower=nothing, upper=nothing)
     return replace_subtree!(leaf, new_tree)
 end
 
-function get_bounds(tree::Tree, dimensionality; _lower=Dict(), _upper=Dict())
+function get_bounds(tree::Tree, dimensionality; _lower=nothing, _upper=nothing)
     parent = tree.parent
+    if _lower === nothing && _upper === nothing
+        _lower = [-Inf for _ in 1:dimensionality]
+        _upper = [Inf for _ in 1:dimensionality]
+    end
 
     # Base case
     if parent === nothing 
-        return Bounds(_lower, _upper, dimensionality)
+        return Bounds(_lower, _upper)
     end
     
     if parent isa Leaf
@@ -123,12 +127,12 @@ function get_bounds(tree::Tree, dimensionality; _lower=Dict(), _upper=Dict())
     
     # Recursion
     if parent.lt === tree
-        previous_bound = get(_upper, parent.axis, Inf)
+        previous_bound = _upper[parent.axis]
         new_bound = parent.threshold
         _upper[parent.axis] = min(previous_bound, new_bound)
         return get_bounds(parent, dimensionality; _lower, _upper)
     elseif parent.geq === tree
-        previous_bound = get(_lower, parent.axis, -Inf)
+        previous_bound = _lower[parent.axis]
         new_bound = parent.threshold
         _lower[parent.axis] = max(previous_bound, new_bound)
         return get_bounds(parent, dimensionality; _lower, _upper)
