@@ -113,6 +113,20 @@ begin
 	draw_walk!(take_walk(rwmechanics, (_, _) -> rand([RW.slow, RW.fast]))...)
 end
 
+# ╔═╡ e8354315-0234-41aa-828d-7627b52d841e
+let
+	deaths = 0
+	runs = 1000
+	for i in 1:runs
+		xs, ts, actions, cost = take_walk(rwmechanics, (_, _) -> rand([RW.slow, RW.fast]))
+		ts[end] >= 1 && (deaths += 1)
+	end
+	1 - deaths/runs
+end
+
+# ╔═╡ 48628903-437a-4efa-bcdc-b0d49b88e0d5
+take_walk(rwmechanics, (_, _) -> rand([RW.slow, RW.fast]))
+
 # ╔═╡ c011233c-476d-4dcc-862c-151e49f75faf
 md"""
 ### The Random Factor
@@ -537,6 +551,8 @@ end
 # ╠═80c812df-9b1c-4fd8-9100-b58fdfc24ff9
 # ╠═7cd5e7bb-36d1-4aea-8384-969d98eaec1a
 # ╠═fb29bd97-0a65-4142-83d0-fcfe60360080
+# ╠═e8354315-0234-41aa-828d-7627b52d841e
+# ╠═48628903-437a-4efa-bcdc-b0d49b88e0d5
 # ╟─c011233c-476d-4dcc-862c-151e49f75faf
 # ╠═bb4516e9-1f18-4b5f-a29f-06fc4449de07
 # ╠═875b85a8-f7d5-4e7d-a499-3cad1c92917d
