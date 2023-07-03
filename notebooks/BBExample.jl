@@ -87,9 +87,9 @@ end
 
 # ╔═╡ 3bf7051c-a644-427b-bbba-14a69d98f4f5
 action_color_dict=Dict(
-	0 => colorant"#ff9178",
-	1 => colorant"#a1eaff", 
-	2 => colorant"#a1eaaa", 
+	0 => colorant"#2C2C2C",
+	1 => colorant"#9C59D1", 
+	2 => colorant"#FCF434", 
 	3 => colorant"#ffffff", 
 )
 
@@ -432,26 +432,67 @@ if synthesize_button > 0
 	synthesize!(safety_strategy, m)
 end
 
-# ╔═╡ c42af80d-bb1e-42f7-9131-1080639cbd6a
-md"""
-Leaves: $(Leaves(safety_strategy) |> collect |> length)
-"""
-
 # ╔═╡ f113308a-1d72-41e9-ba54-71576994a664
 synthesize_button; draw(safety_strategy, 
 		Bounds(outer_bounds.lower, (outer_bounds.upper[1], outer_bounds.upper[2]+2)), 
 		color_dict=action_color_dict,
+		dpi=300,
 		line=nothing,
 		xlabel="v",
 		ylabel="p")
 
+# ╔═╡ e3ead3e3-bc8e-48e0-8e27-d1a5bb20ff4f
+let # For the paper
+	synthesize_button
+	
+	draw(safety_strategy, 
+		Bounds(outer_bounds.lower, (outer_bounds.upper[1], outer_bounds.upper[2]+2)), 
+		color_dict=action_color_dict,
+		dpi=300,
+		size=(300, 180),
+		line=(0.2, colors.ASBESTOS),
+		xlabel="v",
+		ylabel="p")
+
+	for (k, v) in action_color_dict
+		k == 2 && continue
+		
+		plot!(Float64[], Float64[],
+			label=(k == 0 ? "{}" : k == 1 ? "{hit}" : k == 3 ? "{hit, nohit}" : error("unexpected value k=$k")),
+			seriestype=:shape,
+			color=v)
+	end
+	plot!(ylims=(0, 11))
+end
+
 # ╔═╡ 25f2d1da-50b5-4563-afb6-8603c484d39a
 m; @bind refine_button CounterButton("Refine")
+
+# ╔═╡ c42af80d-bb1e-42f7-9131-1080639cbd6a
+synthesize_button, refine_button; md"""
+Leaves: $(Leaves(safety_strategy) |> collect |> length)
+"""
 
 # ╔═╡ 0501c67b-58bb-4016-a948-96ba6960007a
 if refine_button > 0
 	m_refinement = @set m.samples_per_axis = 8
 	synthesize!(safety_strategy, m_refinement)
+end
+
+# ╔═╡ dfba58b6-752a-4051-8cc2-c0c0b1b2c9e3
+@bind remove_yellow_area_button CounterButton("Remove Yellow Area")
+
+# ╔═╡ cad578a7-d574-4fdf-899e-2bd31778df96
+#   This was done to match the safety strategy in our paper,  which does
+# not consider {nohit} at all during synthesis.
+#   It is anyway a little bit complicated why the yellow area appears.
+# And if something seems strange, simply remove it :p
+if remove_yellow_area_button > 0
+	for leaf in Leaves(safety_strategy)
+		if leaf.value == 2
+			leaf.value = 0
+		end
+	end
 end
 
 # ╔═╡ 3b28a5f4-d56e-45fa-89cc-857e7cec6783
@@ -520,9 +561,6 @@ shielded_hits_rarely((7, 0))
 # ╔═╡ c4d28b60-7028-4eb0-9178-32cc9e40d8fd
 refresh_button, go_clock, synthesize_button; @bind runs NumberField(1:100000, default=100)
 
-# ╔═╡ a0795c57-53cb-4562-b05f-9db7a1c7cfe1
-
-
 # ╔═╡ f9ca8159-0b31-4e00-bd7b-89c788295589
 refresh_button, go_clock, synthesize_button ; safety_violations = 		
 	check_safety(bbmechanics, 
@@ -564,7 +602,7 @@ hit
 # ╟─82e532dd-8ec1-458f-b4d6-59cea44dc2b6
 # ╠═bdace121-c7a3-48ba-8588-0f68fabf5fea
 # ╠═8377c2de-6078-463a-911d-29d1dd0e4138
-# ╟─96155a32-5e05-4632-9fe8-e843970e3089
+# ╠═96155a32-5e05-4632-9fe8-e843970e3089
 # ╟─dbdc3329-b95d-42a1-9a98-20ff149bb062
 # ╟─5464b116-06fb-4704-bbd5-f7817dce7cbe
 # ╟─ef615614-6e22-455b-b9aa-74b1dfbb4f61
@@ -623,9 +661,12 @@ hit
 # ╠═ecf49f25-1ea4-48be-a391-c8f4c1012c6f
 # ╠═c92d8cf4-0908-4c7c-8d3d-3dd07972219e
 # ╟─c42af80d-bb1e-42f7-9131-1080639cbd6a
-# ╟─f113308a-1d72-41e9-ba54-71576994a664
-# ╠═25f2d1da-50b5-4563-afb6-8603c484d39a
+# ╠═f113308a-1d72-41e9-ba54-71576994a664
+# ╠═e3ead3e3-bc8e-48e0-8e27-d1a5bb20ff4f
+# ╟─25f2d1da-50b5-4563-afb6-8603c484d39a
 # ╠═0501c67b-58bb-4016-a948-96ba6960007a
+# ╟─dfba58b6-752a-4051-8cc2-c0c0b1b2c9e3
+# ╠═cad578a7-d574-4fdf-899e-2bd31778df96
 # ╟─3b28a5f4-d56e-45fa-89cc-857e7cec6783
 # ╠═629440a0-3ec7-4204-9f27-6575334aae3c
 # ╠═b338748b-0801-474f-9a79-5d794e88d15c
@@ -639,7 +680,6 @@ hit
 # ╠═b37c7ee0-297c-487c-ba45-368ccce8a225
 # ╠═51e0f06e-d317-4325-8473-76b195457469
 # ╠═c4d28b60-7028-4eb0-9178-32cc9e40d8fd
-# ╠═a0795c57-53cb-4562-b05f-9db7a1c7cfe1
 # ╠═f9ca8159-0b31-4e00-bd7b-89c788295589
 # ╟─a0ecb865-b8f6-471c-b32b-80e376792ecd
 # ╠═eba405af-7cf2-4a19-85ba-6750e3ccdef0

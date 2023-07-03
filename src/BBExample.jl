@@ -110,13 +110,14 @@ function animate_trace(vs, ps, ts; fps=10, left_background=plot(), right_backgro
         plot!(vs[1:i], ps[1:i],
 				  xlims=(vmin, vmax), 
 				  ylims=(0, pmax),
-				  xlabel="v",
-				  ylabel="p",
+				  xlabel="velocity (m/s)",
+				  ylabel="position (m)",
 				  color=colorant"#34495e",
 				  markerstrokecolor=colorant"#34495e",
 			  	  linewidth=2,
 			  	  markersize=2,
 			  	  markeralpha=1,
+				  margin=4mm,
 			  	  markershape=:circle)
 
 		hline!([ps[i]], color=colorant"#27ae60")
@@ -126,12 +127,13 @@ function animate_trace(vs, ps, ts; fps=10, left_background=plot(), right_backgro
         plot!(ts[1:i], ps[1:i],
 				  xlims=(0, tmax), 
 				  ylims=(0, pmax),
-				  xlabel="t",
-				  ylabel="p",
+				  xlabel="time (s)",
+				  ylabel="position (m)",
 				  color=colorant"#34495e",
 			  	  linewidth=2,
 			  	  markersize=2,
 			  	  markeralpha=1,
+				  margin=4mm,
 			  	  markershape=:circle)
 
 		hline!([ps[i]], color=colorant"#27ae60")

@@ -53,6 +53,7 @@ module BB
 using Plots
 using StatsBase
 using Distributions
+using Measures
 export bbmechanics, Action, hit, nohit, simulate_point, simulate_sequence, evaluate, check_safety, animate_trace, random_policy
 include("BBExample.jl")
 end#module
