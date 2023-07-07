@@ -17,6 +17,10 @@ Base.length(s::SupportingPoints) = begin
     return s.per_axis^get_dim(s.bounds)
 end
 
+Base.size(s::SupportingPoints) = begin
+    [s.per_axis for _ in 1:get_dim(s.bounds)]
+end
+
 Base.iterate(s::SupportingPoints) = begin
     if s.per_axis - 1 < 0
         throw(ArgumentError("Samples per axis must be at least 1."))
