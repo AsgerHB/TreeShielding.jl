@@ -3,11 +3,6 @@ struct ValueUpdate
     new_value
 end
 
-"""
-    apply_updates!(updates::AbstractVector{ValueUpdate})
-
-Apply updates, splitting unsafe leaves as much as possible.
-"""
 function apply_updates!(updates::AbstractVector{ValueUpdate})
     for update in updates
         update.leaf.value = update.new_value
@@ -15,6 +10,17 @@ function apply_updates!(updates::AbstractVector{ValueUpdate})
 end
 
 
+"""
+    get_allowed_actions(tree::Tree,
+        bounds::Bounds,
+        m::ShieldingModel)
+
+Returns a `set` of actions that are safe within `bounds`.
+
+ - `tree` The (root) of the tree defining actions for regions.
+ - `bounds` Bounds specifying initial location.
+ - `m` A [ShieldingModel].
+"""
 function get_allowed_actions(tree::Tree,
         bounds::Bounds,
         m::ShieldingModel)
@@ -34,6 +40,11 @@ function get_allowed_actions(tree::Tree,
     return allowed
 end
 
+"""
+    get_allowed_actions(leaf::Tree, m::ShieldingModel)
+
+Get a `set` of safe actions at the given leaf.
+"""
 function get_allowed_actions(leaf::Tree, m::ShieldingModel)
 
     tree = getroot(leaf)

@@ -225,7 +225,7 @@ Get ready to read some cursed code.
 bounds = get_bounds(get_leaf(tree, 0.5, 0.5), dimensionality)
 
 # ╔═╡ 826ed80a-bdad-4a38-a50b-cb5bec6216c0
-@doc TreeShielding.get_equivalence_bounds
+@doc TreeShielding.get_action_safety_bounds
 
 # ╔═╡ 2d999c21-cbdd-4ca6-9866-6f763c91feba
 md"""
@@ -283,7 +283,7 @@ Try setting a different number of samples per axis:
 m = ShieldingModel(simulation_function, Pace, dimensionality, samples_per_axis, random_variable_bounds; granularity, margin, splitting_tolerance)
 
 # ╔═╡ 0197dfd6-e689-4aad-8af0-a0cbfa48dfa7
-safe, unsafe = TreeShielding.get_equivalence_bounds(tree, bounds, (@set m.samples_per_axis=16))
+safe, unsafe = TreeShielding.get_action_safety_bounds(tree, bounds, (@set m.samples_per_axis=16))
 
 # ╔═╡ e7609f1e-3d94-4e53-9620-dd62995cfc50
 call() do
@@ -559,7 +559,7 @@ $br
 # ╠═bae11a44-67d8-4b6b-8d10-85b58e7fae63
 # ╟─87e24687-5fc2-485a-ba01-41c10c10d395
 # ╟─9e807328-488f-4e86-ae53-71f39b2631a7
-# ╟─46f3eefe-15c7-4bae-acdb-54e485e4b5b7
+# ╠═46f3eefe-15c7-4bae-acdb-54e485e4b5b7
 # ╟─76f13f2a-82cb-4037-a097-394fb080bf84
 # ╟─66af047f-a34f-484a-8608-8eaaed45b37d
 # ╟─447dc1e2-809a-4f71-b7f4-949ae2a0c4b6

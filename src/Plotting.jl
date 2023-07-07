@@ -131,6 +131,7 @@ function scatter_allowed_actions!(tree, bounds, m)
             for r in SupportingPoints(m.samples_per_axis, m.random_variable_bounds)
                 p′ = m.simulation_function(p, r, a)
                 action_safe = action_safe && get_value(get_leaf(tree, p′)) != no_action
+                !action_safe && break
             end
 			if action_safe
 				push!(actions[i], p)

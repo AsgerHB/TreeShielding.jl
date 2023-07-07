@@ -28,7 +28,19 @@ function compute_safety(tree::Tree, bounds::Bounds, m)
 	result
 end
 
-function get_equivalence_bounds(tree, bounds, m::ShieldingModel)
+"""
+    get_action_safety_bounds(tree, bounds, m::ShieldingModel)
+
+Used by `get_dividing_bounds`.
+This is nearly impossible to explain. It works, but has bad intuition.
+Uses samples given by `m` within `bounds`. 
+
+Computes bounds for each action, which covers every sample for which that action was safe. 
+And vice versa, it computes the bounds for every sample for which the action is unsafe.
+
+Returns the tuple `(safe, unsafe)` which are both `action => bounds` dictionaries.
+"""
+function get_action_safety_bounds(tree, bounds, m::ShieldingModel)
 
 	no_action = actions_to_int([])
 	dimensionality = get_dim(bounds)
@@ -74,8 +86,18 @@ function get_equivalence_bounds(tree, bounds, m::ShieldingModel)
     return safe, unsafe
 end
 
+"""
+    get_dividing_bounds(tree::Tree, bounds::Bounds, axis, action, direction::Direction, m::ShieldingModel)
+
+Single computation step in getting a dividing threshold. Pardon the imprecise language; it might be better visualized in the `Grow.jl` notebook.
+Bases itself off of the samples defined by `m` taken within `bounds`. 
+
+For a given action and direciton, returns a result of type `Bounds`. 
+The result represents an area which divides the samples along `axis`, such that on one side of the bound *all samples consider the action safe.* 
+The "safe" side includes as many samples as possible. Additinoally, the bound stretches between the last safe samples and the first unsafe samples.
+"""
 function get_dividing_bounds(tree::Tree, bounds::Bounds, axis, action, direction::Direction, m::ShieldingModel)
-	safe, unsafe = get_equivalence_bounds(tree, bounds, m)
+	safe, unsafe = get_action_safety_bounds(tree, bounds, m)
 	
 	m.verbose && @info @sprintf "action: %s\nsafe:   ]%-+0.05f; %-+0.05f] \nunsafe: ]%-+0.05f; %-+0.05f]" "$action" safe[action].lower[axis] safe[action].upper[axis] unsafe[action].lower[axis] unsafe[action].upper[axis]
 	if !bounded(safe[action]) || !bounded(unsafe[action])
