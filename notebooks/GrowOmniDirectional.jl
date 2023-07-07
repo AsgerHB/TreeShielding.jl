@@ -28,7 +28,6 @@ begin
 	using AbstractTrees
 	using Printf
 	using Setfield
-	using StaticArrays
 	TableOfContents()
 end
 
@@ -365,7 +364,7 @@ medium = Bool[
 ];
 
 # ╔═╡ da57aa64-055b-46aa-9e0c-7ad8d7e23bcf
-@bind safe Select([small => "small", medium => "medium"])
+@bind safe Select([medium => "medium", small => "small", safety_judegement => "safety_judegement"])
 
 # ╔═╡ 3650e23b-0997-4391-bb02-dda6824fc2ab
 plot(); plot_safety!(safe, size=(200, 230), legend=:outertop)
@@ -375,9 +374,6 @@ safe[1, 7], safe[1, 8]
 
 # ╔═╡ e1e2843e-2793-42b0-b869-34d94867ca9a
 initial_bounds = Bounds([2, 2], [2, 2])
-
-# ╔═╡ 3d47fd67-a543-4658-906d-1e5b010db03d
-safe; dpd = Dict{Bounds{Int},Bounds{Int}}()
 
 # ╔═╡ e424844d-0c5d-4a8f-b983-4c91b6a51699
 function area(bounds::Bounds{T})::T where T
@@ -470,63 +466,6 @@ function get_safe_extensions(safe, bounds::Bounds)
 	result
 end
 
-# ╔═╡ 193b9608-74f9-49da-ba6c-930a38d8d7b3
-begin
-	"""
-		greatest_safe_bounds(safe, bounds::Bounds)
-	
-	Returns the greatest safe bounds that include the given `bounds`.
-	"""
-	function greatest_safe_bounds(safe, 
-		bounds::Bounds{T}, 
-		# Dictionary to support Dynamic Programming
-		dpd::Dict{Bounds{T}, Bounds{T}}=Dict{Bounds{T},Bounds{T}}()
-	)::Bounds{T} where T
-
-		if haskey(dpd, bounds)
-			return dpd[bounds]
-		end
-		
-		extensions = get_safe_extensions(safe, bounds)
-
-		# Recursion
-		best = greatest_area(bounds, 
-			[greatest_safe_bounds(safe, b, dpd) for b in extensions]...)
-
-		dpd[bounds] = best
-		return best
-	end
-
-	function greatest_safe_bounds(bounds::Bounds{T}, m::ShieldingModel) where T
-	end
-end;
-
-# ╔═╡ 81b642ea-d8de-4640-b192-617592a65574
-greatest_safe_result = @time greatest_safe_bounds(safe, initial_bounds, dpd)
-
-# ╔═╡ f919c1a4-9a9a-4a6f-873c-91b7dd9dfe40
-let
-	plot(legend=:outerright,
-		ticks=1:9)
-	
-	plot_safety!(safe)
-	
-	plot!(greatest_safe_result, .1,
-		line=1,
-		alpha=0.8,
-		label="greatest safe",
-		color=colors.NEPHRITIS)	
-	
-	plot!(initial_bounds, .1, 
-		line=1,
-		color=colors.PETER_RIVER,
-		alpha=1,
-		label="initial")
-end
-
-# ╔═╡ 45fafd86-4f60-49f4-a7db-c3d8fd031ddc
-get_safe_extensions(safe, Bounds([1, 2], [2, 2]))
-
 # ╔═╡ 8cccb57e-501d-4cfc-94c1-ea4e260f637a
 get_safe_extensions(safe, Bounds([1, 2], [2, 2]))
 
@@ -573,6 +512,226 @@ end;
 # ╔═╡ 8f3ed4f8-a261-4c05-ac46-0252a3ddd131
 best_bounds(safe, Bounds([1, 1], [2, 3]), Bounds([1, 2], [1, 8]))
 
+# ╔═╡ 193b9608-74f9-49da-ba6c-930a38d8d7b3
+"""
+	greatest_safe_bounds(safe, bounds::Bounds)
+
+Returns the greatest safe bounds that include the given `bounds`.
+"""
+function greatest_safe_bounds(safe, 
+	bounds::Bounds{T}, 
+	# Dictionary to support Dynamic Programming
+	dpd::Dict{Bounds{T}, Bounds{T}}=Dict{Bounds{T},Bounds{T}}()
+)::Bounds{T} where T
+
+	if haskey(dpd, bounds)
+		return dpd[bounds]
+	end
+	
+	extensions = get_safe_extensions(safe, bounds)
+
+	# Recursion
+	best = greatest_area(bounds, 
+		[greatest_safe_bounds(safe, b, dpd) for b in extensions]...)
+
+	dpd[bounds] = best
+	return best
+end;
+
+# ╔═╡ 3d47fd67-a543-4658-906d-1e5b010db03d
+safe; dpd = Dict{Bounds{Int},Bounds{Int}}()
+
+# ╔═╡ 81b642ea-d8de-4640-b192-617592a65574
+greatest_safe_result = @time greatest_safe_bounds(safe, initial_bounds, dpd)
+
+# ╔═╡ f919c1a4-9a9a-4a6f-873c-91b7dd9dfe40
+let
+	plot(legend=:outerright,
+		ticks=1:9)
+	
+	plot_safety!(safe)
+	
+	plot!(greatest_safe_result, .1,
+		line=1,
+		alpha=0.8,
+		label="greatest safe",
+		color=colors.NEPHRITIS)	
+	
+	plot!(initial_bounds, .1, 
+		line=1,
+		color=colors.PETER_RIVER,
+		alpha=1,
+		label="initial")
+end
+
+# ╔═╡ 597f7ab1-468e-4898-b5ff-130aea6bb7a3
+"""
+ 	all_initial_bounds(safe)
+
+Returns a list (TODO: could be an iterator) of all 0-by-0 bounds covering safe points. This can be used to call `greatest_safe_result` on each in turn to find the truly greatest regardless of initial bounds.
+
+Yea I hope I will write some overall explanation when I'm done with this.
+"""
+function all_initial_bounds(safe)
+	result = Vector{Bounds{Int64}}(undef, count(safe))
+	dim = length(size(safe))
+	i = 1
+	for (indices, v) in pairs(safe)
+		(!v) && continue
+		indices = Tuple(indices)
+		@assert i <= length(result)
+		result[i] = Bounds(indices, indices)
+		i += 1
+	end	
+	result
+end;
+
+# ╔═╡ 6be0301b-c2b9-43a0-9f27-99fa2a8ac63b
+all_initial = all_initial_bounds(safe)
+
+# ╔═╡ 0c85a9c0-8090-44fb-9fd0-ec15286c63c2
+let
+	plot(size=(300, 300))
+	plot_safety!(safe)
+	for b in all_initial
+		plot!(b, 0.1, legend=nothing, color=colors.PETER_RIVER)
+	end
+	plot!()
+end
+
+# ╔═╡ 545984e2-e444-4495-bb46-f201db26670b
+function to_statespace(
+	bounds::Bounds{Int64}, 
+	points::Matrix{NTuple{N, T}}
+)::Bounds{T} where {N, T}
+	
+	Bounds(points[bounds.lower...], points[bounds.upper...])
+end
+
+# ╔═╡ 3297e971-d849-42c4-917a-dfd8ca1c37b7
+to_statespace(greatest_safe_result, corresponding_points)
+
+# ╔═╡ 6f0c554b-8592-435e-b6bc-789e8a989c6a
+function find_splitting_bounds(action, 
+	bounds::Bounds{T}, 
+	m::ShieldingModel
+) where T
+	
+	# Get the safety judgement
+	safe, points = get_safety_judgements(action, bounds, m)
+
+	# Find the greatest safe bounds, no matter where you start searching from
+	best = nothing
+	best_area = typemin(Int64)
+	dpd = Dict{Bounds{Int64},Bounds{Int64}}()
+	for b in all_initial_bounds(safe)
+		b′ = greatest_safe_bounds(safe, b, dpd)
+		area_b′ = area(b′)
+		if area_b′ > best_area
+			best = b′
+			best_area = area_b′
+		end
+	end
+
+	# Return converted back into state-space bounds
+	to_statespace(best, points)
+end
+
+# ╔═╡ e0508b3e-aec1-42f2-89d6-52dd7b727791
+find_splitting_bounds(slow, bounds, m)
+
+# ╔═╡ 1a8c579c-df0d-400a-9adb-befa2827b577
+splitting_bounds = @time find_splitting_bounds(fast, bounds, m)
+
+# ╔═╡ 4685a23b-ecf2-4211-b6c3-c90f96d418bf
+let
+	draw(tree, draw_bounds, color_dict=action_color_dict, 
+		aspectratio=:equal,
+		legend=:outertop,
+		size=(500,500))
+	leaf_count = length(Leaves(tree) |> collect)
+
+	scatter_allowed_actions!(tree, bounds, m)
+	plot!([], l=nothing, label="leaves: $leaf_count")
+		
+	plot!(splitting_bounds, 
+		label="splitting_bounds", 
+		color=colors.NEPHRITIS, 
+		alpha=0.7)
+end
+
+# ╔═╡ 0fc53ad2-e4e2-4a04-9745-6adc7eaf1267
+"""
+Split leaf by bounds.
+Pluto gets sad if I try to override a function from another module.
+"""
+function split!!(leaf::Leaf, bounds::Bounds, inner=nothing, outer=nothing)::Tree
+	inner = something(inner, leaf.value)
+	outer = something(outer, leaf.value)
+	dim = get_dim(bounds)
+	bounds_leaf = get_bounds(leaf, m.dimensionality)
+	new_subtree = leaf
+	for i in 1:dim
+		if bounds.lower[i] > bounds_leaf.lower[i]
+			new_subtree = split!(leaf, i, bounds.lower[i], outer, inner)
+			leaf = new_subtree.geq
+		end
+		
+		if bounds.upper[i] < bounds_leaf.upper[i]
+			new_subtree = split!(leaf, i, bounds.upper[i], inner, outer)
+			leaf = new_subtree.lt
+		end
+	end
+	return new_subtree
+end;
+
+# ╔═╡ 13cbb1d6-8f49-4bfb-956c-17c5a85a16d6
+let
+	tree = deepcopy(tree)
+	leaf = get_leaf(tree, (0.5, 0.5))
+	bounds = Bounds([0.4, 0.4], [0.5, 0.5])
+	split!!(leaf, bounds)
+	draw(tree, draw_bounds, size=(500, 500))
+end
+
+# ╔═╡ 1841566d-9068-422a-84b2-ec5b6bbaa653
+md"""
+# Putting it all together real quick
+"""
+
+# ╔═╡ 13179fba-74ce-4643-b1e0-544869d3a095
+@bind iterations NumberField(0:100, default=1)
+
+# ╔═╡ d644638e-e589-48e0-b511-c0d0d1ceb798
+let
+	tree = deepcopy(tree)
+	unsafe = actions_to_int([])
+	for i in 1:iterations
+		changes = 1
+		loop_break = 100
+		while changes != 0
+			changes = 0
+			for leaf in Leaves(tree)
+				leaf.value == unsafe && continue
+				bounds = get_bounds(leaf, m.dimensionality)
+				!bounded(bounds) && continue
+				splitting_bounds = find_splitting_bounds(fast, bounds, m)
+				area(splitting_bounds) == 0 && continue
+				@info i splitting_bounds
+				splitting_bounds == bounds && continue
+				split!!(leaf, splitting_bounds)
+				changes += 1
+			end
+			loop_break -= 1
+			loop_break < 0 && break
+		end
+		update!(tree, m)
+	end
+	draw(tree, draw_bounds, size=(500, 500))
+	bounds = get_bounds(get_leaf(tree, 0.5, 0.5), m.dimensionality)
+	scatter_allowed_actions!(tree, bounds, m)
+end
+
 # ╔═╡ Cell order:
 # ╟─6a50c8f7-6367-4d59-a574-c8a29a785e88
 # ╠═23a8f930-95ae-4820-bac0-82edd0bfbc8a
@@ -609,7 +768,8 @@ best_bounds(safe, Bounds([1, 1], [2, 3]), Bounds([1, 2], [1, 8]))
 # ╟─52015eb7-b4d8-4a08-98b4-c6e006179452
 # ╟─dcab1452-9c39-4912-b6d9-0e013c2240d4
 # ╠═e2c7decc-ec60-4eae-88c3-491ca06673ea
-# ╟─16d39b87-8d2d-4a54-8eb1-ee727671e299
+# ╠═e0508b3e-aec1-42f2-89d6-52dd7b727791
+# ╠═16d39b87-8d2d-4a54-8eb1-ee727671e299
 # ╠═e16be618-813f-4888-a247-e8f54d950de6
 # ╠═15a3178c-499c-4443-9e28-3ab6106c2234
 # ╠═3f4f2a52-1580-41e1-a954-842c15bf6a3e
@@ -620,12 +780,7 @@ best_bounds(safe, Bounds([1, 1], [2, 3]), Bounds([1, 2], [1, 8]))
 # ╠═1778479c-bd0c-444e-937e-a13242435cb4
 # ╠═3650e23b-0997-4391-bb02-dda6824fc2ab
 # ╠═82d43955-fcde-4615-be4a-d237f54ef38c
-# ╠═193b9608-74f9-49da-ba6c-930a38d8d7b3
 # ╠═e1e2843e-2793-42b0-b869-34d94867ca9a
-# ╠═3d47fd67-a543-4658-906d-1e5b010db03d
-# ╠═81b642ea-d8de-4640-b192-617592a65574
-# ╠═45fafd86-4f60-49f4-a7db-c3d8fd031ddc
-# ╟─f919c1a4-9a9a-4a6f-873c-91b7dd9dfe40
 # ╠═0501eeb1-abec-4d6b-8359-005cc4831ec5
 # ╠═c1607955-389c-43e5-bade-c19f1d5c69e7
 # ╠═8cccb57e-501d-4cfc-94c1-ea4e260f637a
@@ -638,3 +793,20 @@ best_bounds(safe, Bounds([1, 1], [2, 3]), Bounds([1, 2], [1, 8]))
 # ╠═e424844d-0c5d-4a8f-b983-4c91b6a51699
 # ╠═4c0120f7-36fe-4232-873d-68cd3e1d5231
 # ╠═3875ddf7-025e-44c8-8280-589e4caf32af
+# ╠═193b9608-74f9-49da-ba6c-930a38d8d7b3
+# ╠═3d47fd67-a543-4658-906d-1e5b010db03d
+# ╠═81b642ea-d8de-4640-b192-617592a65574
+# ╟─f919c1a4-9a9a-4a6f-873c-91b7dd9dfe40
+# ╠═597f7ab1-468e-4898-b5ff-130aea6bb7a3
+# ╠═6be0301b-c2b9-43a0-9f27-99fa2a8ac63b
+# ╠═0c85a9c0-8090-44fb-9fd0-ec15286c63c2
+# ╠═545984e2-e444-4495-bb46-f201db26670b
+# ╠═3297e971-d849-42c4-917a-dfd8ca1c37b7
+# ╠═6f0c554b-8592-435e-b6bc-789e8a989c6a
+# ╠═1a8c579c-df0d-400a-9adb-befa2827b577
+# ╠═4685a23b-ecf2-4211-b6c3-c90f96d418bf
+# ╠═0fc53ad2-e4e2-4a04-9745-6adc7eaf1267
+# ╠═13cbb1d6-8f49-4bfb-956c-17c5a85a16d6
+# ╠═1841566d-9068-422a-84b2-ec5b6bbaa653
+# ╠═d644638e-e589-48e0-b511-c0d0d1ceb798
+# ╠═13179fba-74ce-4643-b1e0-544869d3a095
