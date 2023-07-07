@@ -1,13 +1,19 @@
+struct Bounds{T}
+    lower::Vector{T}
+    upper::Vector{T}
 
-struct Bounds
-    lower
-    upper
-
-    function Bounds(lower, upper)
+    function Bounds(lower::Vector{T}, upper::Vector{T}) where T
         if length(lower) != length(upper)
             error("Inconsistent dimensionality")
         end
-        return new(lower, upper)
+        return new{T}(lower, upper)
+    end
+
+    function Bounds(lower::NTuple{N, T}, upper::NTuple{N, T}) where {N, T}
+        if length(lower) != length(upper)
+            error("Inconsistent dimensionality")
+        end
+        return new{T}(collect(lower), collect(upper))
     end
 end
 
@@ -56,6 +62,8 @@ Base.:(==)(a::Bounds, b::Bounds)  = begin
     end
     return true
 end
+
+Base.hash(a::Bounds) = hash(a.lower) + hash(a.upper)
 
 Base.isapprox(a::Bounds, b::Bounds, params...) = begin
     for (x, y) in hcat(zip(a.lower, b.lower)..., zip(a.upper, b.upper)...)
