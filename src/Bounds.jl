@@ -87,6 +87,10 @@ Base.intersect(a::Bounds, b::Bounds) = begin
 	Bounds(lower, upper)
 end
 
+Base.copy(bounds::Bounds) = begin
+    Bounds(copy(bounds.lower), copy(bounds.upper))
+end
+
 function bounded(bounds::Bounds)
 	for b in bounds.lower
 		if b == -Inf || b == Inf

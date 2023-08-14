@@ -95,7 +95,6 @@ function replace_subtree!(tree::Tree, new_tree::Tree)
 end
 
 function split!(leaf::Leaf, axis, threshold, lower=nothing, upper=nothing)
-    # TODO: Check if threshold is valid
     lower = something(lower, leaf.value)
     upper = something(upper, leaf.value)
 
@@ -105,6 +104,26 @@ function split!(leaf::Leaf, axis, threshold, lower=nothing, upper=nothing)
 
     return replace_subtree!(leaf, new_tree)
 end
+
+function split!(leaf::Leaf, bounds::Bounds, inner=nothing, outer=nothing)::Tree
+	inner = something(inner, leaf.value)
+	outer = something(outer, leaf.value)
+	dim = get_dim(bounds)
+	bounds_leaf = get_bounds(leaf, get_dim(bounds))
+	new_subtree = leaf
+	for i in 1:dim
+		if bounds.lower[i] > bounds_leaf.lower[i]
+			new_subtree = split!(leaf, i, bounds.lower[i], outer, inner)
+			leaf = new_subtree.geq
+		end
+		
+		if bounds.upper[i] < bounds_leaf.upper[i]
+			new_subtree = split!(leaf, i, bounds.upper[i], inner, outer)
+			leaf = new_subtree.lt
+		end
+	end
+	return new_subtree
+end;
 
 function get_bounds(tree::Tree, dimensionality; _lower=nothing, _upper=nothing)
     parent = tree.parent

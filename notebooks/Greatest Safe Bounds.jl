@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.22
+# v0.19.27
 
 using Markdown
 using InteractiveUtils
@@ -39,8 +39,10 @@ end
 
 # ╔═╡ 6a50c8f7-6367-4d59-a574-c8a29a785e88
 md"""
-# Growing the tree V2.0
-This notebook attempts to implement some sort of multi-splitting
+# Greatest Saef Bounds
+
+One approach to splitting along multiple axes at once.
+Doesn't work so good.
 """
 
 # ╔═╡ 1550fddd-6b9d-4b16-9265-c12f44b0f1e4
@@ -225,54 +227,12 @@ md"""
 Everything is rolled up into a convenient little ball that is easy to toss around between functions. This ball is called `ShieldingModel`
 """
 
-# ╔═╡ 34dbeedd-379e-4e22-91d7-c271a796a57b
-md"""
-### Parameters -- Try it Out!
-!!! info "Tip"
-	This cell controls multiple figures. Move it around to gain a better view.
-
-Try setting a different number of samples per axis: 
-
-`samples_per_axis =` $(@bind samples_per_axis NumberField(3:30, default=9))
-
-`granularity =` $(@bind granularity NumberField(0:1E-15:1, default=1E-5))
-
-`margin =` $(@bind margin NumberField(0:0.001:1, default=0.00))
-
-`splitting_tolerance =` $(@bind splitting_tolerance NumberField(0:1E-10:1, default=1E-5))
-"""
-
-# ╔═╡ 364a95c2-de8a-468a-86eb-db18a5489c9d
-m = ShieldingModel(simulation_function, Pace, dimensionality, samples_per_axis, random_variable_bounds; granularity, margin, splitting_tolerance)
-
 # ╔═╡ 52015eb7-b4d8-4a08-98b4-c6e006179452
 md"""
 ## Where to Split
 
 Get ready to read some cursed code.
 """
-
-# ╔═╡ e2c7decc-ec60-4eae-88c3-491ca06673ea
-bounds = get_bounds(get_leaf(tree, 0.5, 0.5), m.dimensionality)
-
-# ╔═╡ e0508b3e-aec1-42f2-89d6-52dd7b727791
-# ╠═╡ disabled = true
-#=╠═╡
-find_splitting_bounds(slow, tree, bounds, m)
-  ╠═╡ =#
-
-# ╔═╡ 16d39b87-8d2d-4a54-8eb1-ee727671e299
-let
-	draw(tree, draw_bounds, color_dict=action_color_dict, 
-		aspectratio=:equal,
-		legend=:outertop,
-		size=(500,500))
-	leaf_count = length(Leaves(tree) |> collect)
-
-	scatter_allowed_actions!(tree, bounds, m)
-	plot!([], l=nothing, label="leaves: $leaf_count")
-	
-end
 
 # ╔═╡ e16be618-813f-4888-a247-e8f54d950de6
 """
@@ -316,9 +276,6 @@ function get_safety_judgements(a,
 	safe, points
 end;
 
-# ╔═╡ 15a3178c-499c-4443-9e28-3ab6106c2234
-safety_judegement, corresponding_points = get_safety_judgements(slow, tree, bounds, m)
-
 # ╔═╡ 31b36e5b-c818-44a7-968f-38b6c9e79f9d
 function plot_safety!(safe; params...)
 	safe_color = colorant"#9eea94"
@@ -332,11 +289,8 @@ function plot_safety!(safe; params...)
 	plot!(;params...)
 end
 
-# ╔═╡ 3f4f2a52-1580-41e1-a954-842c15bf6a3e
-plot(); plot_safety!(safety_judegement)
-
 # ╔═╡ bff9cdd0-85dc-4afb-936b-c4623fa2c9ad
-@recipe function rectangle(bounds::Bounds, pad=0.01) 
+@recipe function rectangle(bounds::Bounds, pad=0.00) 
 	l, u = bounds.lower, bounds.upper
 	xl, yl = l .- pad
 	xu, yu = u .+ pad
@@ -352,9 +306,6 @@ small = Bool[
 	1  1  1;
 	1  1  0;
 ];
-
-# ╔═╡ 30808b06-460c-4106-a2a7-3ebe06523e73
-safety_judegement
 
 # ╔═╡ 1778479c-bd0c-444e-937e-a13242435cb4
 # Looks like column-first indexing
@@ -384,17 +335,8 @@ weird_case = Bool[
 	 1  1  1  1  1  1  1  1  1;
 ];
 
-# ╔═╡ da57aa64-055b-46aa-9e0c-7ad8d7e23bcf
-@bind safe Select([medium => "medium", small => "small", safety_judegement => "safety_judegement", weird_case => "weird_case"])
-
-# ╔═╡ 3650e23b-0997-4391-bb02-dda6824fc2ab
-plot(); plot_safety!(safe, size=(200, 230), legend=:outertop)
-
-# ╔═╡ 82d43955-fcde-4615-be4a-d237f54ef38c
-safe[1, 7], safe[1, 8]
-
 # ╔═╡ e1e2843e-2793-42b0-b869-34d94867ca9a
-initial_bounds = Bounds([5, 5], [5, 9])
+initial_bounds = Bounds([1, 1], [1, 1])
 
 # ╔═╡ 3875ddf7-025e-44c8-8280-589e4caf32af
 """
@@ -433,9 +375,6 @@ function all_safe(safe, bounds::Bounds)
 	all(safe[indices...] for indices in all_values(bounds))
 end
 
-# ╔═╡ 7edda37d-fafd-4171-8dfa-f72f36dabc58
-all_safe(safe, initial_bounds)
-
 # ╔═╡ c1607955-389c-43e5-bade-c19f1d5c69e7
 function get_safe_extensions(safe, bounds::Bounds)
 	result = Bounds[]
@@ -466,32 +405,8 @@ function get_safe_extensions(safe, bounds::Bounds)
 	result
 end
 
-# ╔═╡ 8cccb57e-501d-4cfc-94c1-ea4e260f637a
-get_safe_extensions(safe, Bounds([1, 2], [2, 2]))
-
-# ╔═╡ db8482d5-5998-4f6c-aa2c-5936d81804cc
-let 
-	#rectangle with added margin
-
-	plot()
-	plot_safety!(safe)
-	all = get_safe_extensions(safe, initial_bounds)
-	for b in all
-		plot!(b, 0.1, line=1, alpha=0.5, label="extension")
-	end
-	plot!(initial_bounds, 0.1, line=1, alpha=1, label="initial", color=colors.PETER_RIVER)
-end
-
-# ╔═╡ 9dcc62cd-7246-4875-8006-b62a5f9b8adc
-all_safe(safe, 
-	get_safe_extensions(safe, get_safe_extensions(safe, initial_bounds)[1])[1]
-)
-
 # ╔═╡ 439e31ce-4805-49d2-9098-955444cc2a61
 reactive_extension = Ref(initial_bounds)
-
-# ╔═╡ 9fae31f8-6c32-412e-821c-4bc9e9a71784
-reactive_extension[] = get_safe_extensions(safe, reactive_extension[])[1]
 
 # ╔═╡ f43944e5-1098-4dd2-a89a-5b7a620e5de5
 """
@@ -516,12 +431,6 @@ function best_bounds(safe, boundss::Bounds{T}...)::Tuple{Bounds{T}, Int64} where
 	end
 	best, points
 end;
-
-# ╔═╡ bd9dad15-b2fa-4b35-bd70-bc61efa73e16
-best_bounds(safe, reactive_extension[], initial_bounds)
-
-# ╔═╡ 8f3ed4f8-a261-4c05-ac46-0252a3ddd131
-best_bounds(safe, initial_bounds, get_safe_extensions(safe, initial_bounds)[1])
 
 # ╔═╡ e424844d-0c5d-4a8f-b983-4c91b6a51699
 """
@@ -594,6 +503,170 @@ function greatest_safe_bounds_including(safe,
 	return best
 end;
 
+# ╔═╡ 597f7ab1-468e-4898-b5ff-130aea6bb7a3
+"""
+ 	all_initial_bounds(safe)
+
+Returns a list (TODO: could be an iterator) of all 0-by-0 bounds covering safe points. This can be used to call `greatest_safe_result` on each in turn to find the truly greatest regardless of initial bounds.
+
+Yea I hope I will write some overall explanation when I'm done with this.
+"""
+function all_initial_bounds(safe)
+	result = Vector{Bounds{Int64}}(undef, count(safe))
+	dim = length(size(safe))
+	i = 1
+	for (indices, v) in pairs(safe)
+		(!v) && continue
+		indices = Tuple(indices)
+		@assert i <= length(result)
+		result[i] = Bounds(indices, indices)
+		i += 1
+	end	
+	result
+end;
+
+# ╔═╡ 8f6536cd-d9ba-44d0-b064-e5dae9bc3a0d
+function greatest_safe_bounds(safe; verbose=false)
+	best = nothing
+	best_area = typemin(Int64)
+	dpd = Dict{Bounds{Int64},Bounds{Int64}}()
+	for b in all_initial_bounds(safe)
+		b′ = greatest_safe_bounds_including(safe, b, dpd)
+		area_b′ = area(b′, plus_one=true)
+		if area_b′ > best_area
+			verbose && @info b′ area_b′
+			best = b′
+			best_area = area_b′
+		end
+	end
+	best
+end
+
+# ╔═╡ 02fc4ccd-202f-44c2-85b3-ec68220a188b
+md"""
+## Returning from the "`safe`" abstraction
+"""
+
+# ╔═╡ 545984e2-e444-4495-bb46-f201db26670b
+begin
+	function to_statespace(
+		bounds::Bounds{Int64}, 
+		points::Matrix{NTuple{N, T}}
+	)::Bounds{T} where {N, T}
+		
+		Bounds(points[bounds.lower...], points[bounds.upper...])
+	end
+
+	function to_statespace(nothing::Nothing, _)
+		return nothing
+	end
+end
+
+# ╔═╡ 6f0c554b-8592-435e-b6bc-789e8a989c6a
+function find_splitting_bounds(action, 
+	tree::Tree,
+	bounds::Bounds{T}, 
+	m::ShieldingModel;
+	verbose=false
+) where T
+	
+	# Get the safety judgement
+	safe, points = get_safety_judgements(action, tree, bounds, m)
+
+	# Find the greatest safe bounds, no matter where you start searching from
+	best = greatest_safe_bounds(safe; verbose)
+
+	# Return converted back into state-space bounds
+	to_statespace(best, points)
+end
+
+# ╔═╡ d09d748a-353d-4309-ba33-6e29436875e3
+Direction
+
+# ╔═╡ 34dbeedd-379e-4e22-91d7-c271a796a57b
+md"""
+### Parameters -- Try it Out!
+!!! info "Tip"
+	This cell controls multiple figures. Move it around to gain a better view.
+
+Try setting a different number of samples per axis: 
+
+`samples_per_axis =` $(@bind samples_per_axis NumberField(3:30, default=9))
+
+`granularity =` $(@bind granularity NumberField(0:1E-15:1, default=1E-5))
+
+`margin =` $(@bind margin NumberField(0:0.001:1, default=0.00))
+
+`splitting_tolerance =` $(@bind splitting_tolerance NumberField(0:1E-10:1, default=1E-5))
+"""
+
+# ╔═╡ 364a95c2-de8a-468a-86eb-db18a5489c9d
+m = ShieldingModel(simulation_function, Pace, dimensionality, samples_per_axis, random_variable_bounds; granularity, margin, splitting_tolerance)
+
+# ╔═╡ e2c7decc-ec60-4eae-88c3-491ca06673ea
+bounds = get_bounds(get_leaf(tree, 0.5, 0.5), m.dimensionality)
+
+# ╔═╡ 16d39b87-8d2d-4a54-8eb1-ee727671e299
+let
+	draw(tree, draw_bounds, color_dict=action_color_dict, 
+		aspectratio=:equal,
+		legend=:outertop,
+		size=(500,500))
+	leaf_count = length(Leaves(tree) |> collect)
+
+	scatter_allowed_actions!(tree, bounds, m)
+	plot!([], l=nothing, label="leaves: $leaf_count")
+	
+end
+
+# ╔═╡ 15a3178c-499c-4443-9e28-3ab6106c2234
+safety_judegement, corresponding_points = get_safety_judgements(slow, tree, bounds, m)
+
+# ╔═╡ 3f4f2a52-1580-41e1-a954-842c15bf6a3e
+plot(); plot_safety!(safety_judegement)
+
+# ╔═╡ da57aa64-055b-46aa-9e0c-7ad8d7e23bcf
+@bind safe Select([medium => "medium", small => "small", safety_judegement => "safety_judegement", weird_case => "weird_case"])
+
+# ╔═╡ 3650e23b-0997-4391-bb02-dda6824fc2ab
+plot(); plot_safety!(safe, size=(200, 230), legend=:outertop)
+
+# ╔═╡ 82d43955-fcde-4615-be4a-d237f54ef38c
+safe[1, 7], safe[1, 8]
+
+# ╔═╡ 7edda37d-fafd-4171-8dfa-f72f36dabc58
+all_safe(safe, initial_bounds)
+
+# ╔═╡ 8cccb57e-501d-4cfc-94c1-ea4e260f637a
+get_safe_extensions(safe, Bounds([1, 2], [2, 2]))
+
+# ╔═╡ db8482d5-5998-4f6c-aa2c-5936d81804cc
+let 
+	#rectangle with added margin
+
+	plot()
+	plot_safety!(safe)
+	all = get_safe_extensions(safe, initial_bounds)
+	for b in all
+		plot!(b, 0.1, line=1, alpha=0.5, label="extension")
+	end
+	plot!(initial_bounds, 0.1, line=1, alpha=1, label="initial", color=colors.PETER_RIVER)
+end
+
+# ╔═╡ 9dcc62cd-7246-4875-8006-b62a5f9b8adc
+all_safe(safe, 
+	get_safe_extensions(safe, get_safe_extensions(safe, initial_bounds)[1])[1]
+)
+
+# ╔═╡ 9fae31f8-6c32-412e-821c-4bc9e9a71784
+reactive_extension[] = get_safe_extensions(safe, reactive_extension[])[1]
+
+# ╔═╡ bd9dad15-b2fa-4b35-bd70-bc61efa73e16
+best_bounds(safe, reactive_extension[], initial_bounds)
+
+# ╔═╡ 8f3ed4f8-a261-4c05-ac46-0252a3ddd131
+best_bounds(safe, initial_bounds, get_safe_extensions(safe, initial_bounds)[1])
+
 # ╔═╡ 3d47fd67-a543-4658-906d-1e5b010db03d
 safe, greatest_safe_bounds_including; dpd = Dict{Bounds{Int},Bounds{Int}}()
 
@@ -630,28 +703,6 @@ let
 		label="initial")
 end
 
-# ╔═╡ 597f7ab1-468e-4898-b5ff-130aea6bb7a3
-"""
- 	all_initial_bounds(safe)
-
-Returns a list (TODO: could be an iterator) of all 0-by-0 bounds covering safe points. This can be used to call `greatest_safe_result` on each in turn to find the truly greatest regardless of initial bounds.
-
-Yea I hope I will write some overall explanation when I'm done with this.
-"""
-function all_initial_bounds(safe)
-	result = Vector{Bounds{Int64}}(undef, count(safe))
-	dim = length(size(safe))
-	i = 1
-	for (indices, v) in pairs(safe)
-		(!v) && continue
-		indices = Tuple(indices)
-		@assert i <= length(result)
-		result[i] = Bounds(indices, indices)
-		i += 1
-	end	
-	result
-end;
-
 # ╔═╡ 6be0301b-c2b9-43a0-9f27-99fa2a8ac63b
 all_initial = all_initial_bounds(safe)
 
@@ -663,23 +714,6 @@ let
 		plot!(b, 0.1, legend=nothing, color=colors.PETER_RIVER)
 	end
 	plot!()
-end
-
-# ╔═╡ 8f6536cd-d9ba-44d0-b064-e5dae9bc3a0d
-function greatest_safe_bounds(safe; verbose=false)
-	best = nothing
-	best_area = typemin(Int64)
-	dpd = Dict{Bounds{Int64},Bounds{Int64}}()
-	for b in all_initial_bounds(safe)
-		b′ = greatest_safe_bounds_including(safe, b, dpd)
-		area_b′ = area(b′, plus_one=true)
-		if area_b′ > best_area
-			verbose && @info b′ area_b′
-			best = b′
-			best_area = area_b′
-		end
-	end
-	best
 end
 
 # ╔═╡ cf73b5ca-7f77-4679-9d62-96cda2ce673a
@@ -695,46 +729,11 @@ let
 	plot!(gsb, 0.1, color=colors.NEPHRITIS, alpha=0.7, label="gsb")
 end
 
-# ╔═╡ 02fc4ccd-202f-44c2-85b3-ec68220a188b
-md"""
-## Returning from the "`safe`" abstraction
-"""
-
-# ╔═╡ 545984e2-e444-4495-bb46-f201db26670b
-begin
-	function to_statespace(
-		bounds::Bounds{Int64}, 
-		points::Matrix{NTuple{N, T}}
-	)::Bounds{T} where {N, T}
-		
-		Bounds(points[bounds.lower...], points[bounds.upper...])
-	end
-
-	function to_statespace(nothing::Nothing, _)
-		return nothing
-	end
-end
+# ╔═╡ 30808b06-460c-4106-a2a7-3ebe06523e73
+safety_judegement
 
 # ╔═╡ 3297e971-d849-42c4-917a-dfd8ca1c37b7
 to_statespace(greatest_safe_result, corresponding_points)
-
-# ╔═╡ 6f0c554b-8592-435e-b6bc-789e8a989c6a
-function find_splitting_bounds(action, 
-	tree::Tree,
-	bounds::Bounds{T}, 
-	m::ShieldingModel;
-	verbose=false
-) where T
-	
-	# Get the safety judgement
-	safe, points = get_safety_judgements(action, tree, bounds, m)
-
-	# Find the greatest safe bounds, no matter where you start searching from
-	best = greatest_safe_bounds(safe; verbose)
-
-	# Return converted back into state-space bounds
-	to_statespace(best, points)
-end
 
 # ╔═╡ 1a8c579c-df0d-400a-9adb-befa2827b577
 splitting_bounds = @time find_splitting_bounds(fast, tree, bounds, m)
@@ -756,40 +755,6 @@ let
 		alpha=0.7)
 end
 
-# ╔═╡ 0fc53ad2-e4e2-4a04-9745-6adc7eaf1267
-"""
-Split leaf by bounds.
-Pluto gets sad if I try to override a function from another module.
-"""
-function split!!(leaf::Leaf, bounds::Bounds, inner=nothing, outer=nothing)::Tree
-	inner = something(inner, leaf.value)
-	outer = something(outer, leaf.value)
-	dim = get_dim(bounds)
-	bounds_leaf = get_bounds(leaf, m.dimensionality)
-	new_subtree = leaf
-	for i in 1:dim
-		if bounds.lower[i] > bounds_leaf.lower[i]
-			new_subtree = split!(leaf, i, bounds.lower[i], outer, inner)
-			leaf = new_subtree.geq
-		end
-		
-		if bounds.upper[i] < bounds_leaf.upper[i]
-			new_subtree = split!(leaf, i, bounds.upper[i], inner, outer)
-			leaf = new_subtree.lt
-		end
-	end
-	return new_subtree
-end;
-
-# ╔═╡ 13cbb1d6-8f49-4bfb-956c-17c5a85a16d6
-let
-	tree = deepcopy(tree)
-	leaf = get_leaf(tree, (0.5, 0.5))
-	bounds = Bounds([0.4, 0.4], [0.5, 0.5])
-	split!!(leaf, bounds)
-	draw(tree, draw_bounds, size=(400, 400))
-end
-
 # ╔═╡ 1841566d-9068-422a-84b2-ec5b6bbaa653
 md"""
 # Putting it all together real quick
@@ -807,16 +772,19 @@ let
 		loop_break = 100
 		while changes != 0
 			changes = 0
-			for leaf in Leaves(tree)
-				leaf.value == unsafe && continue
-				bounds = get_bounds(leaf, m.dimensionality)
-				!bounded(bounds) && continue
-				splitting_bounds = find_splitting_bounds(fast, tree, bounds, m)
-				isnothing(splitting_bounds) && continue
-				area(splitting_bounds) == 0 && continue
-				splitting_bounds == bounds && continue
-				split!!(leaf, splitting_bounds)
-				changes += 1
+			leaves = Leaves(tree)
+			for action in instances(Pace)
+				for leaf in leaves
+					leaf.value == unsafe && continue
+					bounds = get_bounds(leaf, m.dimensionality)
+					!bounded(bounds) && continue
+					splitting_bounds = find_splitting_bounds(action, tree, bounds, m)
+					isnothing(splitting_bounds) && continue
+					area(splitting_bounds) == 0 && continue
+					splitting_bounds == bounds && continue
+					split!(leaf, splitting_bounds)
+					changes += 1
+				end
 			end
 			loop_break -= 1
 			loop_break < 0 && break
@@ -844,36 +812,70 @@ reset_button; reactive_tree = deepcopy(tree)
 # ╔═╡ 534d00b4-1618-4864-93c5-41dacb4f1ca3
 reset_button; @bind grow_button CounterButton("Grow")
 
-# ╔═╡ 2dba9f5a-a6cc-4723-be3f-b7d1d6535859
-reset_button; @bind update_button CounterButton("Update")
-
 # ╔═╡ 8e839c6f-3925-4b9e-a613-a3ddefdde7e6
-reset_button, update_button, grow_button; reactive_list = Leaves(reactive_tree) |> collect
+reset_button, grow_button; reactive_list = Leaves(reactive_tree) |> collect
 
 # ╔═╡ 0003edc3-b8f2-4438-834e-7bb224ea0db1
+# ╠═╡ disabled = true
+#=╠═╡
 # TODO: This should go in a function
 if grow_button > 0 let
 	unsafe = actions_to_int([])
 	loop_break = 100
 	changes = 0
 	# refill reactive_list
-	while changes == 0 && length(reactive_list) > 0
+	while length(reactive_list) > 0
 		leaf = pop!(reactive_list)
 		leaf.value == unsafe && continue
 		bounds = get_bounds(leaf, m.dimensionality)
 		!bounded(bounds) && continue
-		splitting_bounds = @time find_splitting_bounds(fast, reactive_tree, bounds, m)
-		isnothing(splitting_bounds) && continue
-		area(splitting_bounds) == 0 && continue
-		splitting_bounds == bounds  && continue
-		split!!(leaf, splitting_bounds)
-		changes += 1
+		for action in instances(Pace)
+			splitting_bounds = find_splitting_bounds(action, reactive_tree, bounds, m)
+			isnothing(splitting_bounds) && continue
+			area(splitting_bounds) == 0 && continue
+			splitting_bounds == bounds  && continue
+			new_subtree = split!(leaf, splitting_bounds)
+			for leaf in Leaves(new_subtree)
+				push!(reactive_list, leaf)
+			end
+			changes += 1
+			break
+		end
+	end
+	@info "Changes: $changes"
+end end
+  ╠═╡ =#
+
+# ╔═╡ 86f17d0b-906a-4499-bd5b-5a3f81b5bafd
+# TODO: This should go in a function
+if grow_button > 0 let
+	unsafe = actions_to_int([])
+	changes = 0
+	for action in [fast]
+		for leaf in Leaves(reactive_tree)
+			leaf.value == unsafe && continue
+			bounds = get_bounds(leaf, m.dimensionality)
+			!bounded(bounds) && continue
+			splitting_bounds = find_splitting_bounds(action, reactive_tree, bounds, m)
+			isnothing(splitting_bounds) && continue
+			area(splitting_bounds) == 0 && continue
+			splitting_bounds == bounds  && continue
+			new_subtree = split!(leaf, splitting_bounds)
+			changes += 1
+			
+		end
 	end
 	@info "Changes: $changes"
 end end
 
+# ╔═╡ ff28ebb4-06c9-4f88-af59-436f5820b69c
+Direction
+
 # ╔═╡ 3db6c5c5-6fed-40c0-a133-96750fd69e4d
 grow_button; reactive_list |> length
+
+# ╔═╡ 2dba9f5a-a6cc-4723-be3f-b7d1d6535859
+reset_button; @bind update_button CounterButton("Update")
 
 # ╔═╡ c6237a43-d3c0-4dce-860b-9605f0ae0f77
 if update_button > 0 let
@@ -905,11 +907,17 @@ let
 	# Splitting plot for bounds under cursor
 	scatter_allowed_actions!(reactive_tree, bounds_under_cursor, m)
 	splitting_bounds = find_splitting_bounds(fast, reactive_tree, bounds_under_cursor, m)
-	plot!(splitting_bounds, 
-		color=colors.SUNFLOWER,
-		alpha=0.4,
-		label="splitting bounds")
+	if !isnothing(splitting_bounds)
+		plot!(splitting_bounds, 
+			color=colors.SUNFLOWER,
+			alpha=0.4,
+			label="splitting bounds")
+	end
+	plot!()
 end
+
+# ╔═╡ 3463c7ba-36c4-4a02-ba0c-58b58e7857ca
+reset_button, grow_button, update_button;            length(collect(Leaves(reactive_tree)))
 
 # ╔═╡ fa44341d-6202-4826-9c54-6942588ec939
 find_splitting_bounds(fast, reactive_tree, bounds_under_cursor, m, verbose=true)
@@ -930,10 +938,10 @@ greatest_safe_bounds_including(safe2, initial_bounds2)
 # ╟─6a50c8f7-6367-4d59-a574-c8a29a785e88
 # ╠═23a8f930-95ae-4820-bac0-82edd0bfbc8a
 # ╠═edf99af5-443f-4c23-b63d-51d5075b30b5
-# ╠═1550fddd-6b9d-4b16-9265-c12f44b0f1e4
-# ╠═00716b11-f49e-4790-9442-c4e24d05f369
-# ╠═c669d727-88fb-4ee8-9f50-7681d1b8df5a
-# ╠═193ea2f4-548f-4dcf-b661-4bf1aca16b43
+# ╟─1550fddd-6b9d-4b16-9265-c12f44b0f1e4
+# ╟─00716b11-f49e-4790-9442-c4e24d05f369
+# ╟─c669d727-88fb-4ee8-9f50-7681d1b8df5a
+# ╟─193ea2f4-548f-4dcf-b661-4bf1aca16b43
 # ╠═ae6142f5-ace2-4211-9318-6f8257f2fdfa
 # ╠═b05c8d41-c62c-4780-90d6-7aa174645770
 # ╟─00d60986-0a1b-4b8e-87e7-dc8597dc35b0
@@ -958,10 +966,8 @@ greatest_safe_bounds_including(safe2, initial_bounds2)
 # ╠═c90215b5-fda7-49e4-83d5-789b9e3b7084
 # ╟─b96cef2c-612b-4097-89b5-2ddec13216b3
 # ╠═364a95c2-de8a-468a-86eb-db18a5489c9d
-# ╟─34dbeedd-379e-4e22-91d7-c271a796a57b
 # ╟─52015eb7-b4d8-4a08-98b4-c6e006179452
 # ╠═e2c7decc-ec60-4eae-88c3-491ca06673ea
-# ╠═e0508b3e-aec1-42f2-89d6-52dd7b727791
 # ╠═16d39b87-8d2d-4a54-8eb1-ee727671e299
 # ╠═e16be618-813f-4888-a247-e8f54d950de6
 # ╠═15a3178c-499c-4443-9e28-3ab6106c2234
@@ -1012,8 +1018,8 @@ greatest_safe_bounds_including(safe2, initial_bounds2)
 # ╠═6f0c554b-8592-435e-b6bc-789e8a989c6a
 # ╠═1a8c579c-df0d-400a-9adb-befa2827b577
 # ╠═4685a23b-ecf2-4211-b6c3-c90f96d418bf
-# ╠═0fc53ad2-e4e2-4a04-9745-6adc7eaf1267
-# ╠═13cbb1d6-8f49-4bfb-956c-17c5a85a16d6
+# ╠═d09d748a-353d-4309-ba33-6e29436875e3
+# ╟─34dbeedd-379e-4e22-91d7-c271a796a57b
 # ╟─1841566d-9068-422a-84b2-ec5b6bbaa653
 # ╠═d644638e-e589-48e0-b511-c0d0d1ceb798
 # ╠═13179fba-74ce-4643-b1e0-544869d3a095
@@ -1023,12 +1029,15 @@ greatest_safe_bounds_including(safe2, initial_bounds2)
 # ╟─534d00b4-1618-4864-93c5-41dacb4f1ca3
 # ╠═8e839c6f-3925-4b9e-a613-a3ddefdde7e6
 # ╠═0003edc3-b8f2-4438-834e-7bb224ea0db1
+# ╠═86f17d0b-906a-4499-bd5b-5a3f81b5bafd
+# ╠═ff28ebb4-06c9-4f88-af59-436f5820b69c
 # ╠═3db6c5c5-6fed-40c0-a133-96750fd69e4d
 # ╟─2dba9f5a-a6cc-4723-be3f-b7d1d6535859
 # ╠═c6237a43-d3c0-4dce-860b-9605f0ae0f77
 # ╟─dcab1452-9c39-4912-b6d9-0e013c2240d4
 # ╠═ecbe5bbd-aabe-4271-8855-b202a9f9d325
 # ╠═00eb65e3-150f-455c-bdb6-ed45e36dfd6a
+# ╠═3463c7ba-36c4-4a02-ba0c-58b58e7857ca
 # ╠═fa44341d-6202-4826-9c54-6942588ec939
 # ╠═ad5ddc3f-6f2e-4b79-8ae0-046d9389c1ef
 # ╠═07cc5f8f-7bb6-4838-be42-d67adb824d98
