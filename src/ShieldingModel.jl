@@ -13,13 +13,13 @@
 struct ShieldingModel
     simulation_function::Function
     action_space
-    dimensionality
-    samples_per_axis
+    dimensionality::Int64
+    samples_per_axis::Int64
     random_variable_bounds::Bounds
-    granularity
-    max_iterations
-    margin 
-    splitting_tolerance 
+    granularity::Float64
+    max_iterations::Int64
+    margin::Float64
+    splitting_tolerance::Float64
     verbose::Bool
 
     function ShieldingModel(simulation_function::Function,
@@ -31,7 +31,8 @@ struct ShieldingModel
                 max_iterations=20,
                 margin=0,
                 splitting_tolerance=0.01,
-                verbose=false)
+                verbose=false
+                )
 
         
         ShieldingModel(simulation_function,
@@ -55,10 +56,13 @@ struct ShieldingModel
             max_iterations,
             margin,
             splitting_tolerance,
-            verbose)
+            verbose
+            )
 
         if action_space isa Type
             action_space = instances(action_space)
+        else
+            action_space = action_space
         end
 
         if margin > granularity

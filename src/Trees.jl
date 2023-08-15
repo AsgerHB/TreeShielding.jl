@@ -1,16 +1,16 @@
-abstract type Tree
+abstract type Tree{T}
 end
 
-mutable struct Node <: Tree 
-    axis
-    threshold
-    lt::Tree
-    geq::Tree
+mutable struct Node{T} <: Tree{T}
+    axis::Int64
+    threshold::Float64
+    lt::Tree{T}
+    geq::Tree{T}
     parent::Union{Nothing,Tree}
 end
 
 function Node(axis, threshold, lt, geq)
-    this = Node(axis, threshold, lt, geq, nothing)
+    this = Node(axis, Float64(threshold), lt, geq, nothing)
     if lt !== nothing
         lt.parent = this
     end 
@@ -20,8 +20,8 @@ function Node(axis, threshold, lt, geq)
     return this
 end
 
-mutable struct Leaf <: Tree
-    value
+mutable struct Leaf{T} <: Tree{T}
+    value::T
     parent::Union{Nothing,Tree}
 end
 
