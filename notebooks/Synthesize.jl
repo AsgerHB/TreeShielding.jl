@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.22
+# v0.19.27
 
 using Markdown
 using InteractiveUtils
@@ -267,12 +267,6 @@ call() do
 	@test is_safe((bounds.upper[1], bounds.lower[2]))
 	@test is_safe((bounds.lower[1], bounds.lower[2]))
 end
-
-# ╔═╡ e21002c4-f772-4c55-9014-6551b41d7ef4
-# ╠═╡ disabled = true
-#=╠═╡
-@bind reset_button Button("Reset")
-  ╠═╡ =#
 
 # ╔═╡ c8248f9e-6fc2-49c4-9e69-b8387628f0fd
 @bind grow_button Button("Grow")

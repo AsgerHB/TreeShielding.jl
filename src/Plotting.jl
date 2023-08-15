@@ -31,6 +31,15 @@ action_color_dict=Dict(
     0 => colorant"#ff9178"
 )
 
+# Draw bounds as rectangles
+@recipe function rectangle(bounds::Bounds, pad=0.00) 
+	l, u = bounds.lower, bounds.upper
+	xl, yl = l .- pad
+	xu, yu = u .+ pad
+	Shape(
+		[xl, xl, xu, xu],
+		[yl, yu, yu, yl])
+end
 
 
 function draw(policy::Function, bounds; 
@@ -159,4 +168,17 @@ function scatter_allowed_actions!(tree, bounds, m)
             legend=:outerright)
     end
     plot!()
+end
+
+function add_actions_to_legend(action_color_dict, action_space; plotargs...)
+	for (k, v) in action_color_dict
+		label = int_to_actions(typeof(action_space[1]), k)
+		label = join(label, ", ")
+		label = "{$label}"
+		plot!([], 
+			seriestype=:shape, 
+			color=v, 
+			label=label, 
+			plotargs...)
+	end
 end
