@@ -27,7 +27,7 @@ struct ShieldingModel
                 dimensionality,
                 samples_per_axis,
                 random_variable_bounds::Bounds; 
-                granularity=1E-5,
+                granularity=0,
                 max_iterations=20,
                 margin=0,
                 splitting_tolerance=0.01,
@@ -65,7 +65,7 @@ struct ShieldingModel
             @warn "Margin should not be greater than minimum granularity.\nThis can cause infinite growth." margin granularity
         end
 
-        if splitting_tolerance > granularity
+        if splitting_tolerance > granularity && granularity != 0
             @warn "Splitting Tolerance should not be greater than minimum granularity.\nThis can cause necessary splits to be skipped." splitting_tolerance granularity
         end
         

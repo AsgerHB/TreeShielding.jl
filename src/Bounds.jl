@@ -2,6 +2,10 @@ struct Bounds{N, T}
     lower::MVector{N, T}
     upper::MVector{N, T}
 
+    function Bounds(lower::MVector{N, T}, upper::MVector{N, T}) where {N, T}
+        return new{N, T}(lower, upper)
+    end
+
     function Bounds(lower::Vector{T}, upper::Vector{T}) where T
         l = length(lower)
         if l != length(upper)

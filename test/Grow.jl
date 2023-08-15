@@ -1,15 +1,17 @@
 
 """
     test_get_threshold(;samples_per_axis=9,
-    granularity=0.00001,
-    margin=0.01)
+    granularity=0,
+    splitting_tolerance=0.01,
+    margin=0)
 
 Using the random walk problem, tests that the `get_threshold` function will return a threshold,
 such that all supporting points to one side of the threshold are safe. 
 """
 function test_get_threshold(;samples_per_axis=9,
-    granularity=0.00001,
-    margin=0.00)
+    granularity=0,
+    splitting_tolerance=0.01,
+    margin=0)
 
     spa_when_testing = 20 
 
@@ -57,12 +59,13 @@ function test_get_threshold(;samples_per_axis=9,
         dimensionality,
         samples_per_axis,
         random_variable_bounds;
+        splitting_tolerance,
         granularity,
         margin)
 
         
         
-        ### Act ##
+    ### Act ##
     point = (0.5, 0.5) # The middle of the playfield.
     bounds = get_bounds(get_leaf(tree, point), dimensionality)
     axis = 2
@@ -86,27 +89,32 @@ end
     @testset "RW get_threshold" begin
         test_get_threshold(
             samples_per_axis=9,
-            granularity=0.0000,
+            granularity=0,
+            splitting_tolerance=0.01,
             margin=0.00)
         
         test_get_threshold(
             samples_per_axis = 9,
             granularity = 0.001,
+            splitting_tolerance=0.0005,
             margin = 0.00001)#
         
         test_get_threshold(
             samples_per_axis = 3,#
             granularity = 0.00001,
+            splitting_tolerance=0.000005,
             margin = 0.000005)
         
         test_get_threshold(
             samples_per_axis = 9,
             granularity = 0.01,#
+            splitting_tolerance=0.005,
             margin = 0.01)
         
         test_get_threshold(
             samples_per_axis = 9,
             granularity = 0.001,
+            splitting_tolerance=0.0005,
             margin = 0.0001)
     end
 
@@ -125,6 +133,10 @@ end
         # greeble is unsafe if p[1] is below the threshold. grooble will always be less safe than greeble.
         unsafe_at_threshold(t) = (p, _, a) -> a == greeble ? (p[1] < t ? unsafe : safe) : (p[1] < t*2 ? unsafe : safe)
 
+
+        # 1D state-space. Anything below -0.99 is unsafe.
+        #     unsafe    -0.99    safe       
+        #  ---------------|------------------>
         tree = Node(1, -0.99,
             Leaf(no_action),
             Node(1, 100,
@@ -136,14 +148,16 @@ end
         
         
         samples_per_axis = 8
-        random_variable_bounds = Bounds((), ())
+        random_variable_bounds = Bounds([], [])
         splitting_tolerance = 1E-5
+
+        
         model(expected) = ShieldingModel(unsafe_at_threshold(expected), 
             Actions, 
             dimensionality,
             samples_per_axis,
             random_variable_bounds;
-            granularity = 1E-10,
+            granularity = 0,
             splitting_tolerance,
             margin = 0
         )
@@ -213,7 +227,7 @@ end
             end
         end
 
-        tree = tree_from_bounds(Bounds((-0.99, 0), (100, 100)))
+        tree = tree_from_bounds(Bounds((-0.99, 0.), (100., 100.)))
 
         unsafe_leaf = get_leaf(tree, unsafe)
         unsafe_leaf.value = no_action # Unsafe leaf is unsafe.
@@ -221,14 +235,14 @@ end
         leaf = get_leaf(tree, safe) # Safe leaf with bounds ( [-0.99, 100[,  [0, 100[ )
 
         samples_per_axis = 8
-        random_variable_bounds = Bounds((), ())
+        random_variable_bounds = Bounds([], [])
         splitting_tolerance = 1E-5
         model(expected) = ShieldingModel(unsafe_at_threshold(expected), 
             Actions, 
             dimensionality,
             samples_per_axis,
             random_variable_bounds;
-            granularity = 1E-10,
+            granularity = 0,
             splitting_tolerance,
             margin = 0
         )
