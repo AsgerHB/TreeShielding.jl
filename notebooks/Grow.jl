@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.22
+# v0.19.27
 
 using Markdown
 using InteractiveUtils
@@ -28,6 +28,7 @@ begin
 	using AbstractTrees
 	using Printf
 	using Setfield
+	using StaticArrays
 	TableOfContents()
 end
 
@@ -178,9 +179,12 @@ outer_bounds = Bounds(
 
 # ╔═╡ 0b6ba501-bc18-4239-b99e-6365b6f5deac
 draw_bounds = Bounds(
-	outer_bounds.lower .- [0.1, 0.1],
-	outer_bounds.upper .+ [0.1, 0.1]
+	MArray(outer_bounds.lower .- [0.1, 0.1]),
+	MArray(outer_bounds.upper .+ [0.1, 0.1])
 )
+
+# ╔═╡ 3b122740-090e-4d74-aa62-8736eba9cad2
+outer_bounds.upper .+ [0.1, 0.1]
 
 # ╔═╡ b2bc01c9-f501-4c75-8fc4-56dad5cd5c38
 begin
@@ -534,6 +538,7 @@ $br
 # ╟─9f9aed0a-66c3-4628-8e7f-cc59374383c9
 # ╠═a136ec18-5e84-489b-a13a-ff4ffbb1870d
 # ╠═0b6ba501-bc18-4239-b99e-6365b6f5deac
+# ╠═3b122740-090e-4d74-aa62-8736eba9cad2
 # ╠═b2bc01c9-f501-4c75-8fc4-56dad5cd5c38
 # ╠═ee408360-8c64-4619-9810-6038738045dc
 # ╠═e9c86cfa-e53f-4c1e-9102-14c821f4232a

@@ -1,19 +1,20 @@
-struct Bounds{T}
-    lower::Vector{T}
-    upper::Vector{T}
+struct Bounds{N, T}
+    lower::MVector{N, T}
+    upper::MVector{N, T}
 
     function Bounds(lower::Vector{T}, upper::Vector{T}) where T
-        if length(lower) != length(upper)
+        l = length(lower)
+        if l != length(upper)
             error("Inconsistent dimensionality")
         end
-        return new{T}(lower, upper)
+        return new{l, T}(MVector{l}(lower), MVector{l}(upper))
     end
 
     function Bounds(lower::NTuple{N, T}, upper::NTuple{N, T}) where {N, T}
         if length(lower) != length(upper)
             error("Inconsistent dimensionality")
         end
-        return new{T}(collect(lower), collect(upper))
+        return new{N, T}(MVector{N}(lower), MVector{N}(upper))
     end
 end
 

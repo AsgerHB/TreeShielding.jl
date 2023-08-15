@@ -30,7 +30,7 @@ Base.iterate(s::SupportingPoints) = begin
     lower, upper = s.bounds.lower, s.bounds.upper
 
     if upper == lower
-        return lower, :terminate
+        return Tuple(lower), :terminate
     end
     
     spacings = get_spacing_sizes(s, dimensionality)

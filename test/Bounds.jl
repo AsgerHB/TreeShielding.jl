@@ -1,7 +1,6 @@
 @testset "Bounds.jl" begin
     @testset "in" begin
         @test (1, 100) ∈ Bounds((0, 0), (10, 1000))
-        @test (1, 100)  ∈ Bounds(Dict(2 => 0, 1 => 0), Dict(2 => 1000, 1 => 10))
         @test (1, 1001) ∉ Bounds((0, 0), (10, 1000))
         @test (11, 100) ∉ Bounds((0, 0), (10, 1000))
         @test (0, 100)  ∈ Bounds((0, 0), (10, 1000))
@@ -11,9 +10,9 @@
     @testset "Equality" begin
         @test Bounds((10, 20), (100, 200)) == Bounds((10, 20), (100, 200))
         @test Bounds((10, 20), (100, 200)) != Bounds((10, 20), (1000, 2000))
-        @test Bounds((10 - 1E-15, 20), (100, 200)) != Bounds((10, 20), (100, 200))
-        @test Bounds((10 - 1E-15, 20), (100, 200)) ≈ Bounds((10, 20), (100, 200))
-        @test Bounds((10 - 1E-1,  20), (100, 200)) ≉ Bounds((10, 20), (100, 200))
+        @test Bounds((10 - 1E-15, 20.), (100., 200.)) != Bounds((10, 20), (100, 200))
+        @test Bounds((10 - 1E-15, 20.), (100., 200.)) ≈ Bounds((10, 20), (100, 200))
+        @test Bounds((10 - 1E-1,  20.), (100., 200.)) ≉ Bounds((10, 20), (100, 200))
     end
 
     @testset "intersect" begin
@@ -21,17 +20,17 @@
     end
 
     @testset "bounded" begin
-        @test !bounded(Bounds((-Inf), (3)))
-        @test !bounded(Bounds((Inf), (3)))
-        @test bounded(Bounds((-3), (3)))
+        @test !bounded(Bounds((-Inf,), (3.,)))
+        @test !bounded(Bounds((Inf,), (3.,)))
+        @test bounded(Bounds((-3,), (3,)))
         @test bounded(Bounds((-3, 5, 1, 0), (3, 100, 2, 10)))
-        @test !bounded(Bounds((-3, 5, 1, 0), (3, 100, Inf, 10)))
+        @test !bounded(Bounds((-3., 5., 1., 0.), (3., 100., Inf, 10.)))
     end
 
     @testset "magnitude" begin
-        @test (5, 20) == magnitude(Bounds((0, 0), (5, 20)))
-        @test (5, 20) == magnitude(Bounds((-5, -20), (0, 0)))
-        @test (5, 20, 10) == magnitude(Bounds((-5, -20, 0), (0, 0, 10)))
+        @test [5, 20] == magnitude(Bounds((0, 0), (5, 20)))
+        @test [5, 20] == magnitude(Bounds((-5, -20), (0, 0)))
+        @test [5, 20, 10] == magnitude(Bounds((-5, -20, 0), (0, 0, 10)))
 
         @test 5 == magnitude(Bounds((0, 0), (5, 20)), 1)
         @test 5 == magnitude(Bounds((-5, -20), (0, 0)), 1)

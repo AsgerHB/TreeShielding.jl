@@ -28,6 +28,7 @@ begin
 	using AbstractTrees
 	using Printf
 	using Setfield
+	using StaticArrays
 	TableOfContents()
 end
 
@@ -176,8 +177,8 @@ outer_bounds = Bounds(
 
 # ╔═╡ 47ff5769-9f8e-486c-981f-f5bad2a449ce
 draw_bounds = Bounds(
-	outer_bounds.lower .- [0.5, 0.5],
-	outer_bounds.upper .+ [0.5, 0.5]
+	Tuple(outer_bounds.lower .- [0.5, 0.5]),
+	Tuple(outer_bounds.upper .+ [0.5, 0.5])
 )
 
 # ╔═╡ fbffa476-2fb1-46b3-b591-ecc7d6cc17d3
@@ -381,7 +382,7 @@ function get_safe_extensions(safe, bounds::Bounds)
 	dim::Int64 = get_dim(bounds)
 	for i in 1:dim
 		# Extend upwards
-		bounds′ = Bounds(bounds.lower, collect(bounds.upper))
+		bounds′ = Bounds(bounds.lower, copy(bounds.upper))
 		bounds′.upper[i] += 1
 		
 		if (bounds′.lower[i] <= bounds′.upper[i] && 
@@ -392,7 +393,7 @@ function get_safe_extensions(safe, bounds::Bounds)
 		end
 
 		# Extend downwards
-		bounds″ = Bounds(collect(bounds.lower), bounds.upper)
+		bounds″ = Bounds(copy(bounds.lower), bounds.upper)
 		bounds″.lower[i] -= 1
 		
 		if (bounds″.lower[i] <= bounds″.upper[i] && 
@@ -440,9 +441,9 @@ Compute the area of the bounds
 
 `plus_one`: If true, will add 1 to the bounds' size in each axis. Use to compare zero-area bounds.
 """
-function area(bounds::Bounds{T}; plus_one=false)::T where T
+function area(bounds::Bounds{N, T}; plus_one=false)::T where {N, T}
 	dim = get_dim(bounds)
-	lengths = Vector{T}(undef, dim)
+	lengths = MVector{N, T}(undef)
 	for i in 1:dim
 		lengths[i] = bounds.upper[i] - bounds.lower[i] 
 		if plus_one
@@ -482,11 +483,11 @@ area(Bounds([-1, 1], [2, 4]))
 Returns the greatest safe bounds that include the given `bounds`.
 """
 function greatest_safe_bounds_including(safe, 
-	bounds::Bounds{T}, 
+	bounds::Bounds{N, T}, 
 	# Dictionary to support Dynamic Programming
-	dpd::Dict{Bounds{T}, Bounds{T}}=Dict{Bounds{T},Bounds{T}}();
+	dpd::Dict{Bounds{N, T}, Bounds{N, T}}=Dict{Bounds{N, T},Bounds{N, T}}();
 	verbose=false
-)::Bounds{T} where T
+)::Bounds{N, T} where {N, T}
 
 	if haskey(dpd, bounds)
 		return dpd[bounds]
@@ -512,7 +513,7 @@ Returns a list (TODO: could be an iterator) of all 0-by-0 bounds covering safe p
 Yea I hope I will write some overall explanation when I'm done with this.
 """
 function all_initial_bounds(safe)
-	result = Vector{Bounds{Int64}}(undef, count(safe))
+	result = Vector{Bounds{ndims(safe), Int64}}(undef, count(safe))
 	dim = length(size(safe))
 	i = 1
 	for (indices, v) in pairs(safe)
@@ -529,7 +530,7 @@ end;
 function greatest_safe_bounds(safe; verbose=false)
 	best = nothing
 	best_area = typemin(Int64)
-	dpd = Dict{Bounds{Int64},Bounds{Int64}}()
+	dpd = Dict{Bounds{ndims(safe), Int64},Bounds{ndims(safe), Int64}}()
 	for b in all_initial_bounds(safe)
 		b′ = greatest_safe_bounds_including(safe, b, dpd)
 		area_b′ = area(b′, plus_one=true)
@@ -550,9 +551,9 @@ md"""
 # ╔═╡ 545984e2-e444-4495-bb46-f201db26670b
 begin
 	function to_statespace(
-		bounds::Bounds{Int64}, 
+		bounds::Bounds{N, Int64}, 
 		points::Matrix{NTuple{N, T}}
-	)::Bounds{T} where {N, T}
+	)::Bounds{N, T} where {N, T}
 		
 		Bounds(points[bounds.lower...], points[bounds.upper...])
 	end
@@ -667,8 +668,38 @@ best_bounds(safe, reactive_extension[], initial_bounds)
 # ╔═╡ 8f3ed4f8-a261-4c05-ac46-0252a3ddd131
 best_bounds(safe, initial_bounds, get_safe_extensions(safe, initial_bounds)[1])
 
+# ╔═╡ 6be0301b-c2b9-43a0-9f27-99fa2a8ac63b
+all_initial = all_initial_bounds(safe)
+
+# ╔═╡ 0c85a9c0-8090-44fb-9fd0-ec15286c63c2
+let
+	plot(size=(300, 300))
+	plot_safety!(safe)
+	for b in all_initial
+		plot!(b, 0.1, legend=nothing, color=colors.PETER_RIVER)
+	end
+	plot!()
+end
+
+# ╔═╡ cf73b5ca-7f77-4679-9d62-96cda2ce673a
+gsb = greatest_safe_bounds(safe, verbose=true)
+
+# ╔═╡ cf27b59e-6705-4de3-989e-91a1557c0e9f
+let
+	plot(size=(300, 300))
+	plot_safety!(safe)
+	for b in all_initial
+		plot!(b, 0.1, legend=nothing, color=colors.PETER_RIVER)
+	end
+	plot!(gsb, 0.1, color=colors.NEPHRITIS, alpha=0.7, label="gsb")
+end
+
+# ╔═╡ 30808b06-460c-4106-a2a7-3ebe06523e73
+safety_judegement
+
 # ╔═╡ 3d47fd67-a543-4658-906d-1e5b010db03d
-safe, greatest_safe_bounds_including; dpd = Dict{Bounds{Int},Bounds{Int}}()
+safe, greatest_safe_bounds_including; dpd = 
+	Dict{Bounds{m.dimensionality, Int},Bounds{m.dimensionality, Int}}()
 
 # ╔═╡ 8a34c75f-5e89-4d6e-bd13-60dd43d0bdb9
 let
@@ -702,35 +733,6 @@ let
 		alpha=1,
 		label="initial")
 end
-
-# ╔═╡ 6be0301b-c2b9-43a0-9f27-99fa2a8ac63b
-all_initial = all_initial_bounds(safe)
-
-# ╔═╡ 0c85a9c0-8090-44fb-9fd0-ec15286c63c2
-let
-	plot(size=(300, 300))
-	plot_safety!(safe)
-	for b in all_initial
-		plot!(b, 0.1, legend=nothing, color=colors.PETER_RIVER)
-	end
-	plot!()
-end
-
-# ╔═╡ cf73b5ca-7f77-4679-9d62-96cda2ce673a
-gsb = greatest_safe_bounds(safe, verbose=true)
-
-# ╔═╡ cf27b59e-6705-4de3-989e-91a1557c0e9f
-let
-	plot(size=(300, 300))
-	plot_safety!(safe)
-	for b in all_initial
-		plot!(b, 0.1, legend=nothing, color=colors.PETER_RIVER)
-	end
-	plot!(gsb, 0.1, color=colors.NEPHRITIS, alpha=0.7, label="gsb")
-end
-
-# ╔═╡ 30808b06-460c-4106-a2a7-3ebe06523e73
-safety_judegement
 
 # ╔═╡ 3297e971-d849-42c4-917a-dfd8ca1c37b7
 to_statespace(greatest_safe_result, corresponding_points)

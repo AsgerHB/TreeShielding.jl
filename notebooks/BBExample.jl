@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.22
+# v0.19.27
 
 using Markdown
 using InteractiveUtils
@@ -28,6 +28,7 @@ begin
 	using AbstractTrees
 	using StatsBase
 	using Setfield
+	using StaticArrays
 	TableOfContents()
 end
 
@@ -434,36 +435,12 @@ end
 
 # ╔═╡ f113308a-1d72-41e9-ba54-71576994a664
 synthesize_button; draw(safety_strategy, 
-		Bounds(outer_bounds.lower, (outer_bounds.upper[1], outer_bounds.upper[2]+2)), 
+		Bounds(outer_bounds.lower, MVector(outer_bounds.upper[1], outer_bounds.upper[2]+2)), 
 		color_dict=action_color_dict,
 		dpi=300,
 		line=nothing,
 		xlabel="v",
 		ylabel="p")
-
-# ╔═╡ e3ead3e3-bc8e-48e0-8e27-d1a5bb20ff4f
-let # For the paper
-	synthesize_button
-	
-	draw(safety_strategy, 
-		Bounds(outer_bounds.lower, (outer_bounds.upper[1], outer_bounds.upper[2]+2)), 
-		color_dict=action_color_dict,
-		dpi=300,
-		size=(300, 180),
-		line=(0.2, colors.ASBESTOS),
-		xlabel="v",
-		ylabel="p")
-
-	for (k, v) in action_color_dict
-		k == 2 && continue
-		
-		plot!(Float64[], Float64[],
-			label=(k == 0 ? "{}" : k == 1 ? "{hit}" : k == 3 ? "{hit, nohit}" : error("unexpected value k=$k")),
-			seriestype=:shape,
-			color=v)
-	end
-	plot!(ylims=(0, 11))
-end
 
 # ╔═╡ 25f2d1da-50b5-4563-afb6-8603c484d39a
 m; @bind refine_button CounterButton("Refine")
@@ -540,7 +517,7 @@ md"""
 
 # ╔═╡ 301a434e-d5d9-44c6-8ea1-b26a89a433cd
 refresh_button; selected_tree_plot = draw(selected_tree, 
-	Bounds(outer_bounds.lower, (outer_bounds.upper[1], outer_bounds.upper[2]+2)), 
+	Bounds(outer_bounds.lower, MVector(outer_bounds.upper[1], outer_bounds.upper[2]+2)), 
 	color_dict=action_color_dict,
 	line=nothing,
 	xlabel="v",
@@ -662,7 +639,6 @@ hit
 # ╠═c92d8cf4-0908-4c7c-8d3d-3dd07972219e
 # ╟─c42af80d-bb1e-42f7-9131-1080639cbd6a
 # ╠═f113308a-1d72-41e9-ba54-71576994a664
-# ╠═e3ead3e3-bc8e-48e0-8e27-d1a5bb20ff4f
 # ╟─25f2d1da-50b5-4563-afb6-8603c484d39a
 # ╠═0501c67b-58bb-4016-a948-96ba6960007a
 # ╟─dfba58b6-752a-4051-8cc2-c0c0b1b2c9e3
