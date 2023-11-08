@@ -134,10 +134,10 @@ any_action, no_action = actions_to_int(instances(Action)), actions_to_int([])
 
 # ╔═╡ 6eee73e9-8ad5-414d-a224-044c051316f3
 action_color_dict=Dict(
-	any_action => colorant"#ffffff", 
-	1 => colorant"#a1eaaa", 
-	2 => colorant"#a1eaff", 
-	no_action => colorant"#ff9178"
+	any_action => colorant"#FFFFFF", 
+	actions_to_int([fast]) => colorant"#9C59D1", 
+	actions_to_int([slow]) => colorant"#FCF434", 
+	no_action => colorant"#2C2C2C"
 )
 
 # ╔═╡ f39969cb-640d-4008-bc72-17edabde0951

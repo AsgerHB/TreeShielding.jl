@@ -25,10 +25,10 @@ colors =
     ASBESTOS = colorant"#7f8c8d")
 
 action_color_dict=Dict(
-    3 => colorant"#ffffff", 
-    1 => colorant"#a1eaff", 
-    2 => colors.EMERALD,
-    0 => colorant"#ff9178"
+    3 => colorant"#FFFFFF", 
+    2 => colorant"#9C59D1", 
+    1 => colorant"#FCF434", 
+    0 => colorant"#2C2C2C"
 )
 
 # Draw bounds as rectangles
@@ -181,4 +181,5 @@ function add_actions_to_legend(action_color_dict, action_space; plotargs...)
 			label=label, 
 			plotargs...)
 	end
+    return plot!()
 end

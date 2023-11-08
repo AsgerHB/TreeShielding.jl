@@ -48,10 +48,10 @@ call(f) = f()
 
 # ╔═╡ 7bfba5f8-dcd6-4741-9291-cd5492bf0e4f
 action_color_dict=Dict(
-	0 => colorant"#ff9178",
-	1 => colorant"#a1eaff", 
-	2 => colorant"#a1eaaa", 
-	3 => colorant"#ffffff", 
+	actions_to_int([hit, nohit]) => colorant"#FFFFFF", 
+	actions_to_int([hit]) => colorant"#9C59D1", 
+	actions_to_int([nohit]) => colorant"#FCF434", 
+	actions_to_int([]) => colorant"#2C2C2C"
 )
 
 # ╔═╡ 91605a2d-e7f5-4eda-ab74-89e5327fa08a

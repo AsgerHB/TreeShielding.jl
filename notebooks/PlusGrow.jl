@@ -103,10 +103,10 @@ any_action, no_action =
 
 # ╔═╡ 193ea2f4-548f-4dcf-b661-4bf1aca16b43
 action_color_dict=Dict(
-	any_action => colorant"#ffffff", 
-	actions_to_int([fast]) => colorant"#a1eaff", 
-	actions_to_int([slow]) => colorant"#a1ffc5", 
-	no_action => colorant"#ff9178"
+	any_action => colorant"#FFFFFF", 
+	actions_to_int([fast]) => colorant"#9C59D1", 
+	actions_to_int([slow]) => colorant"#FCF434", 
+	no_action => colorant"#2C2C2C"
 )
 
 # ╔═╡ 70c269f7-e47c-4405-8012-4f1c68cfb879
