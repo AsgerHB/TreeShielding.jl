@@ -36,6 +36,7 @@ end
 begin
 	@revise using TreeShielding
 	using TreeShielding.RW
+	using TreeShielding.BB
 end
 
 # ╔═╡ 6a50c8f7-6367-4d59-a574-c8a29a785e88
@@ -286,6 +287,89 @@ function plus_split!(leaf::Leaf, dimensionality; min_granularity=nothing)
 	return result
 end;
 
+# ╔═╡ 8d33bf42-ff2d-444a-9a82-433981cc6f12
+begin
+	"""
+		grow_plus!(root::Tree, leaf::Leaf, m::ShieldingModel)
+		grow_plus!(root::Tree, node::Node, m::ShieldingModel)
+
+	Grow the tree using "plus shaped" splitting. In the 2D case, whenever there are a mix of safe and unsafe samples for some action, the partition is split into four rectangles along the middle.
+	"""
+	function grow_plus!(root::Tree, leaf::Leaf, m::ShieldingModel)
+		if m.granularity == 0
+			error("Won't terminate: granularity cannot be zero.")
+		end
+		
+		no_actions = actions_to_int([])
+
+		# Bad partitions stay bad
+		if leaf.value == no_actions
+			return leaf
+		end
+		
+		# Don't split unbounded partitions.
+		bounds = get_bounds(leaf, m.dimensionality)
+		if !bounded(bounds) 
+			return leaf
+		end
+
+		if homogenous(root, leaf, m)
+			return leaf
+		end
+		
+		new_node = plus_split!(leaf, m.dimensionality, min_granularity=m.granularity)
+		if !(new_node isa Leaf)
+			grow_plus!(root, new_node, m)
+		else
+			return new_node
+		end
+	end
+
+	function grow_plus!(root::Tree, node::Node, m::ShieldingModel)
+		grow_plus!(root, node.lt, m)
+		grow_plus!(root, node.geq, m)
+	end
+end
+
+# ╔═╡ a6b1402a-d1cc-4eb0-9334-cbf811827662
+md"""
+# Try it out!
+"""
+
+# ╔═╡ a7a033c6-b1fc-4791-bfe0-c454ad618c91
+md"""
+`x = ` $(@bind x NumberField(rwmechanics.x_min:0.01:rwmechanics.x_max))
+
+`t = ` $(@bind t NumberField(rwmechanics.t_min:0.01:rwmechanics.t_max))
+
+`show_cursor = ` $(@bind show_cursor CheckBox())
+"""
+
+# ╔═╡ d7063385-0fae-4326-81da-7d37411a0fe2
+md"""
+# Everything in one loop
+"""
+
+# ╔═╡ 7f10ecc9-ab21-4299-9f8d-c69fe3ace234
+"""
+	synthesize_plus!(tree::Tree, m::ShieldingModel)
+
+Synthesize a safety strategy using the "plus shaped" dynamic partitioning strategy. 
+"""
+function synthesize_plus!(tree::Tree, m::ShieldingModel)
+	loop_break = m.max_iterations
+	updates = 1 # loop enter
+	while updates != 0
+		grow_plus!(tree, tree, m)
+		updates = update!(tree, m)
+		if (loop_break -= 1) <= 0 
+			@warn "Max iterations reached" m.max_iterations
+			break
+		end
+	end
+	prune!(tree)
+end;
+
 # ╔═╡ efe775a4-7ec7-451a-b3db-2d2f52fba186
 md"""
 ### Parameters -- Try it Out!
@@ -338,50 +422,6 @@ let
 	plot!([], l=nothing, label="leaves: $leaf_count")
 end
 
-# ╔═╡ 8d33bf42-ff2d-444a-9a82-433981cc6f12
-begin
-	"""
-		grow_plus!(root::Tree, leaf::Leaf, m::ShieldingModel)
-		grow_plus!(root::Tree, node::Node, m::ShieldingModel)
-
-	Grow the tree using "plus shaped" splitting. In the 2D case, whenever there are a mix of safe and unsafe samples for some action, the partition is split into four rectangles along the middle.
-	"""
-	function grow_plus!(root::Tree, leaf::Leaf, m::ShieldingModel)
-		if m.granularity == 0
-			error("Won't terminate: granularity cannot be zero.")
-		end
-		
-		no_actions = actions_to_int([])
-
-		# Bad partitions stay bad
-		if leaf.value == no_actions
-			return leaf
-		end
-		
-		# Don't split unbounded partitions.
-		bounds = get_bounds(leaf, m.dimensionality)
-		if !bounded(bounds) 
-			return leaf
-		end
-
-		if homogenous(root, leaf, m)
-			return leaf
-		end
-		
-		new_node = plus_split!(leaf, m.dimensionality, min_granularity=m.granularity)
-		if !(new_node isa Leaf)
-			grow_plus!(root, new_node, m)
-		else
-			return new_node
-		end
-	end
-
-	function grow_plus!(root::Tree, node::Node, m::ShieldingModel)
-		grow_plus!(root, node.lt, m)
-		grow_plus!(root, node.geq, m)
-	end
-end
-
 # ╔═╡ 4040a51b-c7b4-4454-b996-cb40338d8402
 let
 	tree = deepcopy(tree)
@@ -404,11 +444,6 @@ let
 	plot!([], l=nothing, label="leaves: $leaf_count")
 end
 
-# ╔═╡ a6b1402a-d1cc-4eb0-9334-cbf811827662
-md"""
-# Try it out!
-"""
-
 # ╔═╡ afbb777f-6cdf-4af4-831d-b8992531f20b
 m; (
 	@bind reset_button Button("Reset")
@@ -422,18 +457,8 @@ reset_button; (
 # ╔═╡ d2097fb9-cf4c-4fb6-b23a-6721cc7017f2
 reset_button; @bind grow_button CounterButton("Grow")
 
-# ╔═╡ 87581d91-2c9a-4505-8367-722038c962a8
-if grow_button > 0 let
-	grow_plus!(reactive_tree, reactive_tree, m)
-end end
-
 # ╔═╡ 407a80cd-9110-4c28-b5eb-6c5b3e858624
 reset_button; @bind update_button CounterButton("Update")
-
-# ╔═╡ 8fe8cc53-ad34-4f75-8b36-37b0f43d3ab0
-if update_button > 0 let
-	update!(reactive_tree, m)
-end end
 
 # ╔═╡ 9abaf75a-7832-445f-83ff-6e6fd0c4fb71
 reset_button; @bind prune_button CounterButton("Prune")
@@ -443,14 +468,15 @@ if prune_button > 0 let
 	prune!(reactive_tree)
 end end
 
-# ╔═╡ a7a033c6-b1fc-4791-bfe0-c454ad618c91
-md"""
-`x = ` $(@bind x NumberField(rwmechanics.x_min:0.01:rwmechanics.x_max))
+# ╔═╡ 87581d91-2c9a-4505-8367-722038c962a8
+if grow_button > 0 let
+	grow_plus!(reactive_tree, reactive_tree, m)
+end end
 
-`t = ` $(@bind t NumberField(rwmechanics.t_min:0.01:rwmechanics.t_max))
-
-`show_cursor = ` $(@bind show_cursor CheckBox())
-"""
+# ╔═╡ 8fe8cc53-ad34-4f75-8b36-37b0f43d3ab0
+if update_button > 0 let
+	update!(reactive_tree, m)
+end end
 
 # ╔═╡ a175916f-0b4b-47d5-9a0f-c4668146801c
 let	
@@ -472,19 +498,10 @@ let
 	plot!([], l=nothing, label="leaves: $leaf_count")
 end
 
-# ╔═╡ d7063385-0fae-4326-81da-7d37411a0fe2
-md"""
-# Everything in one loop
-"""
-
 # ╔═╡ 8dac6296-9656-4698-9e4b-d7c4c7c42833
 let
 	tree = deepcopy(tree)
-	updates = -1
-	while updates != 0
-		grow_plus!(tree, tree, m)
-		updates = update!(tree, m)
-	end
+	synthesize_plus!(tree, m)
 	prune!(tree)
 	draw(tree, draw_bounds, color_dict=action_color_dict, 
 		aspectratio=:equal,
@@ -495,19 +512,135 @@ let
 	plot!([], l=nothing, label="leaves: $leaf_count")
 end
 
-# ╔═╡ 7f10ecc9-ab21-4299-9f8d-c69fe3ace234
-"""
-	synthesize_plus!(tree::Tree, m::ShieldingModel)
+# ╔═╡ ac6cc02e-9de1-4542-a902-5df745687506
+let
+	tree = deepcopy(tree)
 
-Synthesize a safety strategy using the "plus shaped" dynamic partitioning strategy. 
-"""
-function synthesize_plus!(tree::Tree, m::ShieldingModel)
+	loop_break = m.max_iterations
+	updates = 1 # loop enter
 	while updates != 0
 		grow_plus!(tree, tree, m)
 		updates = update!(tree, m)
+		if (loop_break -= 1) <= 0 
+			@warn "Max iterations reached" m.max_iterations
+			break
+		end
 	end
-	prune!(tree)
-end;
+	
+	draw(tree, draw_bounds, color_dict=action_color_dict, 
+		aspectratio=:equal,
+		legend=:topleft,
+		size=(500, 500))
+	add_actions_to_legend(action_color_dict, m.action_space)
+	leaf_count = length(Leaves(tree) |> collect)
+	plot!([], l=nothing, label="leaves: $leaf_count")
+end
+
+# ╔═╡ cf606e09-801d-447d-874e-844ce6d9c49c
+md"""
+# BB
+"""
+
+# ╔═╡ 10f5db07-5455-4c18-a79c-d53531220954
+bb = let
+	random_variable_bounds = Bounds((-1,), (1,))
+	
+	simulation_function(p, r, a) = 
+		simulate_point(bbmechanics, p, r, a, min_v_on_impact=1)
+	
+	dimensionality = 2
+	samples_per_axis = 3
+	granularity = 0.01
+	max_iterations = 300
+	
+	margin = 0
+	splitting_tolerance = granularity
+	
+	ShieldingModel(simulation_function, BB.Action, dimensionality, samples_per_axis, random_variable_bounds; max_iterations, granularity, margin, splitting_tolerance)
+end
+
+# ╔═╡ 6bfd95e2-df1c-414c-8014-a31895173f1e
+bb_tree = let
+	is_safe(state) = abs(state[1]) > 1 || state[2] > 0
+	is_safe(bounds::Bounds) = is_safe((bounds.lower[1], bounds.lower[2]))
+
+	any_action, no_action = actions_to_int(instances(BB.Action)), actions_to_int([])
+	
+	outer_bounds = Bounds((-15, 0), (15, 10))
+	
+	tree = tree_from_bounds(outer_bounds)
+	inside = get_leaf(tree, 0, 0)
+
+	unsafe_states = Bounds((-1, 0), (2, 1))
+	split!(inside, 1, unsafe_states.lower[1])
+	inside = get_leaf(tree, 0, 0)
+	split!(inside, 1, unsafe_states.upper[1])
+	inside = get_leaf(tree, 0, 0)
+	split!(inside, 2, unsafe_states.upper[2])
+	inside = get_leaf(tree, 0, 0)
+	set_safety!(tree, dimensionality, is_safe, any_action, no_action)
+end
+
+# ╔═╡ 9a28eb36-cbe6-4b50-9d55-786b5d645bc7
+begin
+	draw(bb_tree, Bounds((-16, -1), (16, 11)),
+		xlabel="v",
+		ylabel="p",
+		title="initial")
+		
+	add_actions_to_legend(action_color_dict, bb.action_space)
+end
+
+# ╔═╡ 45002c2b-8df7-4f42-b95d-47fc2833c39d
+
+
+# ╔═╡ 39dc7fc6-da83-4c90-b288-90e0ea73aef7
+bb_strategy = let
+	bb_tree = deepcopy(bb_tree)
+	synthesize_plus!(bb_tree, bb)
+	prune!(bb_tree)
+	bb_tree
+end
+
+# ╔═╡ aec7bf28-6b61-438c-9711-d853e9491af3
+bb_strategy′ = let
+	bb_strategy = deepcopy(bb_strategy)
+	synthesize_plus!(bb_strategy, @set bb.samples_per_axis = 8)
+	prune!(bb_strategy)
+	bb_strategy
+end
+
+# ╔═╡ 673498e0-690b-497a-a0a7-569b716482f5
+begin
+	draw(bb_strategy′, Bounds((-16, -1), (16, 11)),
+		xlabel="v",
+		ylabel="p",
+		title="Bouncing Ball Safety Strategy")
+	
+	add_actions_to_legend(action_color_dict, bb.action_space)
+end
+
+# ╔═╡ dfaf1fd7-3e1d-4a5d-9343-6a18a6ce576a
+function shield(tree::Tree, action_type, policy)
+    return (p) -> begin
+		a = policy(p)
+        allowed = int_to_actions(action_type, get_value(tree, p))
+        if a ∈ allowed
+            return a
+        elseif length(allowed) > 0
+			a′ = rand(allowed)
+            return a′
+        else
+            return a
+        end
+    end
+end
+
+# ╔═╡ a375a86b-d7ac-432b-a717-e5e4a8b69a71
+check_safety(bbmechanics, 
+	shield(bb_strategy′, BB.Action, (_...) -> nohit), 
+	120, 
+	runs=100000)
 
 # ╔═╡ Cell order:
 # ╟─6a50c8f7-6367-4d59-a574-c8a29a785e88
@@ -545,7 +678,6 @@ end;
 # ╠═eefd8f73-9632-4f7d-a1f2-42a7a048bc88
 # ╠═9be6489e-0e9e-451e-94a8-d87a845c0a3c
 # ╠═b7d5ff7f-d020-4e6b-bc49-f3e81b325e2d
-# ╟─efe775a4-7ec7-451a-b3db-2d2f52fba186
 # ╠═8d33bf42-ff2d-444a-9a82-433981cc6f12
 # ╠═4040a51b-c7b4-4454-b996-cb40338d8402
 # ╟─a6b1402a-d1cc-4eb0-9334-cbf811827662
@@ -560,5 +692,17 @@ end;
 # ╟─a7a033c6-b1fc-4791-bfe0-c454ad618c91
 # ╟─a175916f-0b4b-47d5-9a0f-c4668146801c
 # ╟─d7063385-0fae-4326-81da-7d37411a0fe2
-# ╠═8dac6296-9656-4698-9e4b-d7c4c7c42833
 # ╠═7f10ecc9-ab21-4299-9f8d-c69fe3ace234
+# ╟─efe775a4-7ec7-451a-b3db-2d2f52fba186
+# ╠═8dac6296-9656-4698-9e4b-d7c4c7c42833
+# ╠═ac6cc02e-9de1-4542-a902-5df745687506
+# ╟─cf606e09-801d-447d-874e-844ce6d9c49c
+# ╠═10f5db07-5455-4c18-a79c-d53531220954
+# ╠═6bfd95e2-df1c-414c-8014-a31895173f1e
+# ╠═9a28eb36-cbe6-4b50-9d55-786b5d645bc7
+# ╠═45002c2b-8df7-4f42-b95d-47fc2833c39d
+# ╠═39dc7fc6-da83-4c90-b288-90e0ea73aef7
+# ╠═aec7bf28-6b61-438c-9711-d853e9491af3
+# ╠═673498e0-690b-497a-a0a7-569b716482f5
+# ╠═dfaf1fd7-3e1d-4a5d-9343-6a18a6ce576a
+# ╠═a375a86b-d7ac-432b-a717-e5e4a8b69a71
