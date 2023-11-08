@@ -159,3 +159,19 @@ function get_bounds(tree::Tree, dimensionality; _lower=nothing, _upper=nothing)
         error("Badly formed tree. Child not found in parent.")
     end
 end
+
+
+function shield(tree::Tree, policy)
+    return (p) -> begin
+		a = policy(p)
+        allowed = int_to_actions(Action, get_value(tree, p))
+        if a ∈ allowed
+            return a
+        elseif length(allowed) > 0
+			a′ = rand(allowed)
+            return a′
+        else
+            return a
+        end
+    end
+end

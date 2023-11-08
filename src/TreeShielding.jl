@@ -10,7 +10,7 @@ using AbstractTrees
 export Bounds,  get_dim, bounded, magnitude
 include("Bounds.jl")
 
-export Tree, Node,  Leaf,   get_leaf,  get_value,  draw,  replace_subtree!,  split!,  get_bounds
+export Tree, Node,  Leaf,  get_leaf,  get_value,  draw,  replace_subtree!,  split!,  get_bounds, shield
 include("Trees.jl")
 
 export robust_serialize, robust_deserialize
