@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.20
+# v0.19.40
 
 using Markdown
 using InteractiveUtils
@@ -93,6 +93,7 @@ Time to try and draw them
 
 # ╔═╡ 79e27ab4-e215-4d3a-9a46-8392f689aeea
 call() do
+	dimensionality = 2
 	tree = Node(1, 0,
 		Leaf(1),
 		Leaf(2))
@@ -104,7 +105,7 @@ call() do
 	
 	draw(tree, Bounds((-10, -10), (10, 10)), G=0.05)
 
-	partition = get_bounds(get_leaf(tree, l + 1, u - 1))
+	partition = get_bounds(get_leaf(tree, l + 1, u - 1), dimensionality)
 	
 	xs, ys = unzip([SupportingPoints(3, partition)...])
 	scatter!(xs, ys, 

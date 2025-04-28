@@ -1,17 +1,19 @@
 ### A Pluto.jl notebook ###
-# v0.19.32
+# v0.20.4
 
 using Markdown
 using InteractiveUtils
 
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
+    #! format: off
     quote
         local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
         local el = $(esc(element))
         global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
         el
     end
+    #! format: on
 end
 
 # ╔═╡ 23a8f930-95ae-4820-bac0-82edd0bfbc8a
@@ -41,9 +43,11 @@ end
 
 # ╔═╡ 6a50c8f7-6367-4d59-a574-c8a29a785e88
 md"""
-# Plus-grow
+# Minus-grow
 
-Along the middle in each axis. In the 2D case, this will resemble drawing a plus [+] across the partition.
+Split leaves down the middle of a random axis, until all leaves are either homogenous or down to some minimum splitting value.
+
+I call it minus-split in reference to a plus-split that I also tried.
 """
 
 # ╔═╡ 1550fddd-6b9d-4b16-9265-c12f44b0f1e4
@@ -160,8 +164,8 @@ outer_bounds = Bounds(
 
 # ╔═╡ 47ff5769-9f8e-486c-981f-f5bad2a449ce
 draw_bounds = Bounds(
-	Tuple(outer_bounds.lower .- [0.5, 0.5]),
-	Tuple(outer_bounds.upper .+ [0.5, 0.5])
+	Tuple(outer_bounds.lower .- [0.1 , 0.1 ]),
+	Tuple(outer_bounds.upper .+ [0.1 , 0.1 ])
 )
 
 # ╔═╡ fbffa476-2fb1-46b3-b591-ecc7d6cc17d3
@@ -293,36 +297,6 @@ end;
 # ╔═╡ d5d72ac4-5bcc-4d67-bdcc-214e0eea80b9
 shuffle(1:5)
 
-# ╔═╡ 4040a51b-c7b4-4454-b996-cb40338d8402
-# ╠═╡ disabled = true
-#=╠═╡
-let
-	tree = deepcopy(tree)
-	
-	# MAINMATTER
-	updates = grow_minus!(tree, tree, m)
-	TreeShielding.apply_updates!(updates)
-	
-	draw(tree, draw_bounds, color_dict=action_color_dict, 
-		aspectratio=:equal,
-		legend=:outerright,
-		size=(800, 700))
-	
-	add_actions_to_legend(action_color_dict, m.action_space)
-	leaf_count = length(Leaves(tree) |> collect)
-	#=
-	leaf = get_leaf(tree, (x, t))
-	bounds = get_bounds(leaf, m.dimensionality)
-	scatter_allowed_actions!(tree, bounds, m)
-
-	@info get_partition_status(leaf, m)
-
-	scatter!([x], [t], marker=(:rtriangle, 10, :white), label=nothing)
-	=#
-	plot!([], l=nothing, label="leaves: $leaf_count")
-end
-  ╠═╡ =#
-
 # ╔═╡ 8d33bf42-ff2d-444a-9a82-433981cc6f12
 begin
 	"""
@@ -391,18 +365,16 @@ md"""
 """
 
 # ╔═╡ 7f10ecc9-ab21-4299-9f8d-c69fe3ace234
-# ╠═╡ disabled = true
-#=╠═╡
 """
-	synthesize_plus!(tree::Tree, m::ShieldingModel)
+	synthesize_minus!(tree::Tree, m::ShieldingModel)
 
 Synthesize a safety strategy using the "plus shaped" dynamic partitioning strategy. 
 """
-function synthesize_plus!(tree::Tree, m::ShieldingModel)
+function synthesize_minus!(tree::Tree, m::ShieldingModel)
 	loop_break = m.max_iterations
 	updates = 1 # loop enter
 	while updates != 0
-		grow_plus!(tree, tree, m)
+		grow_minus!(tree, tree, m)
 		updates = update!(tree, m)
 		if (loop_break -= 1) <= 0 
 			@warn "Max iterations reached" m.max_iterations
@@ -411,7 +383,6 @@ function synthesize_plus!(tree::Tree, m::ShieldingModel)
 	end
 	prune!(tree)
 end;
-  ╠═╡ =#
 
 # ╔═╡ efe775a4-7ec7-451a-b3db-2d2f52fba186
 md"""
@@ -459,6 +430,33 @@ let
 		legend=:outertop,
 		size=(200,200))
 	leaf_count = length(Leaves(tree) |> collect)
+	plot!([], l=nothing, label="leaves: $leaf_count")
+end
+
+# ╔═╡ 4040a51b-c7b4-4454-b996-cb40338d8402
+let
+	tree = deepcopy(tree)
+	
+	# MAINMATTER
+	updates = grow_minus!(tree, tree, m)
+	TreeShielding.apply_updates!(updates)
+	
+	draw(tree, draw_bounds, color_dict=action_color_dict, 
+		aspectratio=:equal,
+		legend=:outerright,
+		size=(800, 700))
+	
+	add_actions_to_legend(action_color_dict, m.action_space)
+	leaf_count = length(Leaves(tree) |> collect)
+	#=
+	leaf = get_leaf(tree, (x, t))
+	bounds = get_bounds(leaf, m.dimensionality)
+	scatter_allowed_actions!(tree, bounds, m)
+
+	@info get_partition_status(leaf, m)
+
+	scatter!([x], [t], marker=(:rtriangle, 10, :white), label=nothing)
+	=#
 	plot!([], l=nothing, label="leaves: $leaf_count")
 end
 
@@ -521,11 +519,9 @@ let
 end
 
 # ╔═╡ 8dac6296-9656-4698-9e4b-d7c4c7c42833
-# ╠═╡ disabled = true
-#=╠═╡
 let
 	tree = deepcopy(tree)
-	synthesize_plus!(tree, m)
+	synthesize_minus!(tree, m)
 	prune!(tree)
 	draw(tree, draw_bounds, color_dict=action_color_dict, 
 		aspectratio=:equal,
@@ -535,11 +531,8 @@ let
 	leaf_count = length(Leaves(tree) |> collect)
 	plot!([], l=nothing, label="leaves: $leaf_count")
 end
-  ╠═╡ =#
 
 # ╔═╡ ac6cc02e-9de1-4542-a902-5df745687506
-# ╠═╡ disabled = true
-#=╠═╡
 let
 	# This cell is similar to the synthesize-plus function. It is nice to have if you want to experiment with the learning loop
 	tree = deepcopy(tree)
@@ -563,7 +556,6 @@ let
 	leaf_count = length(Leaves(tree) |> collect)
 	plot!([], l=nothing, label="leaves: $leaf_count")
 end
-  ╠═╡ =#
 
 # ╔═╡ cf606e09-801d-447d-874e-844ce6d9c49c
 md"""
@@ -571,8 +563,6 @@ md"""
 """
 
 # ╔═╡ 10f5db07-5455-4c18-a79c-d53531220954
-# ╠═╡ disabled = true
-#=╠═╡
 bb = let
 	random_variable_bounds = Bounds((-1,), (1,))
 	
@@ -589,7 +579,6 @@ bb = let
 	
 	ShieldingModel(simulation_function, BB.Action, dimensionality, samples_per_axis, random_variable_bounds; max_iterations, granularity, margin, splitting_tolerance)
 end
-  ╠═╡ =#
 
 # ╔═╡ 6bfd95e2-df1c-414c-8014-a31895173f1e
 bb_tree = let
@@ -614,7 +603,6 @@ bb_tree = let
 end
 
 # ╔═╡ 9a28eb36-cbe6-4b50-9d55-786b5d645bc7
-#=╠═╡
 begin
 	draw(bb_tree, Bounds((-16, -1), (16, 11)),
 		xlabel="v",
@@ -623,33 +611,27 @@ begin
 		
 	add_actions_to_legend(action_color_dict, bb.action_space)
 end
-  ╠═╡ =#
 
 # ╔═╡ 45002c2b-8df7-4f42-b95d-47fc2833c39d
 
 
 # ╔═╡ 39dc7fc6-da83-4c90-b288-90e0ea73aef7
-#=╠═╡
 bb_strategy = let
 	bb_tree = deepcopy(bb_tree)
 	synthesize_plus!(bb_tree, bb)
 	prune!(bb_tree)
 	bb_tree
 end
-  ╠═╡ =#
 
 # ╔═╡ aec7bf28-6b61-438c-9711-d853e9491af3
-#=╠═╡
 bb_strategy′ = let
 	bb_strategy = deepcopy(bb_strategy)
 	synthesize_plus!(bb_strategy, @set bb.samples_per_axis = 8)
 	prune!(bb_strategy)
 	bb_strategy
 end
-  ╠═╡ =#
 
 # ╔═╡ 673498e0-690b-497a-a0a7-569b716482f5
-#=╠═╡
 begin
 	draw(bb_strategy′, Bounds((-16, -1), (16, 11)),
 		xlabel="v",
@@ -658,7 +640,6 @@ begin
 	
 	add_actions_to_legend(action_color_dict, bb.action_space)
 end
-  ╠═╡ =#
 
 # ╔═╡ dfaf1fd7-3e1d-4a5d-9343-6a18a6ce576a
 function shield(tree::Tree, action_type, policy)
@@ -677,12 +658,10 @@ function shield(tree::Tree, action_type, policy)
 end
 
 # ╔═╡ a375a86b-d7ac-432b-a717-e5e4a8b69a71
-#=╠═╡
 check_safety(bbmechanics, 
 	shield(bb_strategy′, BB.Action, (_...) -> nohit), 
 	120, 
 	runs=2000)
-  ╠═╡ =#
 
 # ╔═╡ Cell order:
 # ╟─6a50c8f7-6367-4d59-a574-c8a29a785e88
@@ -714,13 +693,13 @@ check_safety(bbmechanics,
 # ╟─b96cef2c-612b-4097-89b5-2ddec13216b3
 # ╠═364a95c2-de8a-468a-86eb-db18a5489c9d
 # ╟─52015eb7-b4d8-4a08-98b4-c6e006179452
-# ╠═16d39b87-8d2d-4a54-8eb1-ee727671e299
+# ╟─16d39b87-8d2d-4a54-8eb1-ee727671e299
 # ╠═e2c7decc-ec60-4eae-88c3-491ca06673ea
 # ╠═c62daa70-ea84-463a-b5ed-40fdfa67f2ba
 # ╠═fdacca7e-d250-45ed-8669-e63ffb8bd121
 # ╠═01df6119-9b55-4709-b676-7e2cb445e0d8
 # ╟─10a86329-743b-439d-ac81-46eadae1582d
-# ╠═9be6489e-0e9e-451e-94a8-d87a845c0a3c
+# ╟─9be6489e-0e9e-451e-94a8-d87a845c0a3c
 # ╠═b7d5ff7f-d020-4e6b-bc49-f3e81b325e2d
 # ╠═d5d72ac4-5bcc-4d67-bdcc-214e0eea80b9
 # ╠═4040a51b-c7b4-4454-b996-cb40338d8402
