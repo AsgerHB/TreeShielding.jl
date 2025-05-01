@@ -193,7 +193,7 @@ This is based on the Update notebook, which in turn is based on the Grow noteboo
 
 # ╔═╡ 00621cfa-fd2b-4d9e-8e00-c72fa834fb34
 begin
-	reactive_tree = deepcopy(initial_tree)
+	reactive_tree = copy(initial_tree)
 	set_safety!(reactive_tree, dimensionality, is_safe, any_action, no_action)
 	debounce1, debounce2, debounce3 = Ref(1), Ref(1), Ref(1)
 	reset_button

@@ -193,7 +193,7 @@ get_bounds(get_leaf(initial_tree, (1.1, 0.3)), 2)
 
 # ╔═╡ ec9a089b-8a9c-4ded-bdcb-c387cccbfab7
 begin
-	tree = set_safety!(deepcopy(initial_tree), 
+	tree = set_safety!(copy(initial_tree), 
 		dimensionality, 
 		is_safe, 
 		any_action, 
@@ -239,6 +239,8 @@ function homogenous(root::Tree, leaf::Tree, m::ShieldingModel)
 				m.random_variable_bounds)
 				
 				p′ = m.simulation_function(p, r, a)
+            	push!(get!(leaf.reachable, a, Set{Leaf{<:Tree}}()), 
+						get_leaf(tree, p′))
 				leaf = get_leaf(root, p′)
 				action_safe = action_safe && get_value(leaf) != no_action
 				!action_safe && break
@@ -311,7 +313,7 @@ begin
 		
 		# Don't split unbounded partitions.
 		bounds = get_bounds(leaf, m.dimensionality)
-		if !bounded(bounds) 
+		if !bounded(bounds)
 			return leaf
 		end
 
@@ -413,7 +415,7 @@ homogenous(tree, get_leaf(tree, 0.5, 0.5), m)
 
 # ╔═╡ 9be6489e-0e9e-451e-94a8-d87a845c0a3c
 let
-	tree = deepcopy(tree)
+	tree = copy(tree)
 	leaf = get_leaf(tree, (0.5, 0.5))
 	plus_split!(leaf, m.dimensionality)
 	draw(tree, draw_bounds, color_dict=action_color_dict, 
@@ -426,7 +428,7 @@ end
 
 # ╔═╡ 4040a51b-c7b4-4454-b996-cb40338d8402
 let
-	tree = deepcopy(tree)
+	tree = copy(tree)
 	grow_plus!(tree, tree, m)
 	draw(tree, draw_bounds, color_dict=action_color_dict, 
 		aspectratio=:equal,
@@ -453,7 +455,7 @@ m; (
 
 # ╔═╡ ddf18eba-38da-4e78-a204-040034ea55fd
 reset_button; (
-	reactive_tree = deepcopy(tree)
+	reactive_tree = copy(tree)
 )
 
 # ╔═╡ d2097fb9-cf4c-4fb6-b23a-6721cc7017f2
@@ -502,7 +504,7 @@ end
 
 # ╔═╡ 8dac6296-9656-4698-9e4b-d7c4c7c42833
 let
-	tree = deepcopy(tree)
+	tree = copy(tree)
 	synthesize_plus!(tree, m)
 	prune!(tree)
 	draw(tree, draw_bounds, color_dict=action_color_dict, 
@@ -515,9 +517,11 @@ let
 end
 
 # ╔═╡ ac6cc02e-9de1-4542-a902-5df745687506
+# ╠═╡ disabled = true
+#=╠═╡
 let
 	# This cell is similar to the synthesize-plus function. It is nice to have if you want to experiment with the learning loop
-	tree = deepcopy(tree)
+	tree = copy(tree)
 
 	loop_break = m.max_iterations
 	updates = 1 # loop enter
@@ -538,6 +542,7 @@ let
 	leaf_count = length(Leaves(tree) |> collect)
 	plot!([], l=nothing, label="leaves: $leaf_count")
 end
+  ╠═╡ =#
 
 # ╔═╡ cf606e09-801d-447d-874e-844ce6d9c49c
 md"""
@@ -599,7 +604,7 @@ end
 
 # ╔═╡ 39dc7fc6-da83-4c90-b288-90e0ea73aef7
 bb_strategy = let
-	bb_tree = deepcopy(bb_tree)
+	bb_tree = copy(bb_tree)
 	synthesize_plus!(bb_tree, bb)
 	prune!(bb_tree)
 	bb_tree
@@ -607,13 +612,15 @@ end
 
 # ╔═╡ aec7bf28-6b61-438c-9711-d853e9491af3
 bb_strategy′ = let
-	bb_strategy = deepcopy(bb_strategy)
+	bb_strategy = copy(bb_strategy)
 	synthesize_plus!(bb_strategy, @set bb.samples_per_axis = 8)
 	prune!(bb_strategy)
 	bb_strategy
 end
 
 # ╔═╡ 673498e0-690b-497a-a0a7-569b716482f5
+# ╠═╡ disabled = true
+#=╠═╡
 begin
 	draw(bb_strategy′, Bounds((-16, -1), (16, 11)),
 		xlabel="v",
@@ -623,6 +630,7 @@ begin
 	
 	add_actions_to_legend(action_color_dict, bb.action_space)
 end
+  ╠═╡ =#
 
 # ╔═╡ dfaf1fd7-3e1d-4a5d-9343-6a18a6ce576a
 function shield(tree::Tree, action_type, policy)
@@ -682,7 +690,7 @@ check_safety(bbmechanics,
 # ╠═eefd8f73-9632-4f7d-a1f2-42a7a048bc88
 # ╠═9be6489e-0e9e-451e-94a8-d87a845c0a3c
 # ╠═b7d5ff7f-d020-4e6b-bc49-f3e81b325e2d
-# ╠═4040a51b-c7b4-4454-b996-cb40338d8402
+# ╟─4040a51b-c7b4-4454-b996-cb40338d8402
 # ╠═8d33bf42-ff2d-444a-9a82-433981cc6f12
 # ╟─a6b1402a-d1cc-4eb0-9334-cbf811827662
 # ╟─afbb777f-6cdf-4af4-831d-b8992531f20b

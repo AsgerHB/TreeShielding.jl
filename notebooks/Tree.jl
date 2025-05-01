@@ -153,7 +153,7 @@ Trees support ==
 """
 
 # ╔═╡ fd2699a6-a849-42b6-961f-19e234acd521
-@test bigtree == deepcopy(bigtree)
+@test bigtree == copy(bigtree)
 
 # ╔═╡ bbf7a3d6-4838-412e-b59d-389fe71cbccb
 @doc get_leaf
@@ -210,7 +210,7 @@ end
 
 # ╔═╡ 6c2bb206-05d2-482f-93e4-0fe8bf253f10
 call() do
-	tree = deepcopy(bigtree)
+	tree = copy(bigtree)
 	split!(get_leaf(tree, 10, 10), 2, 10, -4, -3)
 	split!(get_leaf(tree, 10, 10), 1, 10, -4, -1)
 	return draw(tree, bigtree_bounds)

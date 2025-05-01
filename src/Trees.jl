@@ -175,3 +175,11 @@ function shield(tree::Tree, policy)
         end
     end
 end
+
+function Base.copy(leaf::Leaf{T}) where T
+    Leaf(leaf.value)
+end
+
+function Base.copy(node::Node{T}) where T
+    Node(node.axis, node.threshold, copy(node.lt), copy(node.geq))
+end

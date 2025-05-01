@@ -195,7 +195,7 @@ get_bounds(get_leaf(initial_tree, (1.1, 0.3)), 2)
 
 # ╔═╡ ec9a089b-8a9c-4ded-bdcb-c387cccbfab7
 begin
-	tree = set_safety!(deepcopy(initial_tree), 
+	tree = set_safety!(copy(initial_tree), 
 		dimensionality, 
 		is_safe, 
 		any_action, 
@@ -422,7 +422,7 @@ end
 
 # ╔═╡ 9be6489e-0e9e-451e-94a8-d87a845c0a3c
 let
-	tree = deepcopy(tree)
+	tree = copy(tree)
 	leaf = get_leaf(tree, (0.5, 0.5))
 	node = minus_split!(leaf, m.dimensionality, 0.4)
 	draw(tree, draw_bounds, color_dict=action_color_dict, 
@@ -435,7 +435,7 @@ end
 
 # ╔═╡ 4040a51b-c7b4-4454-b996-cb40338d8402
 let
-	tree = deepcopy(tree)
+	tree = copy(tree)
 	
 	# MAINMATTER
 	updates = grow_minus!(tree, tree, m)
@@ -467,7 +467,7 @@ m; (
 
 # ╔═╡ ddf18eba-38da-4e78-a204-040034ea55fd
 reset_button; (
-	reactive_tree = deepcopy(tree)
+	reactive_tree = copy(tree)
 )
 
 # ╔═╡ d2097fb9-cf4c-4fb6-b23a-6721cc7017f2
@@ -520,7 +520,7 @@ end
 
 # ╔═╡ 8dac6296-9656-4698-9e4b-d7c4c7c42833
 let
-	tree = deepcopy(tree)
+	tree = copy(tree)
 	synthesize_minus!(tree, m)
 	prune!(tree)
 	draw(tree, draw_bounds, color_dict=action_color_dict, 
@@ -535,7 +535,7 @@ end
 # ╔═╡ ac6cc02e-9de1-4542-a902-5df745687506
 let
 	# This cell is similar to the synthesize-plus function. It is nice to have if you want to experiment with the learning loop
-	tree = deepcopy(tree)
+	tree = copy(tree)
 
 	loop_break = m.max_iterations
 	updates = 1 # loop enter
@@ -617,7 +617,7 @@ end
 
 # ╔═╡ 39dc7fc6-da83-4c90-b288-90e0ea73aef7
 bb_strategy = let
-	bb_tree = deepcopy(bb_tree)
+	bb_tree = copy(bb_tree)
 	synthesize_plus!(bb_tree, bb)
 	prune!(bb_tree)
 	bb_tree
@@ -625,7 +625,7 @@ end
 
 # ╔═╡ aec7bf28-6b61-438c-9711-d853e9491af3
 bb_strategy′ = let
-	bb_strategy = deepcopy(bb_strategy)
+	bb_strategy = copy(bb_strategy)
 	synthesize_plus!(bb_strategy, @set bb.samples_per_axis = 8)
 	prune!(bb_strategy)
 	bb_strategy

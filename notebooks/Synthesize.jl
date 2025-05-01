@@ -221,7 +221,7 @@ end
 draw(initial_tree, draw_bounds, color_dict=action_color_dict, aspectratio=:equal)
 
 # ╔═╡ 777f87fd-f497-49f8-9deb-e708c990cdd1
-tree = set_safety!(deepcopy(initial_tree), 
+tree = set_safety!(copy(initial_tree), 
 		dimensionality, 
 		is_safe, 
 		any_action, 

@@ -383,7 +383,7 @@ md"""
 """
 
 # ╔═╡ 13513f3c-86f7-4e66-bc4b-166360f865c1
-tree′ = deepcopy(tree);
+tree′ = copy(tree);
 
 # ╔═╡ 67a26631-699a-4638-9798-4134f6903e33
 synthesize!(tree′, m)

@@ -211,7 +211,7 @@ md"""
 # ╔═╡ 3e0e5c6f-e57c-41f2-9869-64f0e3bf2a8a
 begin
 	reset_button1
-	reactive_tree1 = deepcopy(initial_tree)
+	reactive_tree1 = copy(initial_tree)
 end;
 
 # ╔═╡ 0c99bd95-0c3e-46b7-bd27-70ac8bb605cf
@@ -341,7 +341,7 @@ m; @bind reset_button Button("Reset")
 
 # ╔═╡ 142d1db7-183e-45a5-b219-30120ffe437b
 begin
-	reactive_tree = deepcopy(initial_tree)
+	reactive_tree = copy(initial_tree)
 	set_safety!(reactive_tree, dimensionality, is_safe, any_action, no_action)
 	debounce1, debounce2, debounce3 = Ref(1), Ref(1), Ref(1)
 	reset_button
@@ -428,7 +428,7 @@ Automation is a wonderful thing.
 m; @bind synthesize_button CounterButton("Synthesize")
 
 # ╔═╡ ecf49f25-1ea4-48be-a391-c8f4c1012c6f
-m; safety_strategy = deepcopy(initial_tree);
+m; safety_strategy = copy(initial_tree);
 
 # ╔═╡ c92d8cf4-0908-4c7c-8d3d-3dd07972219e
 if synthesize_button > 0

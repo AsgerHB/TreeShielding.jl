@@ -209,7 +209,7 @@ get_bounds(get_leaf(initial_tree, (1.1, 0.3)), 2)
 
 # ╔═╡ ec9a089b-8a9c-4ded-bdcb-c387cccbfab7
 begin
-	tree = set_safety!(deepcopy(initial_tree), 
+	tree = set_safety!(copy(initial_tree), 
 		dimensionality, 
 		is_safe, 
 		any_action, 
@@ -768,7 +768,7 @@ md"""
 
 # ╔═╡ d644638e-e589-48e0-b511-c0d0d1ceb798
 let
-	tree = deepcopy(tree)
+	tree = copy(tree)
 	unsafe = actions_to_int([])
 	for i in 1:iterations
 		changes = 1
@@ -810,7 +810,7 @@ Press these buttons
 @bind reset_button CounterButton("Reset")
 
 # ╔═╡ 2263288d-e731-4e13-adb7-ff68431c1caa
-reset_button; reactive_tree = deepcopy(tree) 
+reset_button; reactive_tree = copy(tree) 
 
 # ╔═╡ 534d00b4-1618-4864-93c5-41dacb4f1ca3
 reset_button; @bind grow_button CounterButton("Grow")

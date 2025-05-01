@@ -1,17 +1,19 @@
 ### A Pluto.jl notebook ###
-# v0.19.27
+# v0.20.4
 
 using Markdown
 using InteractiveUtils
 
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
+    #! format: off
     quote
         local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
         local el = $(esc(element))
         global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
         el
     end
+    #! format: on
 end
 
 # ╔═╡ 483b9a1d-9277-4039-8e8c-bf26ddcb78fa
@@ -135,8 +137,8 @@ any_action, no_action = actions_to_int(instances(Action)), actions_to_int([])
 # ╔═╡ 6eee73e9-8ad5-414d-a224-044c051316f3
 action_color_dict=Dict(
 	any_action => colorant"#FFFFFF", 
-	actions_to_int([fast]) => colorant"#9C59D1", 
-	actions_to_int([slow]) => colorant"#FCF434", 
+	actions_to_int([TreeShielding.RW.fast]) => colorant"#9C59D1", 
+	actions_to_int([TreeShielding.RW.slow]) => colorant"#FCF434", 
 	no_action => colorant"#2C2C2C"
 )
 
@@ -195,7 +197,7 @@ end
 
 # ╔═╡ d1ec6edc-e46d-4a11-9383-b078a7e78bb2
 begin
-	updated_tree = deepcopy(initial_tree)
+	updated_tree = copy(initial_tree)
 	update!(updated_tree, dimensionality, foo, Action, spa)
 end
 
@@ -209,7 +211,7 @@ Now! Let's try calling both `grow!` **and** `update!`. Can you see where I'm goi
 
 # ╔═╡ 05cc0a27-0c06-4f35-a812-4a1dac270cff
 call() do
-	tree = deepcopy(initial_tree)
+	tree = copy(initial_tree)
 	grow!(tree, dimensionality, foo, Action, spa, 0.01) # TODO: Why doesn't it grow the same way as in the other notebook??
 	update!(tree, dimensionality, foo, Action, spa)
 	draw(tree, tree_draw_bounds, color_dict=action_color_dict)
@@ -253,7 +255,7 @@ And then for the actual `tree`, additional splits are made to align with the saf
 
 # ╔═╡ 8a6fecc7-06a6-4820-b8df-edec43d0e194
 begin
-	tree = deepcopy(bounded_tree)
+	tree = copy(bounded_tree)
 	split!(get_leaf(tree, (-1, 10)), 2, 10)
 	split!(get_leaf(tree, (0, 10)), 2, 10)
 	split!(get_leaf(tree, (1, 0)), 1, 1)
@@ -269,7 +271,7 @@ draw(tree, tree_draw_bounds′)
 @bind number_of_splits NumberField(0:5, default=0)
 
 # ╔═╡ 9511605d-f59e-471e-92f3-cb6a44a9e12e
-grid = gridify!(deepcopy(tree), dimensionality, number_of_splits)
+grid = gridify!(copy(tree), dimensionality, number_of_splits)
 
 # ╔═╡ a1b54625-d099-4800-852b-88527e9e11bd
 draw(grid, tree_draw_bounds′, color_dict=action_color_dict)
@@ -289,7 +291,7 @@ safe(b::Bounds) = b.lower[1] >= 1 || b.lower[2] >= 10
 
 
 # ╔═╡ 0faf0f89-d49b-4de6-b909-edcaee6290b8
-draw(set_safety!(deepcopy(grid), dimensionality, safe, any_action, no_action), tree_draw_bounds′, color_dict=action_color_dict)
+draw(set_safety!(copy(grid), dimensionality, safe, any_action, no_action), tree_draw_bounds′, color_dict=action_color_dict)
 
 # ╔═╡ 65d106f5-5638-426d-bd3a-0322c45b4ab2
 md"""
@@ -303,7 +305,7 @@ clicky clicky buttons
 
 # ╔═╡ 7597a12d-168f-48ab-8470-771a304b22b0
 begin
-	reactive_grid = deepcopy(grid)
+	reactive_grid = copy(grid)
 	set_safety!(reactive_grid, dimensionality, safe, any_action, no_action)
 	debounce1, debounce2 = Ref(1), Ref(1)
 	reset_button

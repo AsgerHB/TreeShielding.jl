@@ -1,17 +1,19 @@
 ### A Pluto.jl notebook ###
-# v0.19.36
+# v0.20.4
 
 using Markdown
 using InteractiveUtils
 
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
+    #! format: off
     quote
         local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
         local el = $(esc(element))
         global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
         el
     end
+    #! format: on
 end
 
 # ╔═╡ 404bae97-6794-4fa6-97bf-d09851900305
@@ -199,7 +201,7 @@ end
 
 # ╔═╡ ee408360-8c64-4619-9810-6038738045dc
 begin
-	tree = set_safety!(deepcopy(initial_tree), 
+	tree = set_safety!(copy(initial_tree), 
 		dimensionality, 
 		is_safe, 
 		any_action, 
@@ -372,7 +374,7 @@ proposed_split = get_split(tree, get_leaf(tree, 0.5, 0.5), m)
 
 # ╔═╡ bae11a44-67d8-4b6b-8d10-85b58e7fae63
 call() do
-	tree = deepcopy(tree)
+	tree = copy(tree)
 	leaf = get_leaf(tree, 0.5, 0.5)
 	axis, threshold = proposed_split
 	
@@ -398,7 +400,7 @@ $(@doc grow!)
 
 # ╔═╡ 46f3eefe-15c7-4bae-acdb-54e485e4b5b7
 call() do
-	tree = deepcopy(tree)
+	tree = copy(tree)
 	
 	# Here. #
 	grow!(tree, m)
@@ -424,7 +426,7 @@ md"""
 # ╔═╡ 447dc1e2-809a-4f71-b7f4-949ae2a0c4b6
 begin
 	reset_button
-	reactive_tree = deepcopy(tree)
+	reactive_tree = copy(tree)
 end;
 
 # ╔═╡ 1817421e-50b0-47b2-859d-e87aaf3064b0
