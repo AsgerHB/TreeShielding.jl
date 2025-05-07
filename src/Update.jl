@@ -21,18 +21,15 @@ Returns a `set` of actions that are safe within `bounds`.
  - `bounds` Bounds specifying initial location.
  - `m` A [ShieldingModel].
 """
-function get_allowed_actions(tree::Tree,
-        bounds::Bounds,
-        m::ShieldingModel)
+function get_allowed_actions(tree::Tree, leaf::Leaf, m::ShieldingModel)
 
     no_actions = actions_to_int([])
 
     allowed = Set(m.action_space)
-    for (p, r) in all_supporting_points(bounds, m)
-        for a in m.action_space
-            p′ = m.simulation_function(p, r, a)
-            if get_value(tree, p′) == no_actions
-                # m.verbose && @info "$a is unsafe at $p."
+    for a in m.action_space
+        for l in get(leaf.reachable, a, Set{Leaf{<:Tree}}())
+            if get_value(l) == no_actions
+                # m.verbose && @info "$a is unsafe."
                 delete!(allowed, a)
             end
         end
@@ -40,22 +37,57 @@ function get_allowed_actions(tree::Tree,
     return allowed
 end
 
-"""
-    get_allowed_actions(leaf::Tree, m::ShieldingModel)
+skipped::Int64 = 0
+recomputed::Int64 = 0
+const unsafe = actions_to_int([]) 
 
-Get a `set` of safe actions at the given leaf.
-"""
-function get_allowed_actions(leaf::Tree, m::ShieldingModel)
-
-    tree = getroot(leaf)
+function set_reachable!(tree::Tree, leaf::Leaf{T}, m::ShieldingModel) where {T}
     bounds = get_bounds(leaf, m.dimensionality)
-
-    get_allowed_actions(tree, bounds, m)
+    global skipped, recomputed, unsafe
+    if !leaf.dirty || !bounded(bounds) || leaf.value == unsafe
+        if !leaf.dirty
+            skipped += 1
+        end
+        return 
+    end
+    
+    recomputed += 1
+    empty!(leaf.reachable)
+    for (p, r) in all_supporting_points(bounds, m)
+        for a in m.action_space
+            p′ = m.simulation_function(p, r, a)
+            dest = get_leaf(tree, p′)::Leaf{T}
+            push!(get!(leaf.reachable, a, Set{Leaf{T}}()), dest)
+            push!(get!(dest.incoming, a, Set{Leaf{T}}()), leaf)
+        end
+    end
+    leaf.dirty = false
 end
+
+
+function set_reachable!(tree::Tree, node::Node{T}, m::ShieldingModel) where {T}
+    set_reachable!(tree, node.lt, m)
+    set_reachable!(tree, node.geq, m)
+end
+
+function clear_reachable!(node::Node)
+    clear_reachable!(node.lt)
+    clear_reachable!(node.geq)
+end
+
+function clear_reachable!(leaf::Leaf)
+    leaf.dirty = true # This is redundant as the function is currently used. But things mean things, damnit!
+    empty!(leaf.reachable)
+    empty!(leaf.incoming)
+end
+
 
 function get_updates(tree::Tree, m::ShieldingModel)
     updates = ValueUpdate[]
     no_actions = actions_to_int([])
+    global skipped = 0
+    global recomputed = 0
+    set_reachable!(tree, tree, m) # Update reachability for dirty nodes
     for leaf in Leaves(tree)
         if leaf.value == no_actions
             continue # bad leaves stay bad
@@ -64,8 +96,7 @@ function get_updates(tree::Tree, m::ShieldingModel)
         if !bounded(get_bounds(leaf, m.dimensionality))
             continue # I don't actually know what to do here.
         end
-
-        allowed = get_allowed_actions(leaf, m)
+        allowed = get_allowed_actions(tree, leaf, m)
 
         new_value = actions_to_int(allowed)
         
@@ -73,6 +104,10 @@ function get_updates(tree::Tree, m::ShieldingModel)
             push!(updates, ValueUpdate(leaf, new_value))
         end
     end
+    #if m.verbose
+        @info "Skipped $skipped out of $(skipped + recomputed) nodes when updating reachability."
+    #end
+
     updates
 end
 

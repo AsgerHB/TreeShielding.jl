@@ -1,5 +1,4 @@
-abstract type Tree{T}
-end
+abstract type Tree{T} end
 
 mutable struct Node{T} <: Tree{T}
     axis::Int64
@@ -13,7 +12,7 @@ function Node(axis, threshold, lt, geq)
     this = Node(axis, Float64(threshold), lt, geq, nothing)
     if lt !== nothing
         lt.parent = this
-    end 
+    end
     if geq !== nothing
         geq.parent = this
     end
@@ -22,11 +21,14 @@ end
 
 mutable struct Leaf{T} <: Tree{T}
     value::T
-    parent::Union{Nothing,Tree}
+    parent::Union{Nothing,Tree{T}}
+    dirty::Bool # Does reachability need to be updated?
+    reachable::Dict{Any,Set{Leaf{T}}} # reachable[action] => {leaf2, leaf13, ... }
+    incoming::Dict{Any,Set{Leaf{T}}}  # The inverse of reachable.
 end
 
-function Leaf(value)
-    Leaf(value, nothing)
+function Leaf(value::T) where {T}
+    Leaf(value, nothing, true, Dict{Any,Set{Leaf{T}}}(), Dict{Any,Set{Leaf{T}}}())
 end
 
 AbstractTrees.children(node::Node) = [node.lt, node.geq]
@@ -95,6 +97,12 @@ function replace_subtree!(tree::Tree, new_tree::Tree)
 end
 
 function split!(leaf::Leaf, axis, threshold, lower=nothing, upper=nothing)
+    for (_, leaves) in leaf.incoming
+        for leaf′ in leaves
+            leaf′.dirty = true 
+        end
+    end
+
     lower = something(lower, leaf.value)
     upper = something(upper, leaf.value)
 
