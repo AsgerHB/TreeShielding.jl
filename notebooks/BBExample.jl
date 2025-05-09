@@ -376,7 +376,10 @@ reset_button, go_clock; Leaves(reactive_tree) |> collect |> length
 # ╔═╡ 29f7f0ce-e3e6-4071-bdfe-a6da3994dd85
 go_clock; l = get_leaf(reactive_tree, partition_x, partition_y)
 
-# ╔═╡ ef651fce-cdca-4ca1-9f08-e94fd25df4a4
+# ╔═╡ 7f560461-bfc7-4419-8a27-670b09830052
+TreeShielding.get_allowed_actions(reactive_tree, l, (@set m.verbose = true))
+
+# ╔═╡ 8f4450a9-78c7-49a7-ad3a-49b90294ae9c
 go_clock; b = get_bounds(l, m.dimensionality)
 
 # ╔═╡ 165ba9e0-7409-4f5d-b10b-4223fe589ac6
@@ -385,7 +388,7 @@ begin
 	
 	p1 = draw(reactive_tree, outer_bounds, 
 		color_dict=action_color_dict,
-		line=nothing
+		line=0.1
 	)
 	
 	plot!(legend=:outerright)
@@ -404,9 +407,6 @@ begin
 	
 	plot!(xlabel="v", ylabel="p")
 end
-
-# ╔═╡ 7f560461-bfc7-4419-8a27-670b09830052
-TreeShielding.get_allowed_actions(reactive_tree, b, (@set m.verbose = true))
 
 # ╔═╡ f204e821-45d4-4518-8cd6-4a6ab3963460
 go_clock; get_split(reactive_tree, l, (@set m.verbose=true))
@@ -538,7 +538,7 @@ shielded_hits_rarely((1, 5))
 shielded_hits_rarely((7, 0))
 
 # ╔═╡ c4d28b60-7028-4eb0-9178-32cc9e40d8fd
-refresh_button, go_clock, synthesize_button; @bind runs NumberField(1:100000, default=100)
+refresh_button, go_clock, synthesize_button; @bind runs NumberField(1:100000, default=10)
 
 # ╔═╡ f9ca8159-0b31-4e00-bd7b-89c788295589
 refresh_button, go_clock, synthesize_button ; safety_violations = 		
@@ -630,8 +630,8 @@ hit
 # ╟─57be14bb-d748-4432-8608-106c44c38f83
 # ╠═e0013651-12ed-4c81-ad05-2eb8f47a720c
 # ╠═29f7f0ce-e3e6-4071-bdfe-a6da3994dd85
-# ╠═ef651fce-cdca-4ca1-9f08-e94fd25df4a4
 # ╠═7f560461-bfc7-4419-8a27-670b09830052
+# ╠═8f4450a9-78c7-49a7-ad3a-49b90294ae9c
 # ╠═f204e821-45d4-4518-8cd6-4a6ab3963460
 # ╠═ec1628b6-9dd3-43a6-aa10-01f9743ce0ea
 # ╟─0039a51e-26ed-4ad2-aeda-117436295ca1
@@ -640,7 +640,7 @@ hit
 # ╠═ecf49f25-1ea4-48be-a391-c8f4c1012c6f
 # ╠═c92d8cf4-0908-4c7c-8d3d-3dd07972219e
 # ╟─c42af80d-bb1e-42f7-9131-1080639cbd6a
-# ╠═f113308a-1d72-41e9-ba54-71576994a664
+# ╟─f113308a-1d72-41e9-ba54-71576994a664
 # ╟─25f2d1da-50b5-4563-afb6-8603c484d39a
 # ╠═0501c67b-58bb-4016-a948-96ba6960007a
 # ╟─dfba58b6-752a-4051-8cc2-c0c0b1b2c9e3

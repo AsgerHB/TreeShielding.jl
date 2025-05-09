@@ -503,6 +503,8 @@ let
 end
 
 # ╔═╡ 8dac6296-9656-4698-9e4b-d7c4c7c42833
+# ╠═╡ disabled = true
+#=╠═╡
 let
 	tree = copy(tree)
 	synthesize_plus!(tree, m)
@@ -515,6 +517,7 @@ let
 	leaf_count = length(Leaves(tree) |> collect)
 	plot!([], l=nothing, label="leaves: $leaf_count")
 end
+  ╠═╡ =#
 
 # ╔═╡ ac6cc02e-9de1-4542-a902-5df745687506
 # ╠═╡ disabled = true

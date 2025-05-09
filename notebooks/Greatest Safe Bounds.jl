@@ -1,17 +1,19 @@
 ### A Pluto.jl notebook ###
-# v0.19.27
+# v0.20.4
 
 using Markdown
 using InteractiveUtils
 
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
+    #! format: off
     quote
         local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
         local el = $(esc(element))
         global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
         el
     end
+    #! format: on
 end
 
 # ╔═╡ 23a8f930-95ae-4820-bac0-82edd0bfbc8a
@@ -695,9 +697,6 @@ let
 	plot!(gsb, 0.1, color=colors.NEPHRITIS, alpha=0.7, label="gsb")
 end
 
-# ╔═╡ 30808b06-460c-4106-a2a7-3ebe06523e73
-safety_judegement
-
 # ╔═╡ 3d47fd67-a543-4658-906d-1e5b010db03d
 safe, greatest_safe_bounds_including; dpd = 
 	Dict{Bounds{m.dimensionality, Int},Bounds{m.dimensionality, Int}}()
@@ -979,7 +978,6 @@ greatest_safe_bounds_including(safe2, initial_bounds2)
 # ╠═bff9cdd0-85dc-4afb-936b-c4623fa2c9ad
 # ╠═384c936f-b585-4799-a930-b1bd33d9763a
 # ╠═da57aa64-055b-46aa-9e0c-7ad8d7e23bcf
-# ╠═30808b06-460c-4106-a2a7-3ebe06523e73
 # ╠═1778479c-bd0c-444e-937e-a13242435cb4
 # ╠═70f1f6d5-8afc-481b-83e1-3c89f99a8fd4
 # ╠═3650e23b-0997-4391-bb02-dda6824fc2ab

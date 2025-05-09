@@ -270,11 +270,46 @@ call() do
 	@test is_safe((bounds.lower[1], bounds.lower[2]))
 end
 
+# ╔═╡ 3d8f9479-3a98-4d24-94a4-6935fa2b3de9
+@bind reset_button1 Button("Reset")
+
+# ╔═╡ 5cfd2617-c1d8-4228-b7ca-cde9c3d68a4c
+begin
+	reactive_tree = deepcopy(initial_tree)
+	set_safety!(reactive_tree, dimensionality, is_safe, any_action, no_action)
+	debounce1, debounce2, debounce3, debounce4 = Ref(1), Ref(1), Ref(1), Ref(1)
+	reset_button1
+end
+
 # ╔═╡ c8248f9e-6fc2-49c4-9e69-b8387628f0fd
 @bind grow_button Button("Grow")
 
+# ╔═╡ 0583d3aa-719c-42dd-817a-6651edc90297
+grow_button,
+if debounce1[] == 1
+	debounce1[] += 1
+	reactivity1 = "ready"
+else
+	
+	grown = grow!(reactive_tree, m)
+
+	@info "Grown to $grown leaves"
+	reactivity1 = "grown"
+end
+
 # ╔═╡ b5ee1e74-bd9a-47ab-8a3d-99d7b495766d
 @bind update_button Button("Update")
+
+# ╔═╡ dd16f45d-b348-46bc-b874-babcca2c52ba
+update_button,
+if debounce2[] == 1
+	debounce2[] += 1
+	reactivity2 = "ready"
+else
+	updates = update!(reactive_tree, m)
+	@info "Updated $updates leaves"
+	reactivity2 = "updated"
+end
 
 # ╔═╡ c8424961-5363-41bc-beb2-a0f54a289b5a
 md"""
@@ -292,6 +327,56 @@ $(@bind partition_y
 
 # ╔═╡ c39a5cbf-37b2-4712-a935-ac0ed4a41988
 @bind prune_button Button("Prune")
+
+# ╔═╡ 0fb4f059-135c-4713-be81-94e3acecc2ed
+prune_button,
+if debounce3[] == 1
+	debounce3[] += 1
+	reactivity3 = "ready"
+else
+	pruned_to = prune!(reactive_tree)
+	@info "Pruned to $pruned_to leaves"
+	reactivity3 = "pruned"
+end
+
+# ╔═╡ 897c4e0a-2544-4e7a-b270-8212189f84c0
+grow_button; leaf = get_leaf(reactive_tree, partition_x, partition_y)
+
+# ╔═╡ f29db2ed-6a47-451a-b7c9-9ddf8fb48fce
+axis, threshold = get_split(reactive_tree, leaf, m)
+
+# ╔═╡ 455c7e81-2875-48fe-95c2-2dd92ed3f013
+bounds = get_bounds(leaf, m.dimensionality)
+
+# ╔═╡ 8306fbf0-c537-4f92-9e18-c2b006d7499e
+begin
+	reactivity1, reactivity2, reactivity3
+	p1 = draw(reactive_tree, draw_bounds, color_dict=action_color_dict)
+	plot!(size=(600, 600), legend=:outerright)
+
+	if show_supporting_points
+		p = (partition_x, partition_y)
+		scatter_allowed_actions!(reactive_tree, bounds, m)
+		scatter!(p, m=(4, :rtriangle, :white), msw=1, label=nothing, )
+	end
+	plot!(aspectratio=:equal)
+end
+
+# ╔═╡ e76c943b-acbd-4e97-92b2-f035c574a66a
+bounds_gt = call() do
+	threshold === nothing && return
+	result = Bounds(bounds.lower |> copy, bounds.upper |> copy)
+	result.lower[axis] = threshold
+	result
+end
+
+# ╔═╡ 887add25-5e17-4688-9b87-239d1276f140
+bounds_lt = call() do
+	threshold === nothing && return
+	result = Bounds(bounds.lower |> copy, bounds.upper |> copy)
+	result.upper[axis] = threshold
+	result
+end
 
 # ╔═╡ 8af94312-e7f8-4b44-8190-ad0d2b5ce6d7
 md"""
@@ -346,7 +431,7 @@ shield_action(finished_tree, (0.8, 0.65), RW.slow)
 
 # ╔═╡ 6670a569-61af-4e58-bdfb-44d57b4e7746
 md"""
-### Play the Game -- Try it Out!
+# Play the Game -- Try it Out!
 
 The goal of the game is to reach a state where $x>1.0$ before $t>1.0$. 
 
@@ -354,99 +439,7 @@ Use the buttons below, and see if you can achieve this using as few "fast" actio
 """
 
 # ╔═╡ f849988c-8da2-4977-8f74-ce2d52634b32
-@bind reset_button Button("Reset")
-
-# ╔═╡ 5cfd2617-c1d8-4228-b7ca-cde9c3d68a4c
-begin
-	reactive_tree = deepcopy(initial_tree)
-	set_safety!(reactive_tree, dimensionality, is_safe, any_action, no_action)
-	debounce1, debounce2, debounce3, debounce4 = Ref(1), Ref(1), Ref(1), Ref(1)
-	reset_button
-end
-
-# ╔═╡ 0583d3aa-719c-42dd-817a-6651edc90297
-grow_button,
-if debounce1[] == 1
-	debounce1[] += 1
-	reactivity1 = "ready"
-else
-	
-	grown = grow!(reactive_tree, m)
-
-	@info "Grown to $grown leaves"
-	reactivity1 = "grown"
-end
-
-# ╔═╡ dd16f45d-b348-46bc-b874-babcca2c52ba
-update_button,
-if debounce2[] == 1
-	debounce2[] += 1
-	reactivity2 = "ready"
-else
-	updates = update!(reactive_tree, m)
-	@info "Updated $updates leaves"
-	reactivity2 = "updated"
-end
-
-# ╔═╡ 0fb4f059-135c-4713-be81-94e3acecc2ed
-prune_button,
-if debounce3[] == 1
-	debounce3[] += 1
-	reactivity3 = "ready"
-else
-	pruned_to = prune!(reactive_tree)
-	@info "Pruned to $pruned_to leaves"
-	reactivity3 = "pruned"
-end
-
-# ╔═╡ 897c4e0a-2544-4e7a-b270-8212189f84c0
-grow_button; leaf = get_leaf(reactive_tree, partition_x, partition_y)
-
-# ╔═╡ 455c7e81-2875-48fe-95c2-2dd92ed3f013
-bounds = get_bounds(leaf, m.dimensionality)
-
-# ╔═╡ 8306fbf0-c537-4f92-9e18-c2b006d7499e
-begin
-	reactivity1, reactivity2, reactivity3
-	p1 = draw(reactive_tree, draw_bounds, color_dict=action_color_dict)
-	plot!(size=(600, 600), legend=:outerright)
-
-	if show_supporting_points
-		p = (partition_x, partition_y)
-		scatter_allowed_actions!(reactive_tree, bounds, m)
-		scatter!(p, m=(4, :rtriangle, :white), msw=1, label=nothing, )
-	end
-	plot!(aspectratio=:equal)
-end
-
-# ╔═╡ f29db2ed-6a47-451a-b7c9-9ddf8fb48fce
-axis, threshold = get_split(reactive_tree, leaf, m)
-
-# ╔═╡ e76c943b-acbd-4e97-92b2-f035c574a66a
-bounds_gt = call() do
-	threshold === nothing && return
-	result = Bounds(bounds.lower |> copy, bounds.upper |> copy)
-	result.lower[axis] = threshold
-	result
-end
-
-# ╔═╡ 887add25-5e17-4688-9b87-239d1276f140
-bounds_lt = call() do
-	threshold === nothing && return
-	result = Bounds(bounds.lower |> copy, bounds.upper |> copy)
-	result.upper[axis] = threshold
-	result
-end
-
-# ╔═╡ 5ff44f02-8c19-404d-baf6-421566a5f322
-bounds_lt !== nothing ?
-	TreeShielding.get_allowed_actions(reactive_tree, bounds_lt, m) : 
-	nothing
-
-# ╔═╡ 271cf6fd-1c9e-4d8e-8f8e-c0b4b9fde9dd
-bounds_gt !== nothing ?
-	TreeShielding.get_allowed_actions(reactive_tree, bounds_gt, m) : 
-	nothing
+@bind reset_button2 Button("Reset")
 
 # ╔═╡ 4cf468a6-ebc8-470b-9f6f-3a3c682c779e
 begin
@@ -454,12 +447,12 @@ begin
 	reactive_xs = [0.]
 	reactive_ts = [0.]
 	reactive_as = []
-	reset_button
+	reset_button2
 end
 
 # ╔═╡ 4d07d520-10f7-4558-8ce1-6651f36a05ff
 begin
-	reset_button
+	reset_button2
 	@bind fast_button CounterButton("Fast")
 end
 
@@ -480,7 +473,7 @@ end
 
 # ╔═╡ a275a186-0cda-42ce-8d9a-5f6a63188a8b
 begin
-	reset_button
+	reset_button2
 	@bind slow_button CounterButton("Slow")
 end
 
@@ -501,7 +494,7 @@ end
 
 # ╔═╡ 78288f87-1209-494a-92e3-68de25afeb4e
 begin
-	reset_button, slow_button, fast_button
+	reset_button2, slow_button, fast_button
 	if finished_tree !== nothing
 		draw(finished_tree, draw_bounds, 
 			color_dict=action_color_dict, 
@@ -522,7 +515,7 @@ end
 
 # ╔═╡ effd2e1c-daf3-4a17-914c-ae6fffe112c4
 begin
-	reset_button, slow_button, fast_button
+	reset_button2, slow_button, fast_button
 	if  reactive_xs[end] >= rwmechanics.x_max && reactive_ts[end] < rwmechanics.x_max
 		md"""
 		!!! success "Winner!"
@@ -570,6 +563,7 @@ end
 # ╟─3bf43a31-1739-4b94-944c-0226cc3851cb
 # ╟─503b61c8-e437-42ab-a7d0-de4d47030d50
 # ╠═a52e9520-f4df-4e88-bb39-e516f37335ea
+# ╠═3d8f9479-3a98-4d24-94a4-6935fa2b3de9
 # ╟─5cfd2617-c1d8-4228-b7ca-cde9c3d68a4c
 # ╟─c8248f9e-6fc2-49c4-9e69-b8387628f0fd
 # ╟─0583d3aa-719c-42dd-817a-6651edc90297
@@ -584,8 +578,6 @@ end
 # ╠═455c7e81-2875-48fe-95c2-2dd92ed3f013
 # ╠═e76c943b-acbd-4e97-92b2-f035c574a66a
 # ╠═887add25-5e17-4688-9b87-239d1276f140
-# ╠═5ff44f02-8c19-404d-baf6-421566a5f322
-# ╠═271cf6fd-1c9e-4d8e-8f8e-c0b4b9fde9dd
 # ╟─8af94312-e7f8-4b44-8190-ad0d2b5ce6d7
 # ╠═039a6f5c-2934-4345-a381-56f8c3c33483
 # ╟─6823a7d1-f404-46b1-9490-862aeba553a7
