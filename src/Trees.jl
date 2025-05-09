@@ -191,3 +191,6 @@ end
 function Base.copy(node::Node{T}) where T
     Node(node.axis, node.threshold, copy(node.lt), copy(node.geq))
 end
+
+Base.show(io::IO, leaf::Leaf) = print(io, "Leaf($(leaf.value))")
+Base.show(io::IO, node::Node) = print(io, "Node($(node.axis), $(node.threshold), $(show(node.lt)), $(show(node.geq)))")
