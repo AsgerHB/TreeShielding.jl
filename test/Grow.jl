@@ -2,16 +2,14 @@
 """
     test_get_threshold(;samples_per_axis=9,
     granularity=0,
-    splitting_tolerance=0.01,
-    margin=0)
+    splitting_tolerance=0.01)
 
 Using the random walk problem, tests that the `get_threshold` function will return a threshold,
 such that all supporting points to one side of the threshold are safe. 
 """
 function test_get_threshold(;samples_per_axis=9,
     granularity=0,
-    splitting_tolerance=0.01,
-    margin=0)
+    splitting_tolerance=0.01)
 
     spa_when_testing = 20 
 
@@ -54,14 +52,13 @@ function test_get_threshold(;samples_per_axis=9,
     action_space = instances(Pace)
 
     
-    m = ShieldingModel(simulation_function, 
+    m = ShieldingModel(;simulation_function, 
         action_space, 
         dimensionality,
         samples_per_axis,
-        random_variable_bounds;
+        random_variable_bounds,
         splitting_tolerance,
-        granularity,
-        margin)
+        granularity)
 
         
         
@@ -90,32 +87,23 @@ end
         test_get_threshold(
             samples_per_axis=9,
             granularity=0,
-            splitting_tolerance=0.01,
-            margin=0.00)
+            splitting_tolerance=0.01)
         
         test_get_threshold(
             samples_per_axis = 9,
             granularity = 0.001,
-            splitting_tolerance=0.0005,
-            margin = 0.00001)#
+            splitting_tolerance=0.0005)#
         
         test_get_threshold(
             samples_per_axis = 3,#
             granularity = 0.00001,
-            splitting_tolerance=0.000005,
-            margin = 0.000005)
+            splitting_tolerance=0.000005)
         
         test_get_threshold(
             samples_per_axis = 9,
             granularity = 0.01,#
-            splitting_tolerance=0.005,
-            margin = 0.01)
+            splitting_tolerance=0.005)
         
-        test_get_threshold(
-            samples_per_axis = 9,
-            granularity = 0.001,
-            splitting_tolerance=0.0005,
-            margin = 0.0001)
     end
 
     @enum Actions greeble grooble # This is not just me being silly :3 Julia doesn't like having two enums with the same names.
@@ -152,15 +140,13 @@ end
         splitting_tolerance = 1E-5
 
         
-        model(expected) = ShieldingModel(unsafe_at_threshold(expected), 
-            Actions, 
+        model(expected) = ShieldingModel(;simulation_function=unsafe_at_threshold(expected), 
+            action_space=Actions,
             dimensionality,
             samples_per_axis,
-            random_variable_bounds;
+            random_variable_bounds,
             granularity = 0,
-            splitting_tolerance,
-            margin = 0
-        )
+            splitting_tolerance)
 
         try_getting_split(expected) =  get_split(tree, leaf, model(expected))
 
@@ -237,15 +223,13 @@ end
         samples_per_axis = 8
         random_variable_bounds = Bounds([], [])
         splitting_tolerance = 1E-5
-        model(expected) = ShieldingModel(unsafe_at_threshold(expected), 
-            Actions, 
+        model(expected) = ShieldingModel(;simulation_function=unsafe_at_threshold(expected), 
+            action_space=Actions, 
             dimensionality,
             samples_per_axis,
-            random_variable_bounds;
+            random_variable_bounds,
             granularity = 0,
-            splitting_tolerance,
-            margin = 0
-        )
+            splitting_tolerance)
 
         try_getting_split(expected) =  get_split(tree, leaf, model(expected))
 

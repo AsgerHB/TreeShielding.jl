@@ -317,7 +317,6 @@ And configure min granularity. The value is set as the number of leading zeros t
 `granularity =` $(@bind granularity NumberField(0:1E-10:1, default=1E-2))
 
 
-`margin =` $(@bind margin NumberField(0:1E-10:1, default=0))
 
 `splitting_tolerance =` $(@bind splitting_tolerance NumberField(0:1E-10:1, default=1E-4))
 """
@@ -338,7 +337,7 @@ simulation_function(p, r, a) =
 random_variable_bounds = Bounds((-1,), (1,))
 
 # ╔═╡ 37290094-7ecd-4032-88ac-88c0ed21696d
-m = ShieldingModel(simulation_function, Action, dimensionality, samples_per_axis, random_variable_bounds; max_iterations, granularity, margin, splitting_tolerance)
+m = ShieldingModel(;simulation_function, action_space=Action, dimensionality, samples_per_axis, random_variable_bounds; max_iterations, granularity, splitting_tolerance)
 
 # ╔═╡ ca362313-8755-48a4-a444-e598313743ee
 m.samples_per_axis^3

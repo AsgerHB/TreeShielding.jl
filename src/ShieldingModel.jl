@@ -1,3 +1,7 @@
+@enum ReachabilityCaching no_caching one_way dependency_graph
+@enum ReduceMethod no_reduction naïve caap_reduction
+@enum GrowMethod caap_split plus minus smart_minus binary_search binary_search_minus_fallback
+
 """
 **Fields:**
  - `simulation_function` A function `f(state, random_variables, action)` which returns the resulting state.
@@ -5,10 +9,12 @@
  - `dimensionality` Number of axes. 
  - `samples_per_axis` Determines how many samples are taken. Grows exponentially. See `SupportingPoints`.
  - `granularity` Splits are not made if the resulting size of the partition would be less than `granularity` on the given axis
- - `margin` This value will be added to a threshold after it is computed, as an extra margin for error.
  - `max_iterations` Max iterations when growing the tree. Mostly there as an emergency stop, and ideally should never be hit.
- - `splitting_tolerance` Desired precision while splitting. 
- - `verbose` Print detailed runtime information using the `@Info` macro. Not recommended for calls to `synthesize!` or `grow!`.
+ - `splitting_tolerance` Desired precision while splitting. Specific to the `binary_search` splitting method.
+ - `verbose` Print detailed runtime information using the @Info macro. Not recommended for calls to synthesize! or grow!.
+ - `reachability_caching` Method for chaching and recomputing reachability.
+ - `reduce_method` Method for reducing tree after update.
+ - `grow_method` Method for splitting partitions when growing.
 """
 struct ShieldingModel
     simulation_function::Function
@@ -18,46 +24,26 @@ struct ShieldingModel
     random_variable_bounds::Bounds
     granularity::Float64
     max_iterations::Int64
-    margin::Float64
     splitting_tolerance::Float64
     verbose::Bool
+    reachability_caching::ReachabilityCaching
+    reduce_method::ReduceMethod
+    grow_method::GrowMethod
 
-    function ShieldingModel(simulation_function::Function,
+    function ShieldingModel(;simulation_function::Function,
                 action_space,
                 dimensionality,
                 samples_per_axis,
-                random_variable_bounds::Bounds; 
-                granularity=0,
+                random_variable_bounds::Bounds,
+                granularity=1,
                 max_iterations=20,
-                margin=0,
                 splitting_tolerance=0.01,
-                verbose=false
+                verbose=false,
+                reachability_caching::ReachabilityCaching=no_caching,
+                reduce_method::ReduceMethod=no_reduction,
+                grow_method::GrowMethod=binary_search
                 )
 
-        
-        ShieldingModel(simulation_function,
-            action_space,
-            dimensionality,
-            samples_per_axis,
-            random_variable_bounds::Bounds,
-            granularity,
-            max_iterations,
-            margin,
-            splitting_tolerance,
-            verbose)
-    end
-
-    function ShieldingModel(simulation_function::Function,
-            action_space,
-            dimensionality,
-            samples_per_axis,
-            random_variable_bounds::Bounds,
-            granularity,
-            max_iterations,
-            margin,
-            splitting_tolerance,
-            verbose
-            )
 
         if action_space isa Type
             action_space = instances(action_space)
@@ -65,23 +51,21 @@ struct ShieldingModel
             action_space = action_space
         end
 
-        if margin > granularity
-            @warn "Margin should not be greater than minimum granularity.\nThis can cause infinite growth." margin granularity
-        end
-
         if splitting_tolerance > granularity && granularity != 0
             @warn "Splitting Tolerance should not be greater than minimum granularity.\nThis can cause necessary splits to be skipped." splitting_tolerance granularity
         end
-        
+
         new(simulation_function,
             action_space,
             dimensionality,
             samples_per_axis,
-            random_variable_bounds::Bounds,
+            random_variable_bounds,
             granularity,
             max_iterations,
-            margin,
             splitting_tolerance,
-            verbose)
+            verbose,
+            reachability_caching,
+            reduce_method,
+            grow_method)
     end
 end

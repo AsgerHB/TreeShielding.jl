@@ -288,9 +288,6 @@ And configure min granularity. The value is set as the number of leading zeros t
 
 `granularity =` $(@bind granularity NumberField(0:1E-10:1, default=1E-2))
 
-
-`margin =` $(@bind margin NumberField(0:1E-10:1, default=0))
-
 `splitting_tolerance =` $(@bind splitting_tolerance NumberField(0:1E-10:1, default=1E-4))
 """
 

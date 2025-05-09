@@ -171,15 +171,6 @@ function get_threshold(tree::Tree, bounds::Bounds, axis, action, direction::Dire
 	
 	m.verbose && @info "Resolved to threshold $threshold" axis direction
 
-	# Apply safety margin
-	if 	direction == safe_above_threshold
-		threshold = min(threshold + m.margin, bounds.upper[axis])
-	else
-		threshold = max(threshold - m.margin, bounds.lower[axis])
-	end
-	
-	m.verbose && @info "Applied safety margin.   Threshold is now $threshold."  axis direction threshold margin=m.margin
-
 	# Apply granularity
 	if m.granularity != 0
 		# Trust me on this. 

@@ -37,7 +37,7 @@
     samples_per_axis = 3
     random_variable_bounds = Bounds([], [])
 
-    m = ShieldingModel(simulation_function, Action, dimensionality, samples_per_axis, random_variable_bounds)
+    m = ShieldingModel(;simulation_function, action_space=Action, dimensionality, samples_per_axis, random_variable_bounds)
 
     # Act #
     @test update!(tree, m) == 2

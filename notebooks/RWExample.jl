@@ -249,13 +249,11 @@ Try setting a different number of samples per axis:
 
 `granularity =` $(@bind granularity NumberField(0:1E-15:1, default=1E-5))
 
-`margin =` $(@bind margin NumberField(0:0.001:1, default=0.00))
-
 `splitting_tolerance =` $(@bind splitting_tolerance NumberField(0:1E-10:1, default=1E-5))
 """
 
 # ╔═╡ a52e9520-f4df-4e88-bb39-e516f37335ea
-m = ShieldingModel(simulation_function, Pace, dimensionality, samples_per_axis, random_variable_bounds; granularity, margin, splitting_tolerance)
+m = ShieldingModel(;simulation_function, action_space=Pace, dimensionality, samples_per_axis, random_variable_bounds; granularity, splitting_tolerance)
 
 # ╔═╡ e3ba9c22-6e2c-4d90-9823-93f871c036b4
 get_bounds(get_leaf(initial_tree, x_max + 1, y_max/2), m.dimensionality)
