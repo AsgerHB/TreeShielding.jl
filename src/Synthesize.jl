@@ -23,7 +23,7 @@ function synthesize!(tree::Tree, m::ShieldingModel)
 
         m.verbose && @info "Updated $updates leaves"
         
-        pruned_to = prune!(tree)
+        pruned_to = prune!(tree, m)
 
         m.verbose && @info "Pruned to $pruned_to leaves"
         

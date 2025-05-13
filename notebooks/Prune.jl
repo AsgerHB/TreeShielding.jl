@@ -262,7 +262,7 @@ if debounce3[] == 1
 	debounce3[] += 1
 	reactivity3 = "ready"
 else
-	prune!(reactive_tree)
+	prune!(reactive_tree, m)
 	reactivity3 = "pruned"
 end
 

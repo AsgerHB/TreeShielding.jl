@@ -332,7 +332,7 @@ if debounce3[] == 1
 	debounce3[] += 1
 	reactivity3 = "ready"
 else
-	pruned_to = prune!(reactive_tree)
+	pruned_to = prune!(reactive_tree, m)
 	@info "Pruned to $pruned_to leaves"
 	reactivity3 = "pruned"
 end

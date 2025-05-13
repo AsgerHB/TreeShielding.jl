@@ -1,5 +1,3 @@
-# It's a bit barren now, but I hope to add more pruning tricks.
-
 """
     prune!(tree::Tree)
 
@@ -7,7 +5,19 @@ Attempt to remove redundant leaves from the tree.
 
 **Returns:** The number of changes made to the tree.
 """
-function prune!(tree::Tree)
+function prune!(tree::Tree, m::ShieldingModel)
+	if m.reduce_method == naïve
+		return naïve_prune!(tree)
+	elseif m.reduce_method == caap_reduction
+		error("caap_reduction not implemented")
+	elseif m.reduce_method == no_reduction
+		return
+	else
+		error("Unexpected reduce_method: $(m.reduce_method)")
+	end
+end
+
+function naïve_prune!(tree::Tree)
 	changes_made = 0
     leaf_count = 0
 
@@ -28,7 +38,7 @@ function prune!(tree::Tree)
 	end
 
 	if changes_made > 0
-		return prune!(tree)
+		return prune!(tree, m)
     else
         return leaf_count
     end

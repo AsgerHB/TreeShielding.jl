@@ -371,7 +371,7 @@ function synthesize_plus!(tree::Tree, m::ShieldingModel)
 			break
 		end
 	end
-	prune!(tree)
+	prune!(tree, m)
 end;
 
 # ╔═╡ efe775a4-7ec7-451a-b3db-2d2f52fba186
@@ -467,7 +467,7 @@ reset_button; @bind prune_button CounterButton("Prune")
 
 # ╔═╡ 3e62fb7a-921d-4db9-8bde-fcf509f2a9ab
 if prune_button > 0 let
-	prune!(reactive_tree)
+	prune!(reactive_tree, m)
 end end
 
 # ╔═╡ 87581d91-2c9a-4505-8367-722038c962a8
@@ -506,7 +506,7 @@ end
 let
 	tree = copy(tree)
 	synthesize_plus!(tree, m)
-	prune!(tree)
+	prune!(tree, m)
 	draw(tree, draw_bounds, color_dict=action_color_dict, 
 		aspectratio=:equal,
 		legend=:topleft,
@@ -606,7 +606,7 @@ end
 bb_strategy = let
 	bb_tree = copy(bb_tree)
 	synthesize_plus!(bb_tree, bb)
-	prune!(bb_tree)
+	prune!(bb_tree, m)
 	bb_tree
 end
 
@@ -614,7 +614,7 @@ end
 bb_strategy′ = let
 	bb_strategy = copy(bb_strategy)
 	synthesize_plus!(bb_strategy, @set bb.samples_per_axis = 8)
-	prune!(bb_strategy)
+	prune!(bb_strategy, m)
 	bb_strategy
 end
 
