@@ -6,14 +6,14 @@ Attempt to remove redundant leaves from the tree.
 **Returns:** The number of changes made to the tree.
 """
 function prune!(tree::Tree, m::ShieldingModel)
-	if m.reduce_method == naïve
+	if m.pruning == naïve
 		return naïve_prune!(tree)
-	elseif m.reduce_method == caap_reduction
+	elseif m.pruning == caap_reduction
 		error("caap_reduction not implemented")
-	elseif m.reduce_method == no_reduction
-		return
+	elseif m.pruning == no_pruning
+		return count(Leaves(tree))
 	else
-		error("Unexpected reduce_method: $(m.reduce_method)")
+		error("Unexpected pruning: $(m.pruning)")
 	end
 end
 

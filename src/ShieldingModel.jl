@@ -1,5 +1,5 @@
 @enum ReachabilityCaching::Int no_caching one_way dependency_graph
-@enum ReduceMethod::Int no_reduction naïve caap_reduction
+@enum Pruning::Int no_pruning naïve caap_reduction
 @enum GrowMethod::Int caap_split plus minus smart_minus binary_search binary_search_minus_fallback
 
 """
@@ -13,7 +13,7 @@
  - `splitting_tolerance` Desired precision while splitting. Specific to the `binary_search` splitting method.
  - `verbose` Print detailed runtime information using the @Info macro. Not recommended for calls to synthesize! or grow!.
  - `reachability_caching` Method for chaching and recomputing reachability.
- - `reduce_method` Method for reducing tree after update.
+ - `pruning` Method for reducing tree after update.
  - `grow_method` Method for splitting partitions when growing.
 """
 struct ShieldingModel
@@ -27,7 +27,7 @@ struct ShieldingModel
     splitting_tolerance::Float64
     verbose::Bool
     reachability_caching::ReachabilityCaching
-    reduce_method::ReduceMethod
+    pruning::Pruning
     grow_method::GrowMethod
 
     function ShieldingModel(;simulation_function::Function,
@@ -40,7 +40,7 @@ struct ShieldingModel
                 splitting_tolerance=0.01,
                 verbose=false,
                 reachability_caching::ReachabilityCaching=no_caching,
-                reduce_method::ReduceMethod=no_reduction,
+                pruning::Pruning=no_pruning,
                 grow_method::GrowMethod=binary_search
                 )
 
@@ -65,7 +65,7 @@ struct ShieldingModel
             splitting_tolerance,
             verbose,
             reachability_caching,
-            reduce_method,
+            pruning,
             grow_method)
     end
 end
