@@ -49,11 +49,9 @@ function test_get_threshold(;samples_per_axis=9,
 		any_action, 
 		no_action)
 
-    action_space = instances(Pace)
-
     
     m = ShieldingModel(;simulation_function, 
-        action_space, 
+        action_space=Pace, 
         dimensionality,
         samples_per_axis,
         random_variable_bounds,
@@ -106,7 +104,7 @@ end
         
     end
 
-    @enum Actions greeble grooble # This is not just me being silly :3 Julia doesn't like having two enums with the same names.
+    @enum Actions::Int greeble grooble # This is not just me being silly :3 Julia doesn't like having two enums with the same names.
 
     @testset "get_split, axis-aligned linear" begin
         safe, unsafe = 1, -1

@@ -26,13 +26,15 @@ function get_allowed_actions(tree::Tree, leaf::Leaf, m::ShieldingModel)
     no_actions = actions_to_int([])
 
     allowed = Set(m.action_space)
+    action_index = 1
     for a in m.action_space
-        for l in get(leaf.reachable, a, Set{Leaf{<:Tree}}())
+        for l in leaf.reachable[action_index]
             if get_value(l) == no_actions
                 # m.verbose && @info "$a is unsafe."
                 delete!(allowed, a)
             end
         end
+        action_index += 1
     end
     return allowed
 end
@@ -52,13 +54,15 @@ function set_reachable!(tree::Tree, leaf::Leaf{T}, m::ShieldingModel) where {T}
     end
     
     recomputed += 1
-    empty!(leaf.reachable)
+    clear_reachable!(leaf, m)
     for (p, r) in all_supporting_points(bounds, m)
+        action_index = 1
         for a in m.action_space
             p′ = m.simulation_function(p, r, a)
             dest = get_leaf(tree, p′)::Leaf{T}
-            push!(get!(leaf.reachable, a, Set{Leaf{T}}()), dest)
-            push!(get!(dest.incoming, a, Set{Leaf{T}}()), leaf)
+            push!(leaf.reachable[action_index], dest)
+            push!(dest.incoming[action_index], leaf)
+            action_index += 1
         end
     end
     leaf.dirty = false
@@ -70,15 +74,24 @@ function set_reachable!(tree::Tree, node::Node{T}, m::ShieldingModel) where {T}
     set_reachable!(tree, node.geq, m)
 end
 
-function clear_reachable!(node::Node)
-    clear_reachable!(node.lt)
-    clear_reachable!(node.geq)
+function set_reachable!(tree::Tree{T}, m::ShieldingModel) where {T} 
+    set_reachable!(tree, tree, m)
 end
 
-function clear_reachable!(leaf::Leaf)
+function clear_reachable!(node::Node, m::ShieldingModel)
+    clear_reachable!(node.lt, m)
+    clear_reachable!(node.geq, m)
+end
+
+function clear_reachable!(leaf::Leaf{T}, m::ShieldingModel) where {T}
     leaf.dirty = true # This is redundant as the function is currently used. But things mean things, damnit!
     empty!(leaf.reachable)
     empty!(leaf.incoming)
+
+    for a in m.action_space
+        push!(leaf.reachable, Set{Leaf{T}}())
+        push!(leaf.incoming, Set{Leaf{T}}())
+    end
 end
 
 
@@ -104,9 +117,9 @@ function get_updates(tree::Tree, m::ShieldingModel)
             push!(updates, ValueUpdate(leaf, new_value))
         end
     end
-    #if m.verbose
+    if m.verbose
         @info "Skipped $skipped out of $(skipped + recomputed) nodes when updating reachability."
-    #end
+    end
 
     updates
 end

@@ -23,12 +23,12 @@ mutable struct Leaf{T} <: Tree{T}
     value::T
     parent::Union{Nothing,Tree{T}}
     dirty::Bool # Does reachability need to be updated?
-    reachable::Dict{Any,Set{Leaf{T}}} # reachable[action] => {leaf2, leaf13, ... }
-    incoming::Dict{Any,Set{Leaf{T}}}  # The inverse of reachable.
+    reachable::Vector{Set{Leaf{T}}} # reachable[action_index] => {leaf2, leaf13, ... }
+    incoming::Vector{Set{Leaf{T}}}  # The inverse of reachable.
 end
 
 function Leaf(value::T) where {T}
-    Leaf(value, nothing, true, Dict{Any,Set{Leaf{T}}}(), Dict{Any,Set{Leaf{T}}}())
+    Leaf(value, nothing, true, Vector{Set{Leaf{T}}}(), Vector{Set{Leaf{T}}}())
 end
 
 AbstractTrees.children(node::Node) = [node.lt, node.geq]

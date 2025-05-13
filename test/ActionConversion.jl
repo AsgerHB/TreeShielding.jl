@@ -1,5 +1,5 @@
 @testset "ActionConversion.jl" begin
-    @enum TestActions foo bar baz
+    @enum TestActions::Int foo bar baz
 
     @test [foo, bar, baz] == int_to_actions(TestActions, actions_to_int([foo, bar, baz]))
     @test [foo, baz] == int_to_actions(TestActions, actions_to_int([foo, baz]))

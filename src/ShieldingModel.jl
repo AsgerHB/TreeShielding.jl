@@ -1,6 +1,6 @@
-@enum ReachabilityCaching no_caching one_way dependency_graph
-@enum ReduceMethod no_reduction naïve caap_reduction
-@enum GrowMethod caap_split plus minus smart_minus binary_search binary_search_minus_fallback
+@enum ReachabilityCaching::Int no_caching one_way dependency_graph
+@enum ReduceMethod::Int no_reduction naïve caap_reduction
+@enum GrowMethod::Int caap_split plus minus smart_minus binary_search binary_search_minus_fallback
 
 """
 **Fields:**
@@ -18,7 +18,7 @@
 """
 struct ShieldingModel
     simulation_function::Function
-    action_space
+    action_space::Vector
     dimensionality::Int64
     samples_per_axis::Int64
     random_variable_bounds::Bounds
@@ -31,10 +31,10 @@ struct ShieldingModel
     grow_method::GrowMethod
 
     function ShieldingModel(;simulation_function::Function,
-                action_space,
+                action_space::Union{Vector,Type},
                 dimensionality,
                 samples_per_axis,
-                random_variable_bounds::Bounds,
+                random_variable_bounds::Bounds=Bounds([], []),
                 granularity=1,
                 max_iterations=20,
                 splitting_tolerance=0.01,
@@ -46,7 +46,7 @@ struct ShieldingModel
 
 
         if action_space isa Type
-            action_space = instances(action_space)
+            action_space = [a for a in instances(action_space)]
         else
             action_space = action_space
         end

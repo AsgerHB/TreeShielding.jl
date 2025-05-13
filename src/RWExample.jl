@@ -28,7 +28,7 @@ end
 
 rwmechanics = RWMechanics()
 
-@enum Pace slow fast
+@enum Pace::Int slow fast
 
 function simulate(m::RWMechanics, x, t, a, random_outcomes)
     if x > m.x_max # game has ended.

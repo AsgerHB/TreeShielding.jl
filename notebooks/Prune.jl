@@ -104,7 +104,7 @@ md"""
 """
 
 # ╔═╡ 581a14d5-6833-41db-adf7-17dd213ab8a7
-@enum Action bar baz
+@enum Action::Int bar baz
 
 # ╔═╡ 3b40135b-1a9a-4e53-8aec-60955f046414
 function draw_support_points!(tree::Tree, 

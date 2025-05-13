@@ -1,4 +1,4 @@
-@enum Action hit nohit
+@enum Action::Int hit nohit
 
 function simulate_point(mechanics, point, random_variable, action; min_v_on_impact=1)
 	t_hit, g, β1, ϵ1, β2, ϵ2, v_hit, p_hit  = mechanics

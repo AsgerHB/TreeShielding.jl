@@ -101,7 +101,7 @@ Pretty simple stuff. Remember to come back and play with the values once you've 
 """
 
 # ╔═╡ 1ee465dd-a771-45a1-bf10-2b04b49f2fe1
-@enum Action bar baz
+@enum Action::Int bar baz
 
 # ╔═╡ bebdb738-3f37-44b1-808c-366ca17712ef
 function draw_support_points!(tree::Tree, 

@@ -1,4 +1,4 @@
-@enum Direction safe_above_threshold safe_below_threshold
+@enum Direction::Int safe_above_threshold safe_below_threshold
 
 """
     compute_safety(tree::Tree, simulation_function, action_space, points)
