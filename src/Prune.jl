@@ -11,7 +11,7 @@ function prune!(tree::Tree, m::ShieldingModel)
 	elseif m.pruning == caap_reduction
 		error("caap_reduction not implemented")
 	elseif m.pruning == no_pruning
-		return count(Leaves(tree))
+		return count([true for _ in Leaves(tree)])
 	else
 		error("Unexpected pruning: $(m.pruning)")
 	end
