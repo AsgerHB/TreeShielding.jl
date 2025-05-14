@@ -68,4 +68,33 @@ struct ShieldingModel
             pruning,
             grow_method)
     end
+
+
+
+    function ShieldingModel(simulation_function::Function,
+        action_space::Vector,
+        dimensionality::Int64,
+        samples_per_axis::Int64,
+        random_variable_bounds::Bounds,
+        granularity::Float64,
+        max_iterations::Int64,
+        splitting_tolerance::Float64,
+        verbose::Bool,
+        reachability_caching::ReachabilityCaching,
+        pruning::Pruning,
+        grow_method::GrowMethod)
+        
+    new(simulation_function,
+        action_space,
+        dimensionality,
+        samples_per_axis,
+        random_variable_bounds,
+        granularity,
+        max_iterations,
+        splitting_tolerance,
+        verbose,
+        reachability_caching,
+        pruning,
+        grow_method)
+end
 end
