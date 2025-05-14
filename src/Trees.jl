@@ -97,7 +97,7 @@ function replace_subtree!(tree::Tree, new_tree::Tree)
 end
 
 function split!(leaf::Leaf, axis, threshold, lower=nothing, upper=nothing)
-    for (_, leaves) in leaf.incoming
+    for leaves in leaf.incoming
         for leaf′ in leaves
             leaf′.dirty = true 
         end
