@@ -16,7 +16,11 @@ include("Trees.jl")
 export robust_serialize, robust_deserialize
 include("RobustSerialization.jl")
 
-export ShieldingModel
+export ShieldingModel, 
+    ReachabilityCaching, no_caching, one_way, dependency_graph, 
+    Pruning, no_pruning, naïve, caap_reduction, 
+    GrowMethod, caap_split, plus, minus, smart_minus, binary_search, binary_search_minus_fallback
+
 include("ShieldingModel.jl")
 
 export SupportingPoints, get_spacing_sizes
@@ -25,7 +29,7 @@ include("SuppotingPoints.jl")
 export actions_to_int, int_to_actions
 include("ActionConversion.jl")
 
-export Direction, safe_below_threshold, safe_above_threshold, get_split, compute_safety, get_dividing_bounds, get_threshold, try_splitting!, grow! 
+export grow!, compute_safety
 include("Grow.jl")
 
 export update!, ValueUpdate

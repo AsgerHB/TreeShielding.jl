@@ -297,7 +297,7 @@ m = ShieldingModel(simulation_function, Action, dimensionality, samples_per_axis
 # ╔═╡ 42b0bcee-b931-4bad-9b4b-268f6b3d260c
 if try_splitting_button > 0 && reactive_leaf !== nothing
 	call() do
-		axis, threshold = get_split(reactive_tree1, reactive_leaf, (@set m.verbose = true))
+		axis, threshold = TreeShielding.get_split_by_binary_search(reactive_tree1, reactive_leaf, (@set m.verbose = true))
 		if threshold != nothing
 			split!(reactive_leaf, axis, threshold)
 		end
@@ -406,7 +406,7 @@ begin
 end
 
 # ╔═╡ f204e821-45d4-4518-8cd6-4a6ab3963460
-go_clock; get_split(reactive_tree, l, (@set m.verbose=true))
+go_clock; TreeShielding.get_split_by_binary_search(reactive_tree, l, (@set m.verbose=true))
 
 # ╔═╡ ec1628b6-9dd3-43a6-aa10-01f9743ce0ea
 go_clock; action_color_dict[l.value]

@@ -64,8 +64,8 @@ function test_get_threshold(;samples_per_axis=9,
     point = (0.5, 0.5) # The middle of the playfield.
     bounds = get_bounds(get_leaf(tree, point), dimensionality)
     axis = 2
-    direction = safe_below_threshold
-    threshold = get_threshold(tree, bounds, axis, RW.fast, direction, m)
+    direction = TreeShielding.safe_below_threshold
+    threshold = TreeShielding.get_threshold(tree, bounds, axis, RW.fast, direction, m)
 
     ### Assert ##
 
@@ -106,7 +106,7 @@ end
 
     @enum Actions::Int greeble grooble # This is not just me being silly :3 Julia doesn't like having two enums with the same names.
 
-    @testset "get_split, axis-aligned linear" begin
+    @testset "get_split_by_binary_search, axis-aligned linear" begin
         safe, unsafe = 1, -1
         
         is_safe(p) = p != unsafe
@@ -146,7 +146,7 @@ end
             granularity = 0,
             splitting_tolerance)
 
-        try_getting_split(expected) =  get_split(tree, leaf, model(expected))
+        try_getting_split(expected) =  TreeShielding.get_split_by_binary_search(tree, leaf, model(expected))
 
         expected = 0.10
 
@@ -189,7 +189,7 @@ end
             
     end
 
-    @testset "get_split, linear" begin
+    @testset "get_split_by_binary_search, linear" begin
         safe, unsafe = (1, 1), (-1, -1)
         
         is_safe(p) = p != unsafe
@@ -229,7 +229,7 @@ end
             granularity = 0,
             splitting_tolerance)
 
-        try_getting_split(expected) =  get_split(tree, leaf, model(expected))
+        try_getting_split(expected) =  TreeShielding.get_split_by_binary_search(tree, leaf, model(expected))
 
         expected = 0.10
 

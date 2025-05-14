@@ -42,8 +42,10 @@ end
 
 # ╔═╡ 137adf90-a162-11ed-358b-6fc69c09feba
 md"""
-# Growing the tree
-This notebook demonstrates the `grow!` function. Scroll to the bottom to see it in action, or read from the beginning to get the full context of what it does.
+# Binary-search Split
+This notebook demonstrates the `binary_search` option for the `ShieldingModel`, used in the `grow!` function. 
+
+Scroll to the bottom to see it in action, or read from the beginning to get the full context of what it does.
 """
 
 # ╔═╡ 6f3ab58d-545b-4b60-8f2a-0cb5d4fbd59e
@@ -238,7 +240,7 @@ bounds = get_bounds(get_leaf(tree, 0.5, 0.5), dimensionality)
 md"""
 ### `get_dividing_bounds`
 
-$(@doc get_dividing_bounds)
+$(@doc TreeShielding.get_dividing_bounds)
 """
 
 # ╔═╡ b97cf160-79ab-4cf7-a321-31a86b3bccac
@@ -254,7 +256,7 @@ Also it is possible to control the number of refinement steps in the figures.
 md"""
 ### `get_threshold`
 
-$(@doc get_threshold)
+$(@doc TreeShielding.get_threshold)
 """
 
 # ╔═╡ 3621e6d2-cfac-43d4-8622-4f99eb4d4090
@@ -264,9 +266,9 @@ And note there is no threshold where all points below it are safe.
 
 # ╔═╡ 648fb8ab-b156-4c75-b0e0-16c8c7f151ec
 md"""
-### `get_split`
+### `get_split_by_binary_search`
 
-$(@doc get_split)
+$(@doc get_split_by_binary_search)
 """
 
 # ╔═╡ 87e24687-5fc2-485a-ba01-41c10c10d395
@@ -285,7 +287,7 @@ Try setting a different number of samples per axis:
 """
 
 # ╔═╡ 3c613061-1cd9-4b72-b419-6387c25da513
-m = ShieldingModel(;simulation_function, action_space=Pace, dimensionality, samples_per_axis, random_variable_bounds, granularity, splitting_tolerance)
+m = ShieldingModel(;simulation_function, action_space=Pace, dimensionality, samples_per_axis, random_variable_bounds, granularity, splitting_tolerance, grow_method=binary_search)
 
 # ╔═╡ 0197dfd6-e689-4aad-8af0-a0cbfa48dfa7
 safe, unsafe = TreeShielding.get_action_safety_bounds(tree, bounds, (@set m.samples_per_axis=16))
@@ -318,7 +320,7 @@ call() do
 end
 
 # ╔═╡ c8d182d8-537f-43d7-ab5f-1374219964e8
-call() do
+let
 	m = @set m.samples_per_axis = samples_per_axis_refstep
 	axis = 1
 	leaf = get_leaf(tree, 0.5, 0.5)
@@ -331,7 +333,7 @@ call() do
 	dividing_bounds = bounds
 	for i in 0:refinement_steps
 		dividing_bounds = 
-			get_dividing_bounds(tree, dividing_bounds, axis, RW.fast, safe_above_threshold, m)
+			TreeShielding.get_dividing_bounds(tree, dividing_bounds, axis, RW.fast, TreeShielding.safe_above_threshold, m)
 	
 		plot!(TreeShielding.rectangle(dividing_bounds), lw=0, alpha=0.3, label="$i refinements")
 	end
@@ -346,7 +348,7 @@ There exists an exact threshold, but we approximate it to within `m.splitting_to
 """
 
 # ╔═╡ 3e6a861b-cbb9-4972-adee-46996faf68f3
-threshold = get_threshold(tree, bounds, 1, RW.fast, safe_above_threshold, m)
+threshold = TreeShielding.get_threshold(tree, bounds, 1, RW.fast, TreeShielding.safe_above_threshold, m)
 
 # ╔═╡ c53e43e9-dc81-4b74-b6bd-41f13791f488
 call() do
@@ -365,10 +367,10 @@ call() do
 end
 
 # ╔═╡ bafe51aa-d791-4d36-939b-159a062a2dd4
-@test nothing === get_threshold(tree, bounds, 1, RW.fast, safe_below_threshold, m)
+@test nothing === TreeShielding.get_threshold(tree, bounds, 1, RW.fast, TreeShielding.safe_below_threshold, m)
 
 # ╔═╡ 53cf3fc9-788c-4700-8b07-fe9118432c84
-proposed_split = get_split(tree, get_leaf(tree, 0.5, 0.5), m)
+proposed_split = TreeShielding.get_split_by_binary_search(tree, get_leaf(tree, 0.5, 0.5), m)
 
 # ╔═╡ bae11a44-67d8-4b6b-8d10-85b58e7fae63
 call() do
@@ -407,10 +409,14 @@ call() do
 		aspectratio=:equal,
 		legend=:outertop,
 		size=(500,500))
+	
 	leaf_count = length(Leaves(tree) |> collect)
 
 	scatter_allowed_actions!(tree, bounds, (@set m.samples_per_axis = 12))
-	plot!([], l=nothing, label="leaves: $leaf_count")
+	
+	plot!([], l=nothing, 
+		label="leaves: $leaf_count",
+		title="Result of calling `grow!`")
 end
 
 # ╔═╡ 76f13f2a-82cb-4037-a097-394fb080bf84
@@ -464,7 +470,7 @@ end
 # ╔═╡ 8cc5f9f3-263c-459f-ae78-f2c0e8487e86
 if try_splitting_button > 0 && reactive_leaf !== nothing
 	call() do
-		axis, threshold = get_split(reactive_tree, reactive_leaf, (@set m.verbose = true))
+		axis, threshold = TreeShielding.get_split_by_binary_search(reactive_tree, reactive_leaf, (@set m.verbose = true))
 		if threshold != nothing
 			split!(reactive_leaf, axis, threshold)
 		end
@@ -552,7 +558,7 @@ $br
 # ╟─e7609f1e-3d94-4e53-9620-dd62995cfc50
 # ╟─2d999c21-cbdd-4ca6-9866-6f763c91feba
 # ╟─b97cf160-79ab-4cf7-a321-31a86b3bccac
-# ╟─c8d182d8-537f-43d7-ab5f-1374219964e8
+# ╠═c8d182d8-537f-43d7-ab5f-1374219964e8
 # ╟─15b5d339-705e-4408-9629-2002117b8da7
 # ╠═da493978-1444-4ec3-be36-4aa1c59170b5
 # ╟─2a382ef9-700a-4350-9a95-ff7f1a8f6f22
@@ -562,10 +568,10 @@ $br
 # ╟─c53e43e9-dc81-4b74-b6bd-41f13791f488
 # ╟─648fb8ab-b156-4c75-b0e0-16c8c7f151ec
 # ╠═53cf3fc9-788c-4700-8b07-fe9118432c84
-# ╠═bae11a44-67d8-4b6b-8d10-85b58e7fae63
+# ╟─bae11a44-67d8-4b6b-8d10-85b58e7fae63
 # ╟─87e24687-5fc2-485a-ba01-41c10c10d395
 # ╟─9e807328-488f-4e86-ae53-71f39b2631a7
-# ╠═46f3eefe-15c7-4bae-acdb-54e485e4b5b7
+# ╟─46f3eefe-15c7-4bae-acdb-54e485e4b5b7
 # ╟─76f13f2a-82cb-4037-a097-394fb080bf84
 # ╟─66af047f-a34f-484a-8608-8eaaed45b37d
 # ╟─447dc1e2-809a-4f71-b7f4-949ae2a0c4b6

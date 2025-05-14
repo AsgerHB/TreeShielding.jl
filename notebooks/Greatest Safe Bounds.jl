@@ -585,7 +585,7 @@ function find_splitting_bounds(action,
 end
 
 # ╔═╡ d09d748a-353d-4309-ba33-6e29436875e3
-Direction
+TreeShielding.Direction
 
 # ╔═╡ 34dbeedd-379e-4e22-91d7-c271a796a57b
 md"""
@@ -869,7 +869,7 @@ if grow_button > 0 let
 end end
 
 # ╔═╡ ff28ebb4-06c9-4f88-af59-436f5820b69c
-Direction
+TreeShielding.Direction
 
 # ╔═╡ 3db6c5c5-6fed-40c0-a133-96750fd69e4d
 grow_button; reactive_list |> length

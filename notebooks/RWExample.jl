@@ -253,7 +253,7 @@ Try setting a different number of samples per axis:
 """
 
 # ╔═╡ a52e9520-f4df-4e88-bb39-e516f37335ea
-m = ShieldingModel(;simulation_function, action_space=Pace, dimensionality, samples_per_axis, random_variable_bounds; granularity, splitting_tolerance)
+m = ShieldingModel(;simulation_function, action_space=Pace, dimensionality, samples_per_axis, random_variable_bounds, granularity, splitting_tolerance)
 
 # ╔═╡ e3ba9c22-6e2c-4d90-9823-93f871c036b4
 get_bounds(get_leaf(initial_tree, x_max + 1, y_max/2), m.dimensionality)
@@ -274,6 +274,7 @@ end
 # ╔═╡ 5cfd2617-c1d8-4228-b7ca-cde9c3d68a4c
 begin
 	reactive_tree = deepcopy(initial_tree)
+	clear_reachable!(reactive_tree, m)
 	set_safety!(reactive_tree, dimensionality, is_safe, any_action, no_action)
 	debounce1, debounce2, debounce3, debounce4 = Ref(1), Ref(1), Ref(1), Ref(1)
 	reset_button1
@@ -341,7 +342,7 @@ end
 grow_button; leaf = get_leaf(reactive_tree, partition_x, partition_y)
 
 # ╔═╡ f29db2ed-6a47-451a-b7c9-9ddf8fb48fce
-axis, threshold = get_split(reactive_tree, leaf, m)
+axis, threshold = TreeShielding.get_split_by_binary_search(reactive_tree, leaf, m)
 
 # ╔═╡ 455c7e81-2875-48fe-95c2-2dd92ed3f013
 bounds = get_bounds(leaf, m.dimensionality)
@@ -562,7 +563,7 @@ end
 # ╟─503b61c8-e437-42ab-a7d0-de4d47030d50
 # ╠═a52e9520-f4df-4e88-bb39-e516f37335ea
 # ╠═3d8f9479-3a98-4d24-94a4-6935fa2b3de9
-# ╟─5cfd2617-c1d8-4228-b7ca-cde9c3d68a4c
+# ╠═5cfd2617-c1d8-4228-b7ca-cde9c3d68a4c
 # ╟─c8248f9e-6fc2-49c4-9e69-b8387628f0fd
 # ╟─0583d3aa-719c-42dd-817a-6651edc90297
 # ╟─b5ee1e74-bd9a-47ab-8a3d-99d7b495766d
