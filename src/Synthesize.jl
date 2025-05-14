@@ -12,6 +12,7 @@ The state space must be properly bounded (see function `bounded`) since partitio
 """
 function synthesize!(tree::Tree, m::ShieldingModel)
 
+    clear_reachable!(tree, m)
     previous_leaf_count = 0 # value not required when loop is entered.
     change_occured = true
     while change_occured
