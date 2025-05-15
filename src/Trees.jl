@@ -192,19 +192,27 @@ function Base.copy(node::Node{T}) where T
     Node(node.axis, node.threshold, copy(node.lt), copy(node.geq))
 end
 
+function Base.show(io::IO, leaf::Leaf)
+    print(io, "Leaf(", leaf.value, ")")
+end
 
-Base.show(io::IO, leaf::Leaf) = print(io, "Leaf(", leaf.value, ")")
+function Base.show(io::IO, node::Node)
+    _show_tree(io, node, "", true, true)
+end
 
-Base.show(io::IO, node::Node) = begin
-    print(io, "Node(")
-    show(io, node.axis)
-    print(io, ", ")
-    show(io, node.threshold)
-    print(io, ", ")
-    show(io, node.lt)
-    print(io, ", ")
-    show(io, node.geq)
-    print(io, ")")
+function _show_tree(io::IO, leaf::Leaf, prefix::String, is_last::Bool, is_root::Bool)
+    connector = is_root ? "" : (is_last ? "  └──" : "  ├──")
+    print(io, prefix, connector, "Leaf(", leaf.value, ")\n")
+end
+
+function _show_tree(io::IO, node::Node, prefix::String, is_last::Bool, is_root::Bool)
+    connector = is_root ? "" : (is_last ? "  └──" : "  ├──")
+    print(io, prefix, connector, "Node(axis=", node.axis, ", threshold=", node.threshold, ")\n")
+    new_prefix = prefix * (is_root ? "" : (is_last ? "    " : "  │   "))
+    _show_tree(io, node.lt, new_prefix, false, false)
+    _show_tree(io, node.geq, new_prefix, true, false)
+end
+
 function well_formed(node::Node)
     return (isnothing(node.parent) || node.parent.lt === node || node.parent.geq === node) && well_formed(node.lt) && well_formed(node.geq)
 end
