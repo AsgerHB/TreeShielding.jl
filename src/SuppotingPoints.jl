@@ -29,15 +29,17 @@ Base.iterate(s::SupportingPoints) = begin
 
     lower, upper = s.bounds.lower, s.bounds.upper
 
+    sample = copy(lower)
+    
     if upper == lower
-        return Tuple(lower), :terminate
+        return sample, :terminate
     end
     
     spacings = get_spacing_sizes(s, dimensionality)
     
-    # The iterator state  is (spacings, indices).
+    # The iterator `state` is (spacings, indices, sample).
     # First sample always in the lower-left corner. 
-    return Tuple(lower), (spacings, zeros(Int, dimensionality))
+    return sample, (spacings, zeros(Int, dimensionality), sample)
 end
 
 Base.iterate(s::SupportingPoints, terminate::Symbol) = begin
@@ -50,7 +52,7 @@ end
 Base.iterate(s::SupportingPoints, state) = begin
     
     dimensionality = get_dim(s.bounds)
-    spacings, indices = state
+    spacings, indices, sample = state
     indices = copy(indices)
 
     for dim in 1:dimensionality
@@ -67,10 +69,11 @@ Base.iterate(s::SupportingPoints, state) = begin
         end
     end
 
-    sample = Tuple(i*spacings[dim] + s.bounds.lower[dim] 
-                    for (dim, i) in enumerate(indices))
+    for (dim, i) in enumerate(indices)
+        sample[dim] = i*spacings[dim] + s.bounds.lower[dim] 
+    end
     
-    sample, (spacings, indices)
+    sample, (spacings, indices, sample)
 end
 
 function all_supporting_points(bounds::Bounds, m::ShieldingModel)

@@ -1,8 +1,20 @@
 ### A Pluto.jl notebook ###
-# v0.19.40
+# v0.20.8
 
 using Markdown
 using InteractiveUtils
+
+# This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
+macro bind(def, element)
+    #! format: off
+    return quote
+        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
+        local el = $(esc(element))
+        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
+        el
+    end
+    #! format: on
+end
 
 # ╔═╡ 4059684c-1261-4bed-acf5-965e11101d29
 begin
@@ -80,16 +92,19 @@ md"""
 
 # ╔═╡ 18ecc735-ccac-46ef-a338-001b8584c37d
 call() do
-	supporting_points = [SupportingPoints(3, Bounds((1, 10), (10, 100)))...]
+	supporting_points = [(x[1], x[2]) for x in SupportingPoints(3, Bounds((1., 10.), (10., 100.)))]
 	lower, upper = unzip(supporting_points)
 	lower, upper = lower |> unique |> sort, upper |> unique |> sort
-	@test ([1, 5.5, 10.0], [10, 55.0, 100.0]) == (lower, upper)
+	@test ([1., 5.5, 10.0], [10., 55.0, 100.0]) == (lower, upper)
 end
 
 # ╔═╡ 96573822-8830-40e7-a2c2-95ccf7ab2da7
 md"""
 Time to try and draw them
 """
+
+# ╔═╡ 9e48ab1e-147c-48a6-bd9e-662bbc1002ea
+@bind samples_per_axis NumberField(1:100, default=3)
 
 # ╔═╡ 79e27ab4-e215-4d3a-9a46-8392f689aeea
 call() do
@@ -107,7 +122,9 @@ call() do
 
 	partition = get_bounds(get_leaf(tree, l + 1, u - 1), dimensionality)
 	
-	xs, ys = unzip([SupportingPoints(3, partition)...])
+	xs, ys = unzip([(x[1], x[2]) for x in 
+					SupportingPoints(samples_per_axis, partition)])
+	
 	scatter!(xs, ys, 
 		m=(:+, 5, colors.WET_ASPHALT), msw=4,
 		label="supporting points")
@@ -126,4 +143,5 @@ end
 # ╠═397af844-f217-46dd-b61e-ab4fe757a040
 # ╠═18ecc735-ccac-46ef-a338-001b8584c37d
 # ╟─96573822-8830-40e7-a2c2-95ccf7ab2da7
+# ╠═9e48ab1e-147c-48a6-bd9e-662bbc1002ea
 # ╠═79e27ab4-e215-4d3a-9a46-8392f689aeea

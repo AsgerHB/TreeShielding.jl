@@ -90,10 +90,12 @@ md"""
 """
 
 # ╔═╡ 267f97aa-b429-4962-ab13-19cba39a6bbf
-scatter_supporting_points!(s::SupportingPoints) = 
+function scatter_supporting_points!(s::SupportingPoints)
+	s = [(x[1], x[2]) for x in s]
 	scatter!(unzip(s), 
 		m=(:+, 5, colors.WET_ASPHALT), msw=4, 
 		label="supporting points")
+end
 
 # ╔═╡ 00a6e9c2-a9c6-41ed-ae2a-701e3baf7038
 scatter_outcomes!(outcomes) = scatter!(outcomes, m=(:c, 3, colors.ASBESTOS), msw=0, label="outcomes")

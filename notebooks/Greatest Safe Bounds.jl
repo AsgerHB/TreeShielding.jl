@@ -268,7 +268,7 @@ function get_safety_judgements(a,
 				get_value(get_leaf(tree, p′)) != no_action
 		end
 		safe[indices...] = action_safe
-		points[indices...] = p
+		points[indices...] = copy(p)
 		for i in 1:m.dimensionality
 			indices[i] += 1
 			if indices[i] <= supporting_points.per_axis

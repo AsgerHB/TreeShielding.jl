@@ -98,10 +98,12 @@ function draw(tree::Tree, global_bounds::Bounds; color_dict=action_color_dict, p
 end
 
 
-scatter_supporting_points!(s::SupportingPoints) = 
-    scatter!(unzip(s), 
-        m=(:+, 5, colors.WET_ASPHALT), msw=4, 
-        label="supporting points")
+function scatter_supporting_points!(s::SupportingPoints)
+	s = [(x[1], x[2]) for x in s]
+	scatter!(unzip(s), 
+		m=(:+, 5, colors.WET_ASPHALT), msw=4, 
+		label="supporting points")
+end
 
 
 scatter_outcomes!(outcomes) = scatter!(outcomes, m=(:c, 3, colors.ASBESTOS), msw=0, label="outcomes")
@@ -143,12 +145,12 @@ function scatter_allowed_actions!(tree, bounds, m)
                 !action_safe && break
             end
 			if action_safe
-				push!(actions[i], p)
+				push!(actions[i], Tuple(x for x in p))
 				point_safe = true
 			end
 		end
 		if !point_safe
-			push!(unsafe, p)
+			push!(unsafe, Tuple(x for x in p))
 		end
 	end
 	markers = [(:hline, colors.ORANGE, 6) (:vline, colors.PETER_RIVER, 6) (:circle, colors.NEPHRITIS, 7)]
