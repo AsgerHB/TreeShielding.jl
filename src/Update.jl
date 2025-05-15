@@ -43,39 +43,43 @@ skipped::Int64 = 0
 recomputed::Int64 = 0
 const unsafe = actions_to_int([]) 
 
-function set_reachable!(tree::Tree, leaf::Leaf{T}, m::ShieldingModel) where {T}
-    bounds = get_bounds(leaf, m.dimensionality)
-    global skipped, recomputed, unsafe
-    if !leaf.dirty || !bounded(bounds) || leaf.value == unsafe
-        if !leaf.dirty
-            skipped += 1
-        end
-        return 
-    end
-    
-    recomputed += 1
-    clear_reachable!(leaf, m)
-    for (p, r) in all_supporting_points(bounds, m)
-        action_index = 1
-        for a in m.action_space
-            p′ = m.simulation_function(p, r, a)
-            dest = get_leaf(tree, p′)::Leaf{T}
-            push!(leaf.reachable[action_index], dest)
-            push!(dest.incoming[action_index], leaf)
-            action_index += 1
-        end
-    end
-    leaf.dirty = false
-end
-
-
-function set_reachable!(tree::Tree, node::Node{T}, m::ShieldingModel) where {T}
-    set_reachable!(tree, node.lt, m)
-    set_reachable!(tree, node.geq, m)
-end
 
 function set_reachable!(tree::Tree{T}, m::ShieldingModel) where {T} 
-    set_reachable!(tree, tree, m)
+    queue = Tree[tree]
+    while !isempty(queue)
+        t = pop!(queue)
+        if t isa Node
+            push!(queue, t.lt)
+            push!(queue, t.geq)
+        elseif t isa Leaf
+            leaf = t
+            bounds = get_bounds(leaf, m.dimensionality)
+            global skipped, recomputed, unsafe
+            if !leaf.dirty || !bounded(bounds) || leaf.value == unsafe
+                if !leaf.dirty
+                    skipped += 1
+                end
+                continue
+            end
+            
+            @info "aliive"
+            recomputed += 1
+            clear_reachable!(leaf, m)
+            for (p, r) in all_supporting_points(bounds, m)
+                action_index = 1
+                for a in m.action_space
+                    p′ = m.simulation_function(p, r, a)
+                    dest = get_leaf(tree, p′)::Leaf{T}
+                    push!(leaf.reachable[action_index], dest)
+                    push!(dest.incoming[action_index], leaf)
+                    action_index += 1
+                end
+            end
+            leaf.dirty = false
+        else
+            error("Unkown tree type $t")
+        end
+    end
 end
 
 function clear_reachable!(node::Node, m::ShieldingModel)
@@ -100,7 +104,7 @@ function get_updates(tree::Tree, m::ShieldingModel)
     no_actions = actions_to_int([])
     global skipped = 0
     global recomputed = 0
-    set_reachable!(tree, tree, m) # Update reachability for dirty nodes
+    set_reachable!(tree, m) # Update reachability for dirty nodes
     for leaf in Leaves(tree)
         if leaf.value == no_actions
             continue # bad leaves stay bad
