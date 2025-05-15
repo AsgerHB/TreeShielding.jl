@@ -1,112 +1,5 @@
 
 """
-    grow!(tree::Tree, m::ShieldingModel)
-
-Grow the entire tree by calling `split_all!` on all leaves, until no more changes can be made, or `max_iterations` is exceeded.
-
-Note that the number of resulting leaves is potentially exponential in the number of iterations. Therefore, setting a suitably high `granularity` and a suitably low `max_iterations` is adviced.
-
-**Returns:** The number of leaves in the resulting tree.
-
-**Args:**
- - `tree` Tree to modify.
-"""
-function grow!(tree::Tree, m::ShieldingModel)
-    grow!(tree, tree, m)
-end
-
-function grow!(tree::Tree, node::Node, m::ShieldingModel)
-    grow!(tree, node.lt, m)
-    grow!(tree, node.geq, m)
-end
-
-const no_action = actions_to_int([])
-function grow!(tree::Tree, leaf::Leaf, m::ShieldingModel)
-    leaf.value == no_action && return
-
-    split_result = leaf
-
-
-    if m.grow_method == caap_split
-        split_result = try_split_caap(tree, leaf, m)
-
-    elseif m.grow_method == plus
-        split_result = try_split_plus(tree, leaf, m)
-
-    elseif m.grow_method == minus
-        split_result = try_split_minus(tree, leaf, m)
-
-    elseif m.grow_method == smart_minus
-        split_result = try_split_smart_minus(tree, leaf, m)
-
-    elseif m.grow_method == binary_search
-        split_result = try_split_binary_search(tree, leaf, m)
-
-    elseif m.grow_method == binary_search_minus_fallback
-        split_result = try_split_binary_search_minus_fallback(tree, leaf, m)
-    else
-        error("Unexpected growing method $(m.grow_method)")
-    end
-
-    if split_result isa Node
-        grow!(tree, split_result, m)
-    end
-end
-
-###############################################
-#region try_split_caap
-
-function try_split_caap(tree::Tree, leaf::Leaf, m::ShieldingModel)
-    error("Not implemented")
-end
-
-#endregion
-###############################################
-
-###############################################
-#region try_split_plus
-
-function try_split_plus(tree::Tree, leaf::Leaf, m::ShieldingModel)
-    error("Not implemented")
-end
-
-#endregion
-###############################################
-
-###############################################
-#region try_split_minus
-
-function try_split_minus(tree::Tree, leaf::Leaf, m::ShieldingModel)
-    error("Not implemented")
-end
-
-#endregion
-###############################################
-
-###############################################
-#region try_split_smart_minus
-
-function try_split_smart_minus(tree::Tree, leaf::Leaf, m::ShieldingModel)
-    error("Not implemented")
-end
-
-#endregion
-###############################################
-###############################################
-#region try_split_binary_search_minus_fallback
-
-function try_split_binary_search_minus_fallback(tree::Tree, leaf::Leaf, m::ShieldingModel)
-    error("Not implemented")
-end
-
-#endregion
-###############################################
-
-
-
-@enum Direction::Int safe_above_threshold safe_below_threshold
-
-"""
     compute_safety(tree::Tree, simulation_function, action_space, points)
 
 Helper function for visualisation. 
@@ -135,10 +28,200 @@ function compute_safety(tree::Tree, bounds::Bounds, m)
 end
 
 
+"""
+    grow!(tree::Tree, m::ShieldingModel)
+
+Grow the entire tree by calling `split_all!` on all leaves, until no more changes can be made, or `max_iterations` is exceeded.
+
+Note that the number of resulting leaves is potentially exponential in the number of iterations. Therefore, setting a suitably high `granularity` and a suitably low `max_iterations` is adviced.
+
+**Returns:** The number of leaves in the resulting tree.
+
+**Args:**
+ - `tree` Tree to modify.
+"""
+
+const no_action = actions_to_int([])
+function grow!(tree::Tree, m::ShieldingModel)
+
+    stack = Tree[tree]
+    loop_break = 10000000
+    while !isempty(stack) && loop_break > 0
+        loop_break -= 1
+        node = pop!(stack)
+        if node isa Node
+            push!(stack, node.lt)
+            push!(stack, node.geq)
+        elseif node isa Leaf
+            leaf = node
+            leaf.value == no_action && continue
+            homogenous(tree, leaf, m) && continue
+
+            split_result = leaf
+
+            if m.grow_method == caap_split
+                split_result = try_split_caap!(tree, leaf, m)
+            elseif m.grow_method == plus
+                split_result = try_split_plus!(tree, leaf, m)
+            elseif m.grow_method == minus
+                split_result = try_split_minus!(tree, leaf, m)
+            elseif m.grow_method == smart_minus
+                split_result = try_split_smart_minus!(tree, leaf, m)
+            elseif m.grow_method == binary_search
+                split_result = try_split_binary_search!(tree, leaf, m)
+            elseif m.grow_method == binary_search_minus_fallback
+                split_result = try_split_binary_search_minus_fallback!(tree, leaf, m)
+            else
+                error("Unexpected growing method $(m.grow_method)")
+            end
+
+            if split_result isa Node
+                push!(stack, split_result)
+            end
+        else
+            error("Uexpected node type")
+        end
+    end
+    if loop_break <= 0
+        @warn "Loop was cancelled early! Not done! Due to loop_break."
+    end
+end
+
+###############################################
+#region try_split_caap!
+
+function try_split_caap!(tree::Tree, leaf::Leaf, m::ShieldingModel)
+    error("Not implemented")
+end
+
+#endregion
+###############################################
+
+###############################################
+#region try_split_plus!
+
+"""
+	try_split_plus!(leaf::Leaf, m::ShieldingModel)
+
+Perform a "plus shaped" split, such that the leaf is split down the middle of each axis.
+
+If the dimensionality is `n` then this creates `2^n` new leaves.
+"""
+function try_split_plus!(tree::Tree, leaf::Leaf, m::ShieldingModel)
+
+	queue = Leaf[leaf]
+	result = leaf
+	for axis in 1:m.dimensionality
+		queue′ = Leaf[]
+		while length(queue) > 0
+			l = pop!(queue)
+			bounds = get_bounds(l, m.dimensionality)
+            !bounded(bounds) && continue
+			width = bounds.upper[axis] - bounds.lower[axis]
+            @assert width != NaN
+            @assert width != Inf
+			if width/2 < m.granularity
+				continue
+			end
+			threshold = bounds.lower[axis] + width/2
+            @assert threshold != Inf
+			node = split!(l, axis, threshold)
+			if result == leaf
+				result = node
+			end
+			push!(queue′, node.lt)
+			push!(queue′, node.geq)
+		end
+		queue = queue′
+	end
+    if result isa Node
+        clear_reachable!(result, m)
+    end
+	return result
+end;
+
+
+"""
+	homogenous(root::Tree, leaf::Tree, m::ShieldingModel)
+
+Check if all samples within the bounds of `leaf` are homogenous in terms of which actions are safe. That is, the function returns true if all samples in the partition have the same set of safe actions, and false otherwise.
+
+This is used to determine whether it makes sense to split the leaf further.
+"""
+function homogenous(tree::Tree, leaf::Tree, m::ShieldingModel)
+	clear_reachable!(leaf, m)
+	no_action = actions_to_int([])
+	bounds = get_bounds(leaf, m.dimensionality)
+	actions_allowed = nothing
+	for p in SupportingPoints(m.samples_per_axis, bounds)
+		actions_allowed′ = []
+		action_index = 1
+		for a in m.action_space
+			action_safe = true
+			
+			for r in SupportingPoints(m.samples_per_axis, 
+				m.random_variable_bounds)
+				
+				p′ = m.simulation_function(p, r, a)
+				push!(leaf.reachable[action_index], get_leaf(tree, p′))
+				leaf′ = get_leaf(tree, p′)
+				action_safe = action_safe && get_value(leaf′) != no_action
+				!action_safe && break
+			end
+			if action_safe
+				push!(actions_allowed′, a)
+			end
+			action_index += 1
+		end
+		if isnothing(actions_allowed)
+			actions_allowed = actions_allowed′
+		elseif actions_allowed != actions_allowed′
+                leaf.dirty = true
+				return false
+		end
+	end
+    leaf.dirty =  false
+	return true
+end;
+
+#endregion
+###############################################
+
+###############################################
+#region try_split_minus!
+
+function try_split_minus!(tree::Tree, leaf::Leaf, m::ShieldingModel)
+    error("Not implemented")
+end
+
+#endregion
+###############################################
+
+###############################################
+#region try_split_smart_minus!
+
+function try_split_smart_minus!(tree::Tree, leaf::Leaf, m::ShieldingModel)
+    error("Not implemented")
+end
+
+#endregion
+###############################################
+###############################################
+#region try_split_binary_search_minus_fallback!
+
+function try_split_binary_search_minus_fallback!(tree::Tree, leaf::Leaf, m::ShieldingModel)
+    error("Not implemented")
+end
+
+#endregion
+###############################################
+
+
+
 #########################
 #region binary_search
 
-function try_split_binary_search(tree::Tree, leaf::Leaf, m::ShieldingModel)
+function try_split_binary_search!(tree::Tree, leaf::Leaf, m::ShieldingModel)
 
     axis, threshold = get_split_by_binary_search(tree, leaf, m)
 
@@ -212,6 +295,8 @@ function get_action_safety_bounds(tree, bounds, m::ShieldingModel)
     unsafe = Dict(a => Bounds(min_unsafe[a], max_unsafe[a]) for a in m.action_space)
     return safe, unsafe
 end
+
+@enum Direction::Int safe_above_threshold safe_below_threshold
 
 """
     get_dividing_bounds(tree::Tree, bounds::Bounds, axis, action, direction::Direction, m::ShieldingModel)
