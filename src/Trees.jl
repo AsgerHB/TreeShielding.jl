@@ -205,4 +205,10 @@ Base.show(io::IO, node::Node) = begin
     print(io, ", ")
     show(io, node.geq)
     print(io, ")")
+function well_formed(node::Node)
+    return (isnothing(node.parent) || node.parent.lt === node || node.parent.geq === node) && well_formed(node.lt) && well_formed(node.geq)
+end
+
+function well_formed(leaf::Leaf)
+    return leaf.parent.lt === leaf || leaf.parent.geq === leaf
 end
