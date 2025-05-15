@@ -10,5 +10,5 @@ using AbstractTrees
     include("ActionConversion.jl")
     include("Bounds.jl")
     include("Update.jl")
-    include("Grow.jl")
+    include("GrowBinarySearch.jl")
 end

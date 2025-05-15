@@ -49,9 +49,9 @@
     clear_reachable!(tree, m)
     TreeShielding.set_reachable!(tree, m)
 
-    @show leaf1.reachable
-    @show leaf2.reachable
-    @show leaf3.reachable
+    #@show leaf1.reachable
+    #@show leaf2.reachable
+    #@show leaf3.reachable
 
     # for u in TreeShielding.get_updates(tree, m)
     #     @show get_bounds(u.leaf, 1), u.new_value
@@ -60,9 +60,9 @@
     # Act #
     n_updates = update!(tree, m)
 
-    @show TreeShielding.get_allowed_actions(tree, leaf1, m)
-    @show TreeShielding.get_allowed_actions(tree, leaf2, m)
-    @show TreeShielding.get_allowed_actions(tree, leaf3, m)
+    #@show TreeShielding.get_allowed_actions(tree, leaf1, m)
+    #@show TreeShielding.get_allowed_actions(tree, leaf2, m)
+    #@show TreeShielding.get_allowed_actions(tree, leaf3, m)
 
     @test n_updates == 2  # I expect it to update leaf1 and leaf3
 
