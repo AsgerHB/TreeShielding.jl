@@ -460,7 +460,16 @@ bb = let
 	
 	splitting_tolerance = granularity
 	
-	ShieldingModel(;simulation_function, action_space=BB.Action, dimensionality, samples_per_axis, random_variable_bounds, max_iterations, granularity, splitting_tolerance)
+	ShieldingModel(;simulation_function,
+				   action_space=BB.Action,
+				   pruning=naïve,
+				   grow_method=minus,
+				   dimensionality,
+				   samples_per_axis,
+				   random_variable_bounds,
+				   max_iterations,
+				   granularity,
+				   splitting_tolerance)
 end
 
 # ╔═╡ 6bfd95e2-df1c-414c-8014-a31895173f1e
@@ -490,6 +499,7 @@ begin
 	draw(bb_tree, Bounds((-16, -1), (16, 11)),
 		xlabel="v",
 		ylabel="p",
+	 	line=0.1,
 		title="initial")
 		
 	add_actions_to_legend(action_color_dict, bb.action_space)
@@ -503,30 +513,40 @@ let
 	draw(bb_tree, Bounds((-16, -1), (16, 11)),
 		xlabel="v",
 		ylabel="p",
+	 	line=0.1,
 		title="First grow-step")
 		
 	add_actions_to_legend(action_color_dict, bb.action_space)
 end
 
+# ╔═╡ 1aec4440-3db6-495b-a994-1831a694cdf1
+@bind synthesize_bb_button CounterButton("Synthesize BB")
+
 # ╔═╡ 39dc7fc6-da83-4c90-b288-90e0ea73aef7
 bb_strategy = let
 	bb_tree = copy(bb_tree)
-	synthesize!(bb_tree, bb)
-end
+	if synthesize_bb_button > 0
+		synthesize!(bb_tree, bb)
+	end
+	bb_tree
+end;
 
 # ╔═╡ aec7bf28-6b61-438c-9711-d853e9491af3
 bb_strategy′ = let
 	bb_strategy = copy(bb_strategy)
-	synthesize!(bb_strategy, @set bb.samples_per_axis = 8)
+	if synthesize_bb_button > 0
+		synthesize!(bb_strategy, @set bb.samples_per_axis = 8)
+	end
 	prune!(bb_strategy, m)
 	bb_strategy
-end
+end;
 
 # ╔═╡ 673498e0-690b-497a-a0a7-569b716482f5
 begin
 	draw(bb_strategy′, Bounds((-16, -1), (16, 11)),
 		xlabel="v",
 		ylabel="p",
+	 	line=0.1,
 		title="Bouncing Ball Safety Strategy")
 	
 	add_actions_to_legend(action_color_dict, bb.action_space)
@@ -614,6 +634,7 @@ check_safety(bbmechanics,
 # ╠═6bfd95e2-df1c-414c-8014-a31895173f1e
 # ╟─9a28eb36-cbe6-4b50-9d55-786b5d645bc7
 # ╟─45002c2b-8df7-4f42-b95d-47fc2833c39d
+# ╠═1aec4440-3db6-495b-a994-1831a694cdf1
 # ╠═39dc7fc6-da83-4c90-b288-90e0ea73aef7
 # ╠═aec7bf28-6b61-438c-9711-d853e9491af3
 # ╠═673498e0-690b-497a-a0a7-569b716482f5

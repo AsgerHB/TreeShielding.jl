@@ -29,7 +29,7 @@ Base.iterate(s::SupportingPoints) = begin
 
     lower, upper = s.bounds.lower, s.bounds.upper
 
-    sample = copy(lower)
+    sample = Float64[l for l in lower]
     
     if upper == lower
         return sample, :terminate
