@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.4
+# v0.20.8
 
 using Markdown
 using InteractiveUtils
@@ -7,7 +7,7 @@ using InteractiveUtils
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
     #! format: off
-    quote
+    return quote
         local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
         local el = $(esc(element))
         global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
@@ -393,7 +393,7 @@ md"""
 # ╔═╡ 8dac6296-9656-4698-9e4b-d7c4c7c42833
 if synthesize_button > 0 let
 	tree = copy(tree)
-	@profile synthesize!(tree, m)
+	synthesize!(tree, m)
 	prune!(tree, m)
 	draw(tree, draw_bounds, color_dict=action_color_dict, 
 		aspectratio=:equal,
@@ -403,11 +403,6 @@ if synthesize_button > 0 let
 	leaf_count = length(Leaves(tree) |> collect)
 	plot!([], l=nothing, label="leaves: $leaf_count")
 end end
-
-# ╔═╡ 9233b353-3ac1-49ab-a0f8-fc959384401c
-open("./profile.profile", "w") do io
-	Profile.print(io)
-end
 
 # ╔═╡ cf606e09-801d-447d-874e-844ce6d9c49c
 md"""
@@ -514,10 +509,12 @@ function shield(tree::Tree, action_type, policy)
 end
 
 # ╔═╡ a375a86b-d7ac-432b-a717-e5e4a8b69a71
-check_safety(bbmechanics, 
-	shield(bb_strategy′, BB.Action, (_...) -> nohit), 
-	120, 
-	runs=2000)
+if synthesize_bb_button > 0
+	check_safety(bbmechanics, 
+		shield(bb_strategy′, BB.Action, (_...) -> nohit), 
+		120, 
+		runs=2000)
+end
 
 # ╔═╡ Cell order:
 # ╟─6a50c8f7-6367-4d59-a574-c8a29a785e88
@@ -568,9 +565,7 @@ check_safety(bbmechanics,
 # ╟─a175916f-0b4b-47d5-9a0f-c4668146801c
 # ╟─d7063385-0fae-4326-81da-7d37411a0fe2
 # ╟─1ad5e605-6c7f-4bff-899b-ddc05b99fe55
-# ╟─efe775a4-7ec7-451a-b3db-2d2f52fba186
 # ╠═8dac6296-9656-4698-9e4b-d7c4c7c42833
-# ╠═9233b353-3ac1-49ab-a0f8-fc959384401c
 # ╟─cf606e09-801d-447d-874e-844ce6d9c49c
 # ╠═10f5db07-5455-4c18-a79c-d53531220954
 # ╠═6bfd95e2-df1c-414c-8014-a31895173f1e

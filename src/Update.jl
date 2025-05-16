@@ -62,7 +62,6 @@ function set_reachable!(tree::Tree{T}, m::ShieldingModel) where {T}
                 continue
             end
             
-            @info "aliive"
             recomputed += 1
             clear_reachable!(leaf, m)
             for (p, r) in all_supporting_points(bounds, m)

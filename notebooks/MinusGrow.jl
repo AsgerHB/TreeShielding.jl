@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.4
+# v0.20.8
 
 using Markdown
 using InteractiveUtils
@@ -7,7 +7,7 @@ using InteractiveUtils
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
     #! format: off
-    quote
+    return quote
         local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
         local el = $(esc(element))
         global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
@@ -400,7 +400,7 @@ Try setting a different number of samples per axis:
 """
 
 # ╔═╡ 364a95c2-de8a-468a-86eb-db18a5489c9d
-m = ShieldingModel(;simulation_function, action_space=Pace, dimensionality, samples_per_axis, random_variable_bounds granularity, splitting_tolerance)
+m = ShieldingModel(;simulation_function, action_space=Pace, dimensionality, samples_per_axis, random_variable_bounds, granularity, splitting_tolerance)
 
 # ╔═╡ e2c7decc-ec60-4eae-88c3-491ca06673ea
 bounds = get_bounds(get_leaf(tree, 0.5, 0.5), m.dimensionality)
@@ -474,11 +474,6 @@ reset_button; @bind grow_button CounterButton("Grow")
 # ╔═╡ 9abaf75a-7832-445f-83ff-6e6fd0c4fb71
 reset_button; @bind prune_button CounterButton("Prune")
 
-# ╔═╡ 3e62fb7a-921d-4db9-8bde-fcf509f2a9ab
-if prune_button > 0 let
-	prune!(reactive_tree, m)
-end end
-
 # ╔═╡ 87581d91-2c9a-4505-8367-722038c962a8
 if grow_button > 0
 	updates = grow_minus!(reactive_tree, reactive_tree, m)
@@ -494,6 +489,11 @@ reset_button, updates; @bind update_button CounterButton("Update")
 # ╔═╡ 8fe8cc53-ad34-4f75-8b36-37b0f43d3ab0
 if update_button > 0 let
 	TreeShielding.apply_updates!(updates)
+end end
+
+# ╔═╡ 3e62fb7a-921d-4db9-8bde-fcf509f2a9ab
+if prune_button > 0 let
+	prune!(reactive_tree, m)
 end end
 
 # ╔═╡ a175916f-0b4b-47d5-9a0f-c4668146801c
