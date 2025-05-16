@@ -9,7 +9,7 @@ Attempt to remove redundant leaves from the tree.
 """
 function prune!(tree::Tree, m::ShieldingModel; animation_callback=nothing)
 	if m.pruning == naïve
-		return naïve_prune!(tree; animation_callback)
+		return naïve_prune!(tree, m; animation_callback)
 	elseif m.pruning == caap_reduction
 		error("caap_reduction not implemented")
 	elseif m.pruning == no_pruning
@@ -19,7 +19,7 @@ function prune!(tree::Tree, m::ShieldingModel; animation_callback=nothing)
 	end
 end
 
-function naïve_prune!(tree::Tree; animation_callback=nothing)
+function naïve_prune!(tree::Tree, m::ShieldingModel; animation_callback=nothing)
 	changes_made = 0
     leaf_count = 0
 
@@ -33,7 +33,8 @@ function naïve_prune!(tree::Tree; animation_callback=nothing)
 		end
 
 		if leaf.parent.geq.value == leaf.value
-			replace_subtree!(leaf.parent, Leaf(leaf.value))
+			node = replace_subtree!(leaf.parent, Leaf(leaf.value))
+			clear_reachable!(node, m)
 			changes_made += 1
             leaf_count -= 1
 

@@ -90,6 +90,58 @@ function grow!(tree::Tree, m::ShieldingModel; animation_callback=nothing)
     end
 end
 
+
+
+
+"""
+	homogenous(root::Tree, leaf::Tree, m::ShieldingModel)
+
+Check if leaf is undbounded or if all samples within the bounds of `leaf` are homogenous.
+That is, the function returns true if all samples in the partition have the same set of safe actions, and false otherwise.
+
+This is used to determine whether it makes sense to split the leaf further.
+"""
+function homogenous(tree::Tree, leaf::Tree, m::ShieldingModel)
+	clear_reachable!(leaf, m)
+	no_action = actions_to_int([])
+	bounds = get_bounds(leaf, m.dimensionality)
+	actions_allowed = nothing
+
+    if !bounded(bounds)
+        return true
+    end
+
+	for p in SupportingPoints(m.samples_per_axis, bounds)
+		actions_allowed′ = []
+		action_index = 1
+		for a in m.action_space
+			action_safe = true
+			
+			for r in SupportingPoints(m.samples_per_axis, 
+				m.random_variable_bounds)
+				
+				p′ = m.simulation_function(p, r, a)
+				push!(leaf.reachable[action_index], get_leaf(tree, p′))
+				leaf′ = get_leaf(tree, p′)
+				action_safe = action_safe && get_value(leaf′) != no_action
+				!action_safe && break
+			end
+			if action_safe
+				push!(actions_allowed′, a)
+			end
+			action_index += 1
+		end
+		if isnothing(actions_allowed)
+			actions_allowed = actions_allowed′
+		elseif actions_allowed != actions_allowed′
+                leaf.dirty = true
+				return false
+		end
+	end
+    leaf.dirty =  false
+	return true
+end
+
 ###############################################
 #region try_split_caap!
 
@@ -104,7 +156,7 @@ end
 #region try_split_plus!
 
 """
-	try_split_plus!(leaf::Leaf, m::ShieldingModel)
+	try_split_plus!(tree::Tree, leaf::Leaf, m::ShieldingModel)
 
 Perform a "plus shaped" split, such that the leaf is split down the middle of each axis.
 
@@ -141,51 +193,7 @@ function try_split_plus!(tree::Tree, leaf::Leaf, m::ShieldingModel)
         clear_reachable!(result, m)
     end
 	return result
-end;
-
-
-"""
-	homogenous(root::Tree, leaf::Tree, m::ShieldingModel)
-
-Check if all samples within the bounds of `leaf` are homogenous in terms of which actions are safe. That is, the function returns true if all samples in the partition have the same set of safe actions, and false otherwise.
-
-This is used to determine whether it makes sense to split the leaf further.
-"""
-function homogenous(tree::Tree, leaf::Tree, m::ShieldingModel)
-	clear_reachable!(leaf, m)
-	no_action = actions_to_int([])
-	bounds = get_bounds(leaf, m.dimensionality)
-	actions_allowed = nothing
-	for p in SupportingPoints(m.samples_per_axis, bounds)
-		actions_allowed′ = []
-		action_index = 1
-		for a in m.action_space
-			action_safe = true
-			
-			for r in SupportingPoints(m.samples_per_axis, 
-				m.random_variable_bounds)
-				
-				p′ = m.simulation_function(p, r, a)
-				push!(leaf.reachable[action_index], get_leaf(tree, p′))
-				leaf′ = get_leaf(tree, p′)
-				action_safe = action_safe && get_value(leaf′) != no_action
-				!action_safe && break
-			end
-			if action_safe
-				push!(actions_allowed′, a)
-			end
-			action_index += 1
-		end
-		if isnothing(actions_allowed)
-			actions_allowed = actions_allowed′
-		elseif actions_allowed != actions_allowed′
-                leaf.dirty = true
-				return false
-		end
-	end
-    leaf.dirty =  false
-	return true
-end;
+end
 
 #endregion
 ###############################################
@@ -193,8 +201,23 @@ end;
 ###############################################
 #region try_split_minus!
 
+"""
+	try_split_minus!(tree::Tree, leaf::Leaf, m::ShieldingModel)
+
+Perform a "minus shaped" split, such that the leaf is split down the middle of a random axis. 
+"""
 function try_split_minus!(tree::Tree, leaf::Leaf, m::ShieldingModel)
-    error("Not implemented")
+	bounds = get_bounds(leaf, m.dimensionality)
+	for axis in shuffle(1:m.dimensionality)
+		width = bounds.upper[axis] - bounds.lower[axis]
+		if width/2 < m.granularity
+			continue
+		end
+		threshold = bounds.lower[axis] + width/2
+		node = split!(leaf, axis, threshold)
+		return node
+	end
+	return leaf
 end
 
 #endregion

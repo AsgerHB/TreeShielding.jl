@@ -3,6 +3,7 @@ module TreeShielding
 using Plots
 using Unzip
 using Printf
+using Random
 using StaticArrays
 using Serialization
 using AbstractTrees

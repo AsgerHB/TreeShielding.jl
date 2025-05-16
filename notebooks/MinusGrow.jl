@@ -176,6 +176,7 @@ begin
 	x_max, y_max = rwmechanics.x_max, rwmechanics.t_max
 	split!(get_leaf(initial_tree, x_min - 1, y_max), 2, y_max)
 	split!(get_leaf(initial_tree, x_max + 1, y_max), 2, y_max)
+	split!(get_leaf(initial_tree, 0, 0), 2, y_max/2)
 	split!(get_leaf(initial_tree, x_max + 1, y_max - 0.1), 2, t_min)
 end
 
@@ -217,133 +218,20 @@ Everything is rolled up into a convenient little ball that is easy to toss aroun
 
 # ╔═╡ 52015eb7-b4d8-4a08-98b4-c6e006179452
 md"""
-## The plus-split
+## The minus-split
 """
 
-# ╔═╡ c62daa70-ea84-463a-b5ed-40fdfa67f2ba
-[:foo, :bar, :baz] ∩ [:foo, :bar]
+# ╔═╡ ee5a1881-3040-4748-aec2-5ffe14e51b7e
 
-# ╔═╡ fdacca7e-d250-45ed-8669-e63ffb8bd121
-push!(Set([:foo]), :bar)
 
-# ╔═╡ 01df6119-9b55-4709-b676-7e2cb445e0d8
+# ╔═╡ 0a3bb8da-1194-4b08-9951-5252d07b52e6
 
-"""
-    get_allowed_actions′(tree::Tree,
-        bounds::Bounds,
-        m::ShieldingModel)
 
-Returns tuple `(allowed, homogenous)` 
-- `allowed`: A `list` of actions that are safe within `bounds`.
-- `homogenous`: A bool that is true if the set of allowed actions was the same for all supporting points.
+# ╔═╡ 229a0d92-1daa-4711-8570-79286bdc4e88
 
- - `tree` The (root) of the tree defining actions for regions.
- - `bounds` Bounds specifying initial location.
- - `m` A [ShieldingModel].
-"""
-function get_allowed_actions′(tree::Tree,
-        bounds::Bounds,
-        m::ShieldingModel)
-	homogenous = true
-    no_actions = actions_to_int([])
 
-    allowed = nothing
-    for (p, r) in TreeShielding.all_supporting_points(bounds, m)
-		allowed′ = []
-        for a in m.action_space
-            p′ = m.simulation_function(p, r, a)
-            if get_value(tree, p′) != no_actions
-                # m.verbose && @info "$a is unsafe at $p."
-                push!(allowed′, a)
-            end
-        end
-		allowed = something(allowed, allowed′)
-		if !(allowed == allowed′)
-			allowed = allowed ∩ allowed′
-			homogenous = false
-		end
-    end
-    return allowed, homogenous
-end
-
-# ╔═╡ 10a86329-743b-439d-ac81-46eadae1582d
-md"""
-!!! warning "TODO"
-	It seems that the function `get_allowed_actions′` *always* indicates that the partition is homogenous.
-"""
-
-# ╔═╡ b7d5ff7f-d020-4e6b-bc49-f3e81b325e2d
-"""
-	minus_split!(leaf::Leaf, dimensionality; min_granularity=nothing)
-
-Perform a "minus shaped" split, such that the leaf is split down the middle of a random axis. 
-"""
-function minus_split!(leaf::Leaf, dimensionality, min_granularity)
-	queue = Leaf[leaf]
-	result = leaf
-	bounds = get_bounds(leaf, dimensionality)
-	for axis in shuffle(1:dimensionality)
-		width = bounds.upper[axis] - bounds.lower[axis]
-		if width/2 < min_granularity
-			continue
-		end
-		threshold = bounds.lower[axis] + width/2
-		node = split!(leaf, axis, threshold)
-		return node
-	end
-	return leaf
-end;
-
-# ╔═╡ d5d72ac4-5bcc-4d67-bdcc-214e0eea80b9
-shuffle(1:5)
-
-# ╔═╡ 8d33bf42-ff2d-444a-9a82-433981cc6f12
-begin
-	"""
-		grow_minus!(root::Tree, leaf::Leaf, m::ShieldingModel)
-		grow_minus!(root::Tree, node::Node, m::ShieldingModel)
-
-	Grow the tree using "plus shaped" splitting. In the 2D case, the partition is split into four rectangles along the middle whenever there are a mix of safe and unsafe samples for the same action.
-	"""
-	function grow_minus!(root::Tree, leaf::Leaf, m::ShieldingModel)
-		if m.granularity == 0
-			error("Won't terminate: granularity cannot be zero.")
-		end
-		
-		no_actions = actions_to_int([])
-
-		# Bad partitions stay bad
-		if leaf.value == no_actions
-			return ValueUpdate[]
-		end
-		
-		# Don't split unbounded partitions.
-		bounds = get_bounds(leaf, m.dimensionality)
-		if !bounded(bounds) 
-			return ValueUpdate[]
-		end
-		allowed, homogenous = get_allowed_actions′(root, bounds, m)
-		update = ValueUpdate(leaf, actions_to_int(allowed))
-		if homogenous
-			return update
-		end
-		
-		new_node = minus_split!(leaf, m.dimensionality, m.granularity)
-		if !(new_node isa Leaf)
-			return grow_minus!(root, new_node, m)
-		else
-			@assert new_node == leaf
-			return update
-		end
-	end
-
-	function grow_minus!(root::Tree, node::Node, m::ShieldingModel)
-		return vcat(
-			grow_minus!(root, node.lt, m),
-			grow_minus!(root, node.geq, m)
-		)
-	end
-end
+# ╔═╡ d43e8771-dee1-493f-82b1-1277e279a7b5
+TreeShielding.get_root(get_leaf(tree, (.1, .1)))
 
 # ╔═╡ a6b1402a-d1cc-4eb0-9334-cbf811827662
 md"""
@@ -364,26 +252,6 @@ md"""
 # Everything in one loop
 """
 
-# ╔═╡ 7f10ecc9-ab21-4299-9f8d-c69fe3ace234
-"""
-	synthesize_minus!(tree::Tree, m::ShieldingModel)
-
-Synthesize a safety strategy using the "plus shaped" dynamic partitioning strategy. 
-"""
-function synthesize_minus!(tree::Tree, m::ShieldingModel)
-	loop_break = m.max_iterations
-	updates = 1 # loop enter
-	while updates != 0
-		grow_minus!(tree, tree, m)
-		updates = update!(tree, m)
-		if (loop_break -= 1) <= 0 
-			@warn "Max iterations reached" m.max_iterations
-			break
-		end
-	end
-	prune!(tree, m)
-end;
-
 # ╔═╡ efe775a4-7ec7-451a-b3db-2d2f52fba186
 md"""
 ### Parameters -- Try it Out!
@@ -400,7 +268,15 @@ Try setting a different number of samples per axis:
 """
 
 # ╔═╡ 364a95c2-de8a-468a-86eb-db18a5489c9d
-m = ShieldingModel(;simulation_function, action_space=Pace, dimensionality, samples_per_axis, random_variable_bounds, granularity, splitting_tolerance)
+m = ShieldingModel(;simulation_function, 
+				   action_space=Pace, 
+				   dimensionality,
+				   grow_method=minus,
+				   pruning=naïve,
+				   samples_per_axis, 
+				   random_variable_bounds, 
+				   granularity, 
+				   splitting_tolerance)
 
 # ╔═╡ e2c7decc-ec60-4eae-88c3-491ca06673ea
 bounds = get_bounds(get_leaf(tree, 0.5, 0.5), m.dimensionality)
@@ -420,42 +296,28 @@ end
 
 # ╔═╡ 9be6489e-0e9e-451e-94a8-d87a845c0a3c
 let
-	tree = copy(tree)
-	leaf = get_leaf(tree, (0.5, 0.5))
-	node = minus_split!(leaf, m.dimensionality, 0.4)
-	draw(tree, draw_bounds, color_dict=action_color_dict, 
-		aspectratio=:equal,
-		legend=:outertop,
-		size=(200,200))
-	leaf_count = length(Leaves(tree) |> collect)
-	plot!([], l=nothing, label="leaves: $leaf_count")
-end
-
-# ╔═╡ 4040a51b-c7b4-4454-b996-cb40338d8402
-let
-	tree = copy(tree)
-	
-	# MAINMATTER
-	updates = grow_minus!(tree, tree, m)
-	TreeShielding.apply_updates!(updates)
-	
-	draw(tree, draw_bounds, color_dict=action_color_dict, 
-		aspectratio=:equal,
-		legend=:outerright,
-		size=(800, 700))
-	
-	add_actions_to_legend(action_color_dict, m.action_space)
-	leaf_count = length(Leaves(tree) |> collect)
-	#=
-	leaf = get_leaf(tree, (x, t))
-	bounds = get_bounds(leaf, m.dimensionality)
-	scatter_allowed_actions!(tree, bounds, m)
-
-	@info get_partition_status(leaf, m)
-
-	scatter!([x], [t], marker=(:rtriangle, 10, :white), label=nothing)
-	=#
-	plot!([], l=nothing, label="leaves: $leaf_count")
+	📽️ = @animate for i in 1:10
+		tree′ = copy(tree)
+		
+		leaf = get_leaf(tree′, (0.5, 0.5))
+		node = TreeShielding.try_split_minus!(tree′, leaf, m)
+		
+		leaf = get_leaf(tree′, (0.5, 0.5))
+		node = TreeShielding.try_split_minus!(tree′, leaf, m)
+		
+		draw(tree′, draw_bounds, color_dict=action_color_dict, 
+			aspectratio=:equal,
+			legend=:outertop,
+			size=(300, 300))
+		
+		leaf_count = length(Leaves(tree′) |> collect)
+		plot!([], 
+			  	l=nothing, 
+			  	label="leaves: $leaf_count",
+			  	titlefontsize=12,
+				title="Performing minus-split twice")
+	end
+	gif(📽️, fps=3, show_msg=false)
 end
 
 # ╔═╡ afbb777f-6cdf-4af4-831d-b8992531f20b
@@ -463,37 +325,36 @@ m; (
 	@bind reset_button Button("Reset")
 )
 
-# ╔═╡ ddf18eba-38da-4e78-a204-040034ea55fd
-reset_button; (
-	reactive_tree = copy(tree)
-)
-
 # ╔═╡ d2097fb9-cf4c-4fb6-b23a-6721cc7017f2
 reset_button; @bind grow_button CounterButton("Grow")
+
+# ╔═╡ 407a80cd-9110-4c28-b5eb-6c5b3e858624
+reset_button; @bind update_button CounterButton("Update")
 
 # ╔═╡ 9abaf75a-7832-445f-83ff-6e6fd0c4fb71
 reset_button; @bind prune_button CounterButton("Prune")
 
-# ╔═╡ 87581d91-2c9a-4505-8367-722038c962a8
-if grow_button > 0
-	updates = grow_minus!(reactive_tree, reactive_tree, m)
-	length(updates)
-else
-	updates = ValueUpdate[]
-	0
+# ╔═╡ ddf18eba-38da-4e78-a204-040034ea55fd
+reset_button; begin
+	reactive_tree = copy(tree)
+	clear_reachable!(reactive_tree, m)
 end
 
-# ╔═╡ 407a80cd-9110-4c28-b5eb-6c5b3e858624
-reset_button, updates; @bind update_button CounterButton("Update")
+# ╔═╡ 87581d91-2c9a-4505-8367-722038c962a8
+if grow_button > 0
+	@time grow!(reactive_tree, m)
+else
+	nothing
+end
 
 # ╔═╡ 8fe8cc53-ad34-4f75-8b36-37b0f43d3ab0
 if update_button > 0 let
-	TreeShielding.apply_updates!(updates)
+	@time update!(reactive_tree, m)
 end end
 
 # ╔═╡ 3e62fb7a-921d-4db9-8bde-fcf509f2a9ab
 if prune_button > 0 let
-	prune!(reactive_tree, m)
+	@time prune!(reactive_tree, m)
 end end
 
 # ╔═╡ a175916f-0b4b-47d5-9a0f-c4668146801c
@@ -519,40 +380,65 @@ end
 # ╔═╡ 8dac6296-9656-4698-9e4b-d7c4c7c42833
 let
 	tree = copy(tree)
-	synthesize_minus!(tree, m)
-	prune!(tree, m)
-	draw(tree, draw_bounds, color_dict=action_color_dict, 
-		aspectratio=:equal,
-		legend=:topleft,
-		size=(500, 500))
-	add_actions_to_legend(action_color_dict, m.action_space)
-	leaf_count = length(Leaves(tree) |> collect)
-	plot!([], l=nothing, label="leaves: $leaf_count")
-end
-
-# ╔═╡ ac6cc02e-9de1-4542-a902-5df745687506
-let
-	# This cell is similar to the synthesize-plus function. It is nice to have if you want to experiment with the learning loop
-	tree = copy(tree)
-
-	loop_break = m.max_iterations
-	updates = 1 # loop enter
-	while updates != 0
-		grow_plus!(tree, tree, m)
-		updates = update!(tree, m)
-		if (loop_break -= 1) <= 0 
-			@warn "Max iterations reached" m.max_iterations
-			break
-		end
-	end
+	synthesize!(tree, m)
 	
 	draw(tree, draw_bounds, color_dict=action_color_dict, 
 		aspectratio=:equal,
 		legend=:topleft,
 		size=(500, 500))
+	
 	add_actions_to_legend(action_color_dict, m.action_space)
 	leaf_count = length(Leaves(tree) |> collect)
 	plot!([], l=nothing, label="leaves: $leaf_count")
+end
+
+# ╔═╡ 7f54a9c8-61c1-4a39-a9b0-a0f2f2223795
+md"""
+# Synthesis Animation
+
+**very slow**
+
+Generate an animation which shows every little step of the synthesis.
+One frame for each split, and each leaf coloured in.
+
+It's really fun to look at, kind of looking at a disc defragmenting.
+"""
+
+# ╔═╡ d832260e-773c-414c-8bf9-7b0e3588c1e1
+@bind make_animation_button CounterButton("Make Animation")
+
+# ╔═╡ 4040a51b-c7b4-4454-b996-cb40338d8402
+📽 = let
+	t = copy(tree)
+	mm = @set(m.grow_method=minus)
+	mm = @set(mm.pruning=naïve)
+
+	📽 = Animation()
+	
+	function 📸(tree::Tree)
+		draw(tree, draw_bounds, color_dict=action_color_dict, 
+			aspectratio=:equal,
+			legend=:bottomleft,
+			size=(300, 300))
+		
+		frame(📽)
+	end
+
+	if make_animation_button > 0
+	
+		📸(t)
+		
+		synthesize!(t, mm, animation_callback=📸)
+	end
+	
+	📸(t)
+		
+	📽
+end;
+
+# ╔═╡ 956b3db6-80ff-474e-92db-6690a5887e6d
+if make_animation_button > 0
+	gif(📽, fps=24, show_msg=false)
 end
 
 # ╔═╡ cf606e09-801d-447d-874e-844ce6d9c49c
@@ -574,7 +460,7 @@ bb = let
 	
 	splitting_tolerance = granularity
 	
-	ShieldingModel(;simulation_function, action_space=BB.Action, dimensionality, samples_per_axis, random_variable_bounds; max_iterations, granularity, splitting_tolerance)
+	ShieldingModel(;simulation_function, action_space=BB.Action, dimensionality, samples_per_axis, random_variable_bounds, max_iterations, granularity, splitting_tolerance)
 end
 
 # ╔═╡ 6bfd95e2-df1c-414c-8014-a31895173f1e
@@ -610,20 +496,28 @@ begin
 end
 
 # ╔═╡ 45002c2b-8df7-4f42-b95d-47fc2833c39d
-
+let
+	bb_tree = copy(bb_tree)
+	grow!(bb_tree, bb)
+	
+	draw(bb_tree, Bounds((-16, -1), (16, 11)),
+		xlabel="v",
+		ylabel="p",
+		title="First grow-step")
+		
+	add_actions_to_legend(action_color_dict, bb.action_space)
+end
 
 # ╔═╡ 39dc7fc6-da83-4c90-b288-90e0ea73aef7
 bb_strategy = let
 	bb_tree = copy(bb_tree)
-	synthesize_plus!(bb_tree, bb)
-	prune!(bb_tree, m)
-	bb_tree
+	synthesize!(bb_tree, bb)
 end
 
 # ╔═╡ aec7bf28-6b61-438c-9711-d853e9491af3
 bb_strategy′ = let
 	bb_strategy = copy(bb_strategy)
-	synthesize_plus!(bb_strategy, @set bb.samples_per_axis = 8)
+	synthesize!(bb_strategy, @set bb.samples_per_axis = 8)
 	prune!(bb_strategy, m)
 	bb_strategy
 end
@@ -692,36 +586,34 @@ check_safety(bbmechanics,
 # ╟─52015eb7-b4d8-4a08-98b4-c6e006179452
 # ╟─16d39b87-8d2d-4a54-8eb1-ee727671e299
 # ╠═e2c7decc-ec60-4eae-88c3-491ca06673ea
-# ╠═c62daa70-ea84-463a-b5ed-40fdfa67f2ba
-# ╠═fdacca7e-d250-45ed-8669-e63ffb8bd121
-# ╠═01df6119-9b55-4709-b676-7e2cb445e0d8
-# ╟─10a86329-743b-439d-ac81-46eadae1582d
 # ╟─9be6489e-0e9e-451e-94a8-d87a845c0a3c
-# ╠═b7d5ff7f-d020-4e6b-bc49-f3e81b325e2d
-# ╠═d5d72ac4-5bcc-4d67-bdcc-214e0eea80b9
-# ╠═4040a51b-c7b4-4454-b996-cb40338d8402
-# ╠═8d33bf42-ff2d-444a-9a82-433981cc6f12
+# ╟─ee5a1881-3040-4748-aec2-5ffe14e51b7e
+# ╟─0a3bb8da-1194-4b08-9951-5252d07b52e6
+# ╟─229a0d92-1daa-4711-8570-79286bdc4e88
+# ╠═d43e8771-dee1-493f-82b1-1277e279a7b5
 # ╟─a6b1402a-d1cc-4eb0-9334-cbf811827662
 # ╟─afbb777f-6cdf-4af4-831d-b8992531f20b
 # ╠═ddf18eba-38da-4e78-a204-040034ea55fd
-# ╠═d2097fb9-cf4c-4fb6-b23a-6721cc7017f2
+# ╟─d2097fb9-cf4c-4fb6-b23a-6721cc7017f2
 # ╠═87581d91-2c9a-4505-8367-722038c962a8
-# ╠═407a80cd-9110-4c28-b5eb-6c5b3e858624
+# ╟─407a80cd-9110-4c28-b5eb-6c5b3e858624
 # ╠═8fe8cc53-ad34-4f75-8b36-37b0f43d3ab0
 # ╠═9abaf75a-7832-445f-83ff-6e6fd0c4fb71
 # ╠═3e62fb7a-921d-4db9-8bde-fcf509f2a9ab
-# ╠═a175916f-0b4b-47d5-9a0f-c4668146801c
+# ╟─a175916f-0b4b-47d5-9a0f-c4668146801c
 # ╟─a7a033c6-b1fc-4791-bfe0-c454ad618c91
 # ╟─d7063385-0fae-4326-81da-7d37411a0fe2
-# ╠═7f10ecc9-ab21-4299-9f8d-c69fe3ace234
 # ╟─efe775a4-7ec7-451a-b3db-2d2f52fba186
 # ╠═8dac6296-9656-4698-9e4b-d7c4c7c42833
-# ╠═ac6cc02e-9de1-4542-a902-5df745687506
+# ╟─7f54a9c8-61c1-4a39-a9b0-a0f2f2223795
+# ╟─d832260e-773c-414c-8bf9-7b0e3588c1e1
+# ╟─4040a51b-c7b4-4454-b996-cb40338d8402
+# ╟─956b3db6-80ff-474e-92db-6690a5887e6d
 # ╟─cf606e09-801d-447d-874e-844ce6d9c49c
 # ╠═10f5db07-5455-4c18-a79c-d53531220954
 # ╠═6bfd95e2-df1c-414c-8014-a31895173f1e
-# ╠═9a28eb36-cbe6-4b50-9d55-786b5d645bc7
-# ╠═45002c2b-8df7-4f42-b95d-47fc2833c39d
+# ╟─9a28eb36-cbe6-4b50-9d55-786b5d645bc7
+# ╟─45002c2b-8df7-4f42-b95d-47fc2833c39d
 # ╠═39dc7fc6-da83-4c90-b288-90e0ea73aef7
 # ╠═aec7bf28-6b61-438c-9711-d853e9491af3
 # ╠═673498e0-690b-497a-a0a7-569b716482f5
