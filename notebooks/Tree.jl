@@ -1,17 +1,19 @@
 ### A Pluto.jl notebook ###
-# v0.19.27
+# v0.20.8
 
 using Markdown
 using InteractiveUtils
 
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
-    quote
+    #! format: off
+    return quote
         local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
         local el = $(esc(element))
         global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
         el
     end
+    #! format: on
 end
 
 # ╔═╡ 12e0989a-9cc1-11ed-2520-1f3866e942fa
@@ -259,38 +261,58 @@ Tree to serialize:
 ![A 4-level binary tree named from A to O. At the 4th level there are 8 leaves.](https://i.stack.imgur.com/9jegh.png)
 """
 
+# ╔═╡ d5846c2c-08f4-4cc9-92aa-8a808b8e6f53
+begin
+	A = 1
+	B = 2
+	D = 3
+	E = 4
+	F = 6
+	C = 5
+	G = 7
+	h = 11
+	i = 22
+	j = 33
+	k = 44
+	l = 55
+	m = 66
+	n = 77
+	o = 88
+end;
+
 # ╔═╡ df236b61-7f19-461c-9f10-9163175393b3
-tree_to_serialize = Node(0, :A,
-	Node(0, :B,
-		Node(0, :D,
-			Leaf(:h),
-			Leaf(:i)
+tree_to_serialize = Node(0, A,
+	Node(0, B,
+		Node(0, D,
+			Leaf(h),
+			Leaf(i)
 		),
-		Node(0, :E,
-			Leaf(:j),
-			Leaf(:k)
+		Node(0, E,
+			Leaf(j),
+			Leaf(k)
 		)
 	),
-	Node(0, :C,
-		Node(0, :F,
-			Leaf(:l),
-			Leaf(:m)
+	Node(0, C,
+		Node(0, F,
+			Leaf(l),
+			Leaf(m)
 		),
-		Node(0, :G,
-			Leaf(:n),
-			Leaf(:o)
+		Node(0, G,
+			Leaf(n),
+			Leaf(o)
 		)
 	)
 )
 
 # ╔═╡ 602d60b1-21ae-4233-9957-ddab756d1906
-working_dir = mktemp()
+working_dir = mktempdir()
 
 # ╔═╡ 66fb431c-55dd-4745-b526-106dbf0b713a
-file_name = join(working_dir, "tree to serialize.tree")
-
-# ╔═╡ 79386bc7-759c-4cde-9fba-7721215c852e
-robust_serialize(file_name, tree_to_serialize)
+begin
+	file_name = joinpath(working_dir, "tree to serialize.tree")
+	robust_serialize(file_name, tree_to_serialize);
+	file_name
+end
 
 # ╔═╡ 1cbd2cf9-6a94-4adc-a35c-16a51b0bbe3f
 deserialized_tree = robust_deserialize(file_name)
@@ -345,9 +367,9 @@ tree_to_serialize == deserialized_tree
 # ╠═60ac823b-cfe1-4212-ab9e-14a90aa683d0
 # ╟─dc3a0c5d-8f06-442e-8fe1-d662b0ed896d
 # ╟─df8e53e0-d1c1-45a1-81b3-5e0f2ece53f6
-# ╟─df236b61-7f19-461c-9f10-9163175393b3
+# ╠═d5846c2c-08f4-4cc9-92aa-8a808b8e6f53
+# ╠═df236b61-7f19-461c-9f10-9163175393b3
 # ╠═602d60b1-21ae-4233-9957-ddab756d1906
 # ╠═66fb431c-55dd-4745-b526-106dbf0b713a
-# ╠═79386bc7-759c-4cde-9fba-7721215c852e
 # ╠═1cbd2cf9-6a94-4adc-a35c-16a51b0bbe3f
 # ╠═655f8934-fd3e-48c3-b27c-6fee5f976a87
