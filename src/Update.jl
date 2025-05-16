@@ -3,9 +3,10 @@ struct ValueUpdate
     new_value
 end
 
-function apply_updates!(updates::AbstractVector{ValueUpdate})
+function apply_updates!(updates::AbstractVector{ValueUpdate}; animation_callback=nothing)
     for update in updates
         update.leaf.value = update.new_value
+        if !isnothing(animation_callback); animation_callback(get_root(update.leaf)) end
     end
 end
 
@@ -136,11 +137,12 @@ Updates every properly bounded partition with a new set of safe actions. An acti
 
 **Args:**
 - `tree` The tree to update.
+- `animation_callback`: Function on the form animation_callback(tree::Tree). Use to create a step-by-step animation. Mind that this can be extremely slow.
 """
-function update!(tree::Tree, m::ShieldingModel)
+function update!(tree::Tree, m::ShieldingModel; animation_callback=nothing)
     updates = get_updates(tree, m)
 
-    apply_updates!(updates)
+    apply_updates!(updates; animation_callback)
 
     length(updates)
 end

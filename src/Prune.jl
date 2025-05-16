@@ -1,13 +1,15 @@
 """
-    prune!(tree::Tree)
+    prune!(tree::Tree; animation_callback)
 
 Attempt to remove redundant leaves from the tree.
 
+- `animation_callback`: Function on the form animation_callback(tree::Tree). Use to create a step-by-step animation. Mind that this can be extremely slow.
+
 **Returns:** The number of changes made to the tree.
 """
-function prune!(tree::Tree, m::ShieldingModel)
+function prune!(tree::Tree, m::ShieldingModel; animation_callback=nothing)
 	if m.pruning == naïve
-		return naïve_prune!(tree)
+		return naïve_prune!(tree; animation_callback)
 	elseif m.pruning == caap_reduction
 		error("caap_reduction not implemented")
 	elseif m.pruning == no_pruning
@@ -17,7 +19,7 @@ function prune!(tree::Tree, m::ShieldingModel)
 	end
 end
 
-function naïve_prune!(tree::Tree)
+function naïve_prune!(tree::Tree; animation_callback=nothing)
 	changes_made = 0
     leaf_count = 0
 
@@ -34,6 +36,8 @@ function naïve_prune!(tree::Tree)
 			replace_subtree!(leaf.parent, Leaf(leaf.value))
 			changes_made += 1
             leaf_count -= 1
+
+			if !isnothing(animation_callback); animation_callback(tree) end
 		end
 	end
 

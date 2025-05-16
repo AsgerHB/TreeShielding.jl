@@ -220,3 +220,11 @@ end
 function well_formed(leaf::Leaf)
     return leaf.parent.lt === leaf || leaf.parent.geq === leaf
 end
+
+function get_root(tree::Tree)
+    if isnothing(tree.parent)
+        return tree
+    else
+        return get_root(tree.parent)
+    end
+end

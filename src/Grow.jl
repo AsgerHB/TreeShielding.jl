@@ -35,6 +35,8 @@ Grow the entire tree by calling `split_all!` on all leaves, until no more change
 
 Note that the number of resulting leaves is potentially exponential in the number of iterations. Therefore, setting a suitably high `granularity` and a suitably low `max_iterations` is adviced.
 
+- `animation_callback`: Function on the form animation_callback(tree::Tree). Use to create a step-by-step animation. Mind that this can be extremely slow.
+
 **Returns:** The number of leaves in the resulting tree.
 
 **Args:**
@@ -42,7 +44,7 @@ Note that the number of resulting leaves is potentially exponential in the numbe
 """
 
 const no_action = actions_to_int([])
-function grow!(tree::Tree, m::ShieldingModel)
+function grow!(tree::Tree, m::ShieldingModel; animation_callback=nothing)
 
     stack = Tree[tree]
     loop_break = 10000000
@@ -77,6 +79,7 @@ function grow!(tree::Tree, m::ShieldingModel)
 
             if split_result isa Node
                 push!(stack, split_result)
+                if !isnothing(animation_callback); animation_callback(tree) end
             end
         else
             error("Uexpected node type")
@@ -410,7 +413,7 @@ function get_threshold(tree::Tree, bounds::Bounds, axis, action, direction::Dire
         return nothing
     end
 
-    @assert bounds.lower[axis] < threshold < bounds.upper[axis] "$(bounds.lower[axis]) < $threshold < $(bounds.upper[axis])"
+    @assert bounds.lower[axis] < threshold < bounds.upper[axis] "Threshold out of bounds: $(bounds.lower[axis]) < $threshold < $(bounds.upper[axis])"
     
     return threshold
 end

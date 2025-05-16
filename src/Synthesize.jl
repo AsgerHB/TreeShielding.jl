@@ -9,22 +9,23 @@ The state space must be properly bounded (see function `bounded`) since partitio
 
 **Args:**
 - `tree` A properly initialized tree. See description.
+- `animation_callback`: Function on the form animation_callback(tree::Tree). Use to create a step-by-step animation. Mind that this can be extremely slow.
 """
-function synthesize!(tree::Tree, m::ShieldingModel)
+function synthesize!(tree::Tree, m::ShieldingModel; animation_callback=nothing)
 
     clear_reachable!(tree, m)
     previous_leaf_count = 0 # value not required when loop is entered.
     change_occured = true
     while change_occured
-        grown_to = grow!(tree, m)
+        grown_to = grow!(tree, m; animation_callback)
 
         m.verbose && @info "Grown to $grown_to leaves"
         
-        updates = update!(tree, m)
+        updates = update!(tree, m; animation_callback)
 
         m.verbose && @info "Updated $updates leaves"
         
-        pruned_to = prune!(tree, m)
+        pruned_to = prune!(tree, m; animation_callback)
 
         m.verbose && @info "Pruned to $pruned_to leaves"
         
