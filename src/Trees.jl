@@ -38,6 +38,11 @@ AbstractTrees.nodevalue(leaf::Leaf) = leaf.value
 AbstractTrees.parent(tree::Tree) = tree.parent
 AbstractTrees.ParentLinks(::Type{<:Tree}) = AbstractTrees.StoredParents()
 
+
+
+#region equality
+# See https://stackoverflow.com/questions/57945372/when-should-i-use-vs-vs-isequal
+
 Base.:(==)(a::Node, b::Node) = begin
     a.axis == b.axis &&
     a.threshold == b.threshold &&
@@ -48,6 +53,14 @@ end
 Base.:(==)(a::Leaf, b::Leaf) = begin
     a.value == b.value
 end
+
+Base.isequal(a::Tree, b::Tree) = begin
+    return objectid(a) == objectid(b)
+end
+
+Base.hash(a::Tree) = objectid(a)
+
+#endregion
 
 function get_leaf(leaf::Leaf, _)
     leaf
