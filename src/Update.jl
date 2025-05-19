@@ -71,7 +71,7 @@ function set_reachable!(tree::Tree{T}, m::ShieldingModel) where {T}
                     p′ = m.simulation_function(p, r, a)
                     dest = get_leaf(tree, p′)::Leaf{T}
                     push!(leaf.reachable[action_index], dest)
-                    push!(dest.incoming[action_index], leaf)
+                    push!(dest.incoming, leaf)
                     action_index += 1
                 end
             end
@@ -94,7 +94,6 @@ function clear_reachable!(leaf::Leaf{T}, m::ShieldingModel) where {T}
 
     for a in m.action_space
         push!(leaf.reachable, Set{Leaf{T}}())
-        push!(leaf.incoming, Set{Leaf{T}}())
     end
 end
 

@@ -24,11 +24,11 @@ mutable struct Leaf{T} <: Tree{T}
     parent::Union{Nothing,Tree{T}}
     dirty::Bool # Does reachability need to be updated?
     reachable::Vector{Set{Leaf{T}}} # reachable[action_index] => {leaf2, leaf13, ... }
-    incoming::Vector{Set{Leaf{T}}}  # The inverse of reachable.
+    incoming::Set{Leaf{T}}  # The inverse of reachable.
 end
 
 function Leaf(value::T) where {T}
-    Leaf(value, nothing, true, Vector{Set{Leaf{T}}}(), Vector{Set{Leaf{T}}}())
+    Leaf(value, nothing, true, Vector{Set{Leaf{T}}}(), Set{Leaf{T}}())
 end
 
 AbstractTrees.children(node::Node) = [node.lt, node.geq]
@@ -110,10 +110,8 @@ function replace_subtree!(tree::Tree, new_tree::Tree)
 end
 
 function split!(leaf::Leaf, axis, threshold, lower=nothing, upper=nothing)
-    for leaves in leaf.incoming
-        for leaf′ in leaves
-            leaf′.dirty = true 
-        end
+    for leaf′ in leaf.incoming
+        leaf′.dirty = true
     end
 
     lower = something(lower, leaf.value)
