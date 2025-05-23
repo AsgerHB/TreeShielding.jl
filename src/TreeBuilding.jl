@@ -85,9 +85,7 @@ Used to initialize the values of the tree, marking partitions as unsafe, if they
 function set_safety!(tree, dimensionality, safe_function, safe_value, unsafe_value)
 	for leaf in Leaves(tree)
 		bounds = get_bounds(leaf, dimensionality)
-		if !bounded(bounds)
-			continue
-		elseif safe_function(bounds)
+		if safe_function(bounds)
 			leaf.value = safe_value
 		else
 			leaf.value = unsafe_value

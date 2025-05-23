@@ -437,7 +437,7 @@ end
 
 # ╔═╡ f113308a-1d72-41e9-ba54-71576994a664
 synthesize_button; draw(safety_strategy, 
-		Bounds(outer_bounds.lower, MVector(outer_bounds.upper[1], outer_bounds.upper[2]+2)), 
+		Bounds((-16, -1), (16, 11)), 
 		color_dict=action_color_dict,
 		dpi=300,
 		line=0.2,
@@ -637,7 +637,7 @@ end end
 # ╠═ecf49f25-1ea4-48be-a391-c8f4c1012c6f
 # ╠═c92d8cf4-0908-4c7c-8d3d-3dd07972219e
 # ╟─c42af80d-bb1e-42f7-9131-1080639cbd6a
-# ╟─f113308a-1d72-41e9-ba54-71576994a664
+# ╠═f113308a-1d72-41e9-ba54-71576994a664
 # ╟─25f2d1da-50b5-4563-afb6-8603c484d39a
 # ╠═0501c67b-58bb-4016-a948-96ba6960007a
 # ╟─dfba58b6-752a-4051-8cc2-c0c0b1b2c9e3

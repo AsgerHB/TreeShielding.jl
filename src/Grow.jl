@@ -13,7 +13,7 @@ For each point, use the `simulation_function` to check if it would end up in an 
  - `action_space` The possible actions to provide `simulation_function`. 
  - `points` This is the set of points.
 """
-function compute_safety(tree::Tree, bounds::Bounds, m)
+function compute_safety(tree::Tree, bounds::Bounds, m::ShieldingModel)
     no_action = actions_to_int([]) # The value for states where no actions are allowed.
     result = []
     for (p, r) in all_supporting_points(bounds, m)

@@ -14,20 +14,14 @@ function test_get_threshold(;samples_per_axis=9,
     spa_when_testing = 20 
 
     ### Setting up the Random walk problem ###
-    dimensionality = 2
-
-    simulation_function(point, random_outcomes, action) = simulate(
-        rwmechanics,
-        point[1], 
-        point[2], 
-        action,
-        random_outcomes)
-
-    ϵ = rwmechanics.ϵ
-    random_variable_bounds = Bounds((-ϵ, -ϵ), (ϵ, ϵ))
+    
+    m = ShieldingModel(;environment...,
+        samples_per_axis,
+        splitting_tolerance,
+        granularity)
 
     any_action, no_action = 
-	    actions_to_int(instances(Pace)), actions_to_int([])
+	    actions_to_int(m.action_space), actions_to_int([])
 
     tree = tree_from_bounds(Bounds(
         (rwmechanics.x_min, rwmechanics.t_min), 
@@ -44,30 +38,19 @@ function test_get_threshold(;samples_per_axis=9,
 	is_safe(bounds::Bounds) = is_safe((bounds.lower[1], bounds.upper[2]))
 
 	set_safety!(tree, 
-		dimensionality, 
+		m.dimensionality, 
 		is_safe, 
 		any_action, 
 		no_action)
-
-    
-    m = ShieldingModel(;simulation_function, 
-        action_space=Pace, 
-        dimensionality,
-        samples_per_axis,
-        random_variable_bounds,
-        splitting_tolerance,
-        granularity)
-
         
-        
-    ### Act ##
+    ### Act ###
     point = (0.5, 0.5) # The middle of the playfield.
-    bounds = get_bounds(get_leaf(tree, point), dimensionality)
+    bounds = get_bounds(get_leaf(tree, point), m.dimensionality)
     axis = 2
     direction = TreeShielding.safe_below_threshold
     threshold = TreeShielding.get_threshold(tree, bounds, axis, RW.fast, direction, m)
 
-    ### Assert ##
+    ### Assert ###
 
     bounds_above, bounds_below = deepcopy(bounds), deepcopy(bounds)
     

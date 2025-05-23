@@ -77,7 +77,12 @@ For concrete states: Returns whether state satisfies the safety property.
 For bounds: Returns whether all states within bounds are safe.
 """
 is_safe(state) = abs(state[1]) > 1 || state[2] > 0
-is_safe(bounds::Bounds) = all([is_safe((s[1], s[2])) for s in SupportingPoints(5, bounds)])
+is_safe(bounds::Bounds) = begin
+	if !bounded(bounds)
+		return true
+	end
+	return all([is_safe((s[1], s[2])) for s in SupportingPoints(5, bounds)])
+end
 
 
 function evaluate(mechanics, policy, duration;

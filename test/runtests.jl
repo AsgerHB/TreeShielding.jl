@@ -1,8 +1,10 @@
 using Test
 using Unzip
 using TreeShielding
-using TreeShielding.RW
+using TreeShielding.Environments.RandomWalk
 using AbstractTrees
+
+RW = TreeShielding.Environments.RandomWalk
 
 @testset "TreeShielding.jl" begin
     include("Trees.jl")
