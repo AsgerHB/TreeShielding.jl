@@ -1,4 +1,4 @@
-# The "Random Walk" example.
+using TreeShielding
 
 struct RWMechanics
     t_min
@@ -48,10 +48,60 @@ function simulate(m::RWMechanics, x, t, a, random_outcomes)
 	x′, t′
 end
 
-
 function simulate(m::RWMechanics, x, t, a)
 	random_outcomes = (rand(-m.ϵ:0.005:m.ϵ), rand(-m.ϵ:0.005:m.ϵ))
 	simulate(m::RWMechanics, x, t, a, random_outcomes)
+end
+
+
+# The simulation-function expected by shielding models.
+simulation_function=(s, r, a) -> simulate(rwmechanics, s[1], s[2], a, r)
+
+random_variable_bounds = let ϵ = rwmechanics.ϵ
+	Bounds((-ϵ,  -ϵ), (ϵ, ϵ))
+end
+
+# Named-tuple containing all the environment-specific fields for a ShieldingModel
+environment = (;random_variable_bounds, simulation_function, action_space=Pace, dimensionality=2)
+
+"""
+	is_safe(x::Number, t::Number)
+	is_safe(s::Number)
+	is_safe(b::Bounds)
+
+	For concrete states: Returns whether state satisfies the safety property.
+
+	For bounds: Returns whether all states within bounds are safe.
+"""
+function is_safe(x::Number, t::Number)
+	if x <= 1
+		if t <= 1
+			return true
+		else
+			return false
+		end
+	else
+		if t >= 0.1
+			return true
+		else 
+			return false
+		end
+	end
+end
+
+function is_safe(s::Number)
+	return is_safe(s[1], s[2])
+end
+
+function is_safe(b::Bounds)
+	for x in [b.lower[1], b.upper[1]]
+		for t in [b.lower[2], b.upper[2]]
+			if !is_safe(x, t)
+				return false
+			end
+		end
+	end
+	return true
 end
 
 

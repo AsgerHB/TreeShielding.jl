@@ -35,7 +35,8 @@ end
 # ╔═╡ 40e5b7be-7438-48cc-b275-a73d7e42c5a2
 begin
 	@revise using TreeShielding
-	using TreeShielding.RW
+	using TreeShielding.Environments.RandomWalk 
+	RW = RandomWalk
 end
 
 # ╔═╡ 49cebaac-b284-487d-9569-018c7410bec9
@@ -112,7 +113,7 @@ begin
 	plot(aspectratio=:equal)
 	xlims!(rwmechanics.x_min, rwmechanics.x_max + 0.1)
 	ylims!(rwmechanics.t_min, rwmechanics.t_max + 0.1)
-	draw_walk!(take_walk(rwmechanics, (_, _) -> rand([RW.slow, RW.fast]))...)
+	draw_walk!(take_walk(rwmechanics, (_, _) -> rand([slow, fast]))...)
 end
 
 # ╔═╡ e8354315-0234-41aa-828d-7627b52d841e
@@ -136,18 +137,8 @@ md"""
 The actions are affected by a random factor $\pm \epsilon$ in each dimension. This is captured in the below bounds, which make up part of the model. This will be used as part of the reachability simulation.
 """
 
-# ╔═╡ bb4516e9-1f18-4b5f-a29f-06fc4449de07
-ϵ = rwmechanics.ϵ
-
-# ╔═╡ 875b85a8-f7d5-4e7d-a499-3cad1c92917d
-@bind just_worst_case CheckBox(default=true)
-
 # ╔═╡ 55ef89de-76c4-48c7-953b-44e2034409c6
-random_variable_bounds = if just_worst_case
-	Bounds((-ϵ,  ϵ), (-ϵ, ϵ))
-else
-	Bounds((-ϵ,  -ϵ), (ϵ, ϵ))
-end
+RW.random_variable_bounds
 
 # ╔═╡ 7d07f8c2-3bde-4506-b7d3-f2b4a6b7aba9
 md"""
@@ -157,15 +148,15 @@ The function for taking a single step needs to be wrapped up, so that it has the
 """
 
 # ╔═╡ f698931f-0f24-4f82-8a09-f521bb1b4d2d
-simulation_function(point, random_variables, action) = RW.simulate(
-	rwmechanics, 
-	point[1], 
-	point[2], 
-	action,
-	random_variables)
+RW.simulation_function([0.0, 0.0], RW.random_variable_bounds.lower, slow)
+
+# ╔═╡ 82def350-e9fc-498d-99e0-a311483cdf33
+RW.simulation_function([0.0, 0.0], RW.random_variable_bounds.upper, slow)
 
 # ╔═╡ c235f874-a7dc-4090-9733-7a92263b6d32
 md"""
+### Safety Property
+
 The goal of the game is to reach `x >= x_max` without reaching `t >= t_max`. 
 
 As an additional constraint, the player must not be too early. Arriving before `t == earliest` is also a safety violation.
@@ -173,19 +164,8 @@ As an additional constraint, the player must not be too early. Arriving before `
 This corresponds to the below safety property. It is defined both for a single `(x, t)` point, as well as for a set of points given by `Bounds`.
 """
 
-# ╔═╡ 4f33f9a0-9a7a-426b-8022-43a87bb3d188
-earliest = 0.0
-
-# ╔═╡ 957a7a75-0ac0-4c2e-9359-f9ad915e88be
-begin
-	is_safe(point) = point[2] <= rwmechanics.t_max && 
-					(point[1] <= rwmechanics.x_max || point[2] >= earliest)
-	
-	is_safe(bounds::Bounds) = is_safe((bounds.lower[1], bounds.upper[2])) &&
-                              is_safe((bounds.upper[1], bounds.upper[2])) &&
-                              is_safe((bounds.upper[1], bounds.lower[2])) &&
-                              is_safe((bounds.lower[1], bounds.lower[2]))
-end
+# ╔═╡ 45ccd502-ce51-4053-a6e4-2b2613644590
+@doc is_safe
 
 # ╔═╡ 98cd05d4-07ee-4574-a157-8e3270091c15
 md"""
@@ -213,12 +193,9 @@ begin
 	x_max, y_max = rwmechanics.x_max, rwmechanics.t_max
 	split!(get_leaf(initial_tree, x_min - 0.1, y_max), 2, y_max)
 	split!(get_leaf(initial_tree, x_max + 0.1, y_max), 2, y_max)
-	split!(get_leaf(initial_tree, x_max + 0.1, y_max - 0.1), 2, earliest)
+	split!(get_leaf(initial_tree, x_max + 0.1, y_max - 0.1), 2, 0.1)
 	split!(get_leaf(initial_tree, x_max - 0.1, y_max - 0.1), 2, (x_max - x_min)/2)
 end
-
-# ╔═╡ 7c4dba76-5ce9-4db7-b5d5-421c5ef981d3
-draw(initial_tree, draw_bounds, color_dict=action_color_dict, aspectratio=:equal)
 
 # ╔═╡ 777f87fd-f497-49f8-9deb-e708c990cdd1
 tree = set_safety!(copy(initial_tree), 
@@ -229,6 +206,13 @@ tree = set_safety!(copy(initial_tree),
 
 # ╔═╡ 3b86ac41-4d87-4498-a1ca-c8c327ceb347
 draw(tree, draw_bounds, color_dict=action_color_dict, aspectratio=:equal)
+
+# ╔═╡ e81be65e-1c9d-4052-bb41-c1d332886f9f
+md"""
+# ShieldingModel
+
+The `m` is just a big bucket of parameters used for synthesis. It's easier to throw `m` around between functions than it is to pass only what they'll need.
+"""
 
 # ╔═╡ 3bf43a31-1739-4b94-944c-0226cc3851cb
 md"""
@@ -247,25 +231,41 @@ Try setting a different number of samples per axis:
 
 `samples_per_axis =` $(@bind samples_per_axis NumberField(3:30, default=5))
 
-`granularity =` $(@bind granularity NumberField(0:1E-15:1, default=1E-5))
+`granularity =` $(@bind granularity NumberField(0:1E-15:1, default=0.01))
 
+
+`grow_method = `
+	$(@bind grow_method Select(GrowMethod |> instances |> collect,
+		default=plus))
+
+`pruning = `
+	$(@bind pruning Select(Pruning |> instances |> collect,
+		default=naïve))
+
+`reachability_caching = `
+	$(@bind reachability_caching Select(ReachabilityCaching |> instances |> collect,
+		default=dependency_graph))
+
+For `binary_search` splitting method only:
 `splitting_tolerance =` $(@bind splitting_tolerance NumberField(0:1E-10:1, default=1E-5))
 """
 
 # ╔═╡ a52e9520-f4df-4e88-bb39-e516f37335ea
-m = ShieldingModel(;simulation_function, action_space=Pace, dimensionality, samples_per_axis, random_variable_bounds, granularity, splitting_tolerance)
+m = ShieldingModel(;environment...,
+				   grow_method,
+				   pruning,
+				   reachability_caching,
+				   samples_per_axis,
+				   granularity,
+				   splitting_tolerance)
 
 # ╔═╡ e3ba9c22-6e2c-4d90-9823-93f871c036b4
 get_bounds(get_leaf(initial_tree, x_max + 1, y_max/2), m.dimensionality)
 
 # ╔═╡ 1e96d57c-3dfe-4bd3-89b8-09d2157b6472
-call() do
+let
 	bounds = get_bounds(get_leaf(initial_tree, x_max/2, y_max/2), m.dimensionality)
 	@test is_safe(bounds)
-	@test is_safe((bounds.lower[1], bounds.upper[2]))
-	@test is_safe((bounds.upper[1], bounds.upper[2]))
-	@test is_safe((bounds.upper[1], bounds.lower[2]))
-	@test is_safe((bounds.lower[1], bounds.lower[2]))
 end
 
 # ╔═╡ 3d8f9479-3a98-4d24-94a4-6935fa2b3de9
@@ -398,7 +398,7 @@ finished_tree = if synthesize_button > 0 # Set to 0 to prevent refresh on every 
 	synthesize!(finished_tree, m)
 
 	finished_tree
-end
+end;
 
 # ╔═╡ 1dae01dd-7491-4ec2-bed6-80fca1162e6f
 if finished_tree !== nothing
@@ -542,26 +542,24 @@ end
 # ╠═e8354315-0234-41aa-828d-7627b52d841e
 # ╠═48628903-437a-4efa-bcdc-b0d49b88e0d5
 # ╟─c011233c-476d-4dcc-862c-151e49f75faf
-# ╠═bb4516e9-1f18-4b5f-a29f-06fc4449de07
-# ╠═875b85a8-f7d5-4e7d-a499-3cad1c92917d
 # ╠═55ef89de-76c4-48c7-953b-44e2034409c6
 # ╟─7d07f8c2-3bde-4506-b7d3-f2b4a6b7aba9
-# ╟─f698931f-0f24-4f82-8a09-f521bb1b4d2d
+# ╠═f698931f-0f24-4f82-8a09-f521bb1b4d2d
+# ╠═82def350-e9fc-498d-99e0-a311483cdf33
 # ╟─c235f874-a7dc-4090-9733-7a92263b6d32
-# ╠═4f33f9a0-9a7a-426b-8022-43a87bb3d188
-# ╠═957a7a75-0ac0-4c2e-9359-f9ad915e88be
+# ╠═45ccd502-ce51-4053-a6e4-2b2613644590
 # ╟─98cd05d4-07ee-4574-a157-8e3270091c15
 # ╠═36ffecc0-b0f3-47ee-91aa-83c31a117405
 # ╠═3e46f4e4-7711-4e7f-915c-17db6ab18a42
 # ╠═35da0d89-1799-43c9-ba07-f48e7803e395
 # ╠═e3ba9c22-6e2c-4d90-9823-93f871c036b4
 # ╠═1e96d57c-3dfe-4bd3-89b8-09d2157b6472
-# ╠═7c4dba76-5ce9-4db7-b5d5-421c5ef981d3
 # ╠═777f87fd-f497-49f8-9deb-e708c990cdd1
 # ╠═3b86ac41-4d87-4498-a1ca-c8c327ceb347
+# ╟─e81be65e-1c9d-4052-bb41-c1d332886f9f
+# ╠═a52e9520-f4df-4e88-bb39-e516f37335ea
 # ╟─3bf43a31-1739-4b94-944c-0226cc3851cb
 # ╟─503b61c8-e437-42ab-a7d0-de4d47030d50
-# ╠═a52e9520-f4df-4e88-bb39-e516f37335ea
 # ╠═3d8f9479-3a98-4d24-94a4-6935fa2b3de9
 # ╠═5cfd2617-c1d8-4228-b7ca-cde9c3d68a4c
 # ╟─c8248f9e-6fc2-49c4-9e69-b8387628f0fd
@@ -580,7 +578,7 @@ end
 # ╟─8af94312-e7f8-4b44-8190-ad0d2b5ce6d7
 # ╠═039a6f5c-2934-4345-a381-56f8c3c33483
 # ╟─6823a7d1-f404-46b1-9490-862aeba553a7
-# ╠═0e68f636-cf63-4df8-b9ca-c597701334a9
+# ╟─0e68f636-cf63-4df8-b9ca-c597701334a9
 # ╟─1dae01dd-7491-4ec2-bed6-80fca1162e6f
 # ╟─92c40459-93b0-488d-86b9-e6a8d0a01a19
 # ╠═fca5d006-6cdd-40b7-90f6-ba3def553090

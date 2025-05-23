@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.4
+# v0.20.8
 
 using Markdown
 using InteractiveUtils
@@ -7,7 +7,7 @@ using InteractiveUtils
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
     #! format: off
-    quote
+    return quote
         local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
         local el = $(esc(element))
         global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
@@ -37,7 +37,8 @@ end
 # ╔═╡ 8377c2de-6078-463a-911d-29d1dd0e4138
 begin
 	@revise using TreeShielding
-	using TreeShielding.BB
+	using TreeShielding.Environments.BouncingBall
+	BB = BouncingBall
 end
 
 # ╔═╡ 82e532dd-8ec1-458f-b4d6-59cea44dc2b6
@@ -47,7 +48,7 @@ This notebook applies the package to a non-trivial example.
 """
 
 # ╔═╡ 96155a32-5e05-4632-9fe8-e843970e3089
-animate_trace(simulate_sequence(bbmechanics, (0, 7), random_policy(0.1), 10)...)
+animate_trace(simulate_sequence(bbmechanics, (0, 7), random_policy(0.1), 3)...)
 
 # ╔═╡ dbdc3329-b95d-42a1-9a98-20ff149bb062
 md"""
@@ -106,6 +107,46 @@ md"""
 Everything is rolled up into a convenient little ball that is easy to toss around between functions. This ball is called `ShieldingModel`
 """
 
+# ╔═╡ 57be14bb-d748-4432-8608-106c44c38f83
+md"""
+### Set the parameters -- Try it Out
+Try setting a different number of samples per axis: 
+
+`samples_per_axis =` $(@bind samples_per_axis NumberField(3:30, default=3))
+
+`max_iterations =` $(@bind max_iterations NumberField(1:1000, default=20))
+
+And configure min granularity. The value is set as the number of leading zeros to the first digit.
+
+`granularity =` $(@bind granularity NumberField(0:1E-10:1, default=1E-2))
+
+
+`grow_method = `
+	$(@bind grow_method Select(GrowMethod |> instances |> collect,
+		default=plus))
+
+`pruning = `
+	$(@bind pruning Select(Pruning |> instances |> collect,
+		default=naïve))
+
+`reachability_caching = `
+	$(@bind reachability_caching Select(ReachabilityCaching |> instances |> collect,
+		default=dependency_graph))
+
+For `binary_search` splitting method only:
+`splitting_tolerance =` $(@bind splitting_tolerance NumberField(0:1E-10:1, default=1E-5))
+"""
+
+# ╔═╡ f878ebd6-b261-4151-8aae-521b6736b28a
+m = ShieldingModel(;environment...,
+				   grow_method,
+				   pruning,
+				   reachability_caching,
+				   samples_per_axis,
+				   max_iterations,
+				   granularity,
+				   splitting_tolerance)
+
 # ╔═╡ 39cd11b7-2428-47ae-b8ec-90459bb03636
 dimensionality = 2
 
@@ -119,7 +160,7 @@ However, both events cannot happen at the same time-step, so a random value betw
 """
 
 # ╔═╡ 2887090b-71f7-4be8-abf7-04eeeca14559
-random_variable_bounds = Bounds((-1,), (1,))
+BB.random_variable_bounds
 
 # ╔═╡ 490b1897-3357-4529-9780-33122b1dbd62
 md"""
@@ -128,33 +169,23 @@ md"""
 The function for taking a single step needs to be wrapped up, so that it has the signature `(point::AbstractVector, action, random_variables::AbstractVector) -> updated_point`. 
 """
 
-# ╔═╡ 1cc57555-e687-4b84-9568-c7eb903f57ef
-simulation_function(p, r, a) = 
-	simulate_point(bbmechanics, p, r, a, min_v_on_impact=1)
-
 # ╔═╡ d772354b-b855-4d4e-b768-2200c03cc0d6
-simulation_function((4, 7), -1, hit)
+BB.simulation_function((4, 7), -1, hit)
 
 # ╔═╡ cd82ff88-3e88-4a94-b414-abca02a55217
-simulation_function((0.1, 0), 0.5, hit)
-
-# ╔═╡ 0ed0c202-227f-4432-b23d-03163ebcffbe
-rand(0.0:eps():1.0)
+BB.simulation_function((0.1, 0), 0.5, hit)
 
 # ╔═╡ 33aae1b2-cffb-44f7-9b19-5c5b682473ed
 md"""
-## Safety Property
+### Safety Property
 
 The ball should never "come to a stop." However, coming to a stop includes doing an infinite amount of bounces in a finite amount of time, until the velocity becomes zero.
 
 In practice, this means it should bounce back with more than $1^m/{}_s$. 
 """
 
-# ╔═╡ f86a0e8b-9d76-4e68-91cf-927595c27387
-begin
-	is_safe(state) = abs(state[1]) > 1 || state[2] > 0
-	is_safe(bounds::Bounds) = is_safe((bounds.lower[1], bounds.lower[2]))
-end
+# ╔═╡ c57418b4-a84e-4101-8a79-b2bace15fb90
+@doc is_safe
 
 # ╔═╡ caa90ceb-0435-40b7-a97d-74919b040002
 @test !is_safe((0, 0))
@@ -173,7 +204,7 @@ end
 
 # ╔═╡ 0a267aab-98d7-4ee5-a907-29d54e2a09f0
 md"""
-# Applying Everything we Learned
+# Building a Tree
 """
 
 # ╔═╡ 4f55da12-5f81-484f-970a-691336e6e58f
@@ -184,21 +215,23 @@ outer_bounds = Bounds((-15, 0), (15, 10))
 
 # ╔═╡ c8b40bd6-a8f3-42e8-bcbb-5bddd452dab0
 initial_tree = call() do
-	tree = tree_from_bounds(outer_bounds)
+	tree = tree_from_bounds(outer_bounds, 3, 3)
 	inside = get_leaf(tree, 0, 0)
 
-	unsafe_states = Bounds((-1, 0), (2, 1))
-	split!(inside, 1, unsafe_states.lower[1])
+	unsafe_states = Bounds((-1., 0.), (2., 1.))
+	split!(inside, 1, unsafe_states.lower[1] - 0.1)
 	inside = get_leaf(tree, 0, 0)
 	split!(inside, 1, unsafe_states.upper[1])
 	inside = get_leaf(tree, 0, 0)
 	split!(inside, 2, unsafe_states.upper[2])
 	inside = get_leaf(tree, 0, 0)
+	
 	set_safety!(tree, dimensionality, is_safe, any_action, no_action)
+	tree
 end
 
 # ╔═╡ b8024843-e681-4dde-9af9-1254c0e0d732
-draw(initial_tree, outer_bounds, color_dict=action_color_dict)
+draw(initial_tree, Bounds([-16, -1], [16, 11]), color_dict=action_color_dict)
 
 # ╔═╡ 454f91d1-3e42-4424-a594-3bc35528d4d8
 md"""
@@ -248,52 +281,6 @@ begin
 	"Next: Leaf($(reactive_queue[end].value))"
 end
 
-# ╔═╡ afd89bd1-347e-4792-8f3b-e5b372c649fe
-md"""
-# Synthesis --  Try it Out!
-
-Change the inputs and click the buttons to see how the parameters affect synthesis, one step at a time.
-"""
-
-# ╔═╡ 0e18b756-f8a9-4821-8b85-30c908f7e3af
-md"""
-`show_supporting_points:`
-$(@bind show_supporting_points CheckBox(default=true))
-
-`zoom_in`
-$(@bind zoom_in CheckBox(default=false))
-
-`a =` $(@bind a Select(instances(Action) |> collect, default=nohit))
-
-Position: 
-$(@bind partition_x 
-	NumberField(outer_bounds.lower[1]:0.01:outer_bounds.upper[1], default=0.9))
-$(@bind partition_y 
-	NumberField(outer_bounds.lower[2]:0.01:outer_bounds.upper[2], default=0.9))
-"""
-
-# ╔═╡ 38dc8c6d-7181-42ca-b760-55e4ffebe0b9
-p = (partition_x, partition_y)
-
-# ╔═╡ 57be14bb-d748-4432-8608-106c44c38f83
-md"""
-### Set the parameters -- Try it Out
-Try setting a different number of samples per axis: 
-
-`samples_per_axis =` $(@bind samples_per_axis NumberField(3:30, default=3))
-
-`max_iterations =` $(@bind max_iterations NumberField(1:1000, default=20))
-
-And configure min granularity. The value is set as the number of leading zeros to the first digit.
-
-`granularity =` $(@bind granularity NumberField(0:1E-10:1, default=1E-2))
-
-`splitting_tolerance =` $(@bind splitting_tolerance NumberField(0:1E-10:1, default=1E-4))
-"""
-
-# ╔═╡ f878ebd6-b261-4151-8aae-521b6736b28a
-m = ShieldingModel(simulation_function, Action, dimensionality, samples_per_axis, random_variable_bounds; max_iterations, granularity, margin, splitting_tolerance)
-
 # ╔═╡ 42b0bcee-b931-4bad-9b4b-268f6b3d260c
 if try_splitting_button > 0 && reactive_leaf !== nothing
 	call() do
@@ -333,8 +320,15 @@ call() do
 	plot!([], line=nothing, label="$leaf_count leaves")
 end
 
+# ╔═╡ afd89bd1-347e-4792-8f3b-e5b372c649fe
+md"""
+# One synthesis step at a time --  Try it Out!
+
+Change the inputs and click the buttons to see how the parameters affect synthesis, one step at a time.
+"""
+
 # ╔═╡ fb359eb9-2ce4-466a-9de8-0a0d691f78b9
-m; @bind reset_button Button("Reset")
+@bind reset_button Button("Reset")
 
 # ╔═╡ 142d1db7-183e-45a5-b219-30120ffe437b
 begin
@@ -345,43 +339,54 @@ begin
 end
 
 # ╔═╡ 129fbdb0-88a5-4f3d-82e0-56df43c7a46c
-reset_button; @bind go_clock CounterButton("Go!")
+reset_button; @bind go_button CounterButton("Go!")
 
 # ╔═╡ e7fbb9bb-63b5-4f6a-bb27-7ea1613d6740
-go_clock,
-if debounce1[] == 1
-	debounce1[] += 1
-	"ready"
-else
+if go_button > 0 let 
+	msg = ""
 	
-	grown = grow!(reactive_tree, m)
+	grow!(reactive_tree, m)
 
-	# @info "Grown to $grown leaves"
+	msg *= "Grown to $(length(collect(Leaves(reactive_tree)))) leaves.\n\n"
 	
 	updates = update!(reactive_tree, m)
-	# @info "Updated $updates leaves"
+	msg *= "Updated $updates leaves.\n\n"
 	
-	pruned_to = prune!(reactive_tree)
-	# @info "Pruned to $pruned_to leaves"
+	pruned_to = prune!(reactive_tree, m)
+	msg *= "Pruned to $pruned_to leaves.\n\n"
 	
-	"done"
-end
+	(msg) |> Markdown.parse
+end end
 
-# ╔═╡ e0013651-12ed-4c81-ad05-2eb8f47a720c
-reset_button, go_clock; Leaves(reactive_tree) |> collect |> length
+# ╔═╡ 0e18b756-f8a9-4821-8b85-30c908f7e3af
+md"""
+`show_supporting_points:`
+$(@bind show_supporting_points CheckBox(default=true))
+
+`zoom_in`
+$(@bind zoom_in CheckBox(default=false))
+
+`a =` $(@bind a Select(instances(Action) |> collect, default=nohit))
+
+Position: 
+$(@bind partition_x 
+	NumberField(outer_bounds.lower[1]:0.01:outer_bounds.upper[1], default=0.9))
+$(@bind partition_y 
+	NumberField(outer_bounds.lower[2]:0.01:outer_bounds.upper[2], default=0.9))
+"""
+
+# ╔═╡ 38dc8c6d-7181-42ca-b760-55e4ffebe0b9
+p = (partition_x, partition_y)
 
 # ╔═╡ 29f7f0ce-e3e6-4071-bdfe-a6da3994dd85
-go_clock; l = get_leaf(reactive_tree, partition_x, partition_y)
-
-# ╔═╡ 7f560461-bfc7-4419-8a27-670b09830052
-TreeShielding.get_allowed_actions(reactive_tree, l, (@set m.verbose = true))
+go_button; l = get_leaf(reactive_tree, partition_x, partition_y)
 
 # ╔═╡ 8f4450a9-78c7-49a7-ad3a-49b90294ae9c
-go_clock; b = get_bounds(l, m.dimensionality)
+go_button; b = get_bounds(l, m.dimensionality)
 
 # ╔═╡ 165ba9e0-7409-4f5d-b10b-4223fe589ac6
 begin
-	reset_button, go_clock
+	reset_button, go_button
 	
 	p1 = draw(reactive_tree, outer_bounds, 
 		color_dict=action_color_dict,
@@ -399,17 +404,15 @@ begin
 		plot!(xlims=(b.lower[1] - 0.5, b.upper[1] + 0.5),
 		      ylims=(b.lower[2] - 0.5, b.upper[2] + 0.5),)
 	end
-
-	hline!([bbmechanics.p_hit], c=colors.WET_ASPHALT, label="phit")
 	
 	plot!(xlabel="v", ylabel="p")
 end
 
 # ╔═╡ f204e821-45d4-4518-8cd6-4a6ab3963460
-go_clock; TreeShielding.get_split_by_binary_search(reactive_tree, l, (@set m.verbose=true))
+go_button; TreeShielding.get_split_by_binary_search(reactive_tree, l, (@set m.verbose=true))
 
 # ╔═╡ ec1628b6-9dd3-43a6-aa10-01f9743ce0ea
-go_clock; action_color_dict[l.value]
+go_button; action_color_dict[l.value]
 
 # ╔═╡ 0039a51e-26ed-4ad2-aeda-117436295ca1
 md"""
@@ -532,13 +535,13 @@ shielded_hits_rarely = shield(selected_tree, hits_rarely)
 shielded_hits_rarely((1, 5))
 
 # ╔═╡ 51e0f06e-d317-4325-8473-76b195457469
-shielded_hits_rarely((7, 0))
+shielded_hits_rarely((0, 7))
 
 # ╔═╡ c4d28b60-7028-4eb0-9178-32cc9e40d8fd
-refresh_button, go_clock, synthesize_button; @bind runs NumberField(1:100000, default=10)
+refresh_button, synthesize_button; @bind runs NumberField(1:100000, default=10)
 
 # ╔═╡ f9ca8159-0b31-4e00-bd7b-89c788295589
-refresh_button, go_clock, synthesize_button ; safety_violations = 		
+refresh_button, synthesize_button ; safety_violations = 		
 	check_safety(bbmechanics, 
 		shielded_hits_rarely, 
 		120, 
@@ -561,18 +564,19 @@ begin
 	end
 end
 
+# ╔═╡ b02ba348-4d9a-4534-9a6f-333da8cadfa6
+@bind show_trace_button CounterButton("Show Trace")
+
 # ╔═╡ eba405af-7cf2-4a19-85ba-6750e3ccdef0
-call() do
-	refresh_button
+if show_trace_button > 0 let
 	shielded_lazy = shield(selected_tree, _ -> nohit)
 	
 	animate_trace(simulate_sequence(bbmechanics, 
-		(0, 7), 
-		shielded_hits_rarely, 10)...)
-end
-
-# ╔═╡ 57a03baf-2b14-4822-9c16-d8d2bbfd0162
-hit
+									(0, 7), 
+									shielded_hits_rarely, 10)...,
+				  #left_background=selected_tree_plot
+				 )
+end end
 
 # ╔═╡ Cell order:
 # ╟─82e532dd-8ec1-458f-b4d6-59cea44dc2b6
@@ -585,17 +589,16 @@ hit
 # ╠═3bf7051c-a644-427b-bbba-14a69d98f4f5
 # ╠═56f10aa2-c768-4936-9a70-76d6b0ec21a1
 # ╟─1feb5107-1587-495d-8024-160f9cc68447
+# ╟─57be14bb-d748-4432-8608-106c44c38f83
 # ╠═f878ebd6-b261-4151-8aae-521b6736b28a
 # ╠═39cd11b7-2428-47ae-b8ec-90459bb03636
 # ╟─ecd44dfb-36c6-41ca-bb9c-4b73f00b4c40
 # ╠═2887090b-71f7-4be8-abf7-04eeeca14559
 # ╟─490b1897-3357-4529-9780-33122b1dbd62
-# ╠═1cc57555-e687-4b84-9568-c7eb903f57ef
 # ╠═d772354b-b855-4d4e-b768-2200c03cc0d6
 # ╠═cd82ff88-3e88-4a94-b414-abca02a55217
-# ╠═0ed0c202-227f-4432-b23d-03163ebcffbe
 # ╟─33aae1b2-cffb-44f7-9b19-5c5b682473ed
-# ╠═f86a0e8b-9d76-4e68-91cf-927595c27387
+# ╠═c57418b4-a84e-4101-8a79-b2bace15fb90
 # ╠═caa90ceb-0435-40b7-a97d-74919b040002
 # ╠═ac0047af-ce08-4131-915c-efd380884b73
 # ╠═b7843c6f-066d-473c-ad6c-a693b4601aad
@@ -605,7 +608,7 @@ hit
 # ╠═4f55da12-5f81-484f-970a-691336e6e58f
 # ╠═40b843de-e367-49d7-8a50-d2cefe4e3939
 # ╠═c8b40bd6-a8f3-42e8-bcbb-5bddd452dab0
-# ╠═b8024843-e681-4dde-9af9-1254c0e0d732
+# ╟─b8024843-e681-4dde-9af9-1254c0e0d732
 # ╟─454f91d1-3e42-4424-a594-3bc35528d4d8
 # ╟─baa640a5-7a21-483b-87a4-f112cfe48d2b
 # ╟─3e0e5c6f-e57c-41f2-9869-64f0e3bf2a8a
@@ -624,10 +627,7 @@ hit
 # ╟─0e18b756-f8a9-4821-8b85-30c908f7e3af
 # ╠═38dc8c6d-7181-42ca-b760-55e4ffebe0b9
 # ╟─165ba9e0-7409-4f5d-b10b-4223fe589ac6
-# ╟─57be14bb-d748-4432-8608-106c44c38f83
-# ╠═e0013651-12ed-4c81-ad05-2eb8f47a720c
 # ╠═29f7f0ce-e3e6-4071-bdfe-a6da3994dd85
-# ╠═7f560461-bfc7-4419-8a27-670b09830052
 # ╠═8f4450a9-78c7-49a7-ad3a-49b90294ae9c
 # ╠═f204e821-45d4-4518-8cd6-4a6ab3963460
 # ╠═ec1628b6-9dd3-43a6-aa10-01f9743ce0ea
@@ -657,5 +657,5 @@ hit
 # ╠═c4d28b60-7028-4eb0-9178-32cc9e40d8fd
 # ╠═f9ca8159-0b31-4e00-bd7b-89c788295589
 # ╟─a0ecb865-b8f6-471c-b32b-80e376792ecd
+# ╟─b02ba348-4d9a-4534-9a6f-333da8cadfa6
 # ╠═eba405af-7cf2-4a19-85ba-6750e3ccdef0
-# ╠═57a03baf-2b14-4822-9c16-d8d2bbfd0162

@@ -1,3 +1,5 @@
+using TreeShielding
+
 @enum Action::Int hit nohit
 
 function simulate_point(mechanics, point, random_variable, action; min_v_on_impact=1)
@@ -41,6 +43,12 @@ function simulate_point(mechanics, point, action; min_v_on_impact=1)
 	simulate_point(mechanics, point, r, action; min_v_on_impact=min_v_on_impact)
 end
 
+simulation_function = (s, r, a) -> simulate_point(bbmechanics, s, r, a)
+
+random_variable_bounds = Bounds([-1.], [1.])
+
+# Named-tuple containing all the environment-specific fields for a ShieldingModel
+environment = (;random_variable_bounds, simulation_function, action_space=Action, dimensionality=2)
 
 function simulate_sequence(mechanics, initial_point, 
 						   policy, duration; 
@@ -61,6 +69,17 @@ function simulate_sequence(mechanics, initial_point,
     velocities, positions, times
 end
 
+"""
+	is_safe(state)
+	is_safe(bounds::Bounds)
+
+For concrete states: Returns whether state satisfies the safety property.
+For bounds: Returns whether all states within bounds are safe.
+"""
+is_safe(state) = abs(state[1]) > 1 || state[2] > 0
+is_safe(bounds::Bounds) = all([is_safe((s[1], s[2])) for s in SupportingPoints(5, bounds)])
+
+
 function evaluate(mechanics, policy, duration;
 		runs=1000,
 		cost_hit=1)
@@ -71,7 +90,7 @@ function evaluate(mechanics, policy, duration;
 		cost = 0
 		for i in 1:ceil(duration/t_hit)
 			action = policy(v, p)
-			cost += action == "hit" ? 1 : 0
+			cost += action == "hit" ? cost_hit : 0
 			v, p = simulate_point(mechanics, (v, p), action)
 		end
 		push!(costs, cost)

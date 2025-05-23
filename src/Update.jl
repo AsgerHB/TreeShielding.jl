@@ -29,7 +29,7 @@ function get_allowed_actions(tree::Tree, leaf::Leaf, m::ShieldingModel)
     allowed = Set(m.action_space)
     action_index = 1
     for a in m.action_space
-        for l in leaf.reachable[action_index]
+        for l in get_reachable(tree, leaf, action_index, m)
             if get_value(l) == no_actions
                 # m.verbose && @info "$a is unsafe."
                 delete!(allowed, a)
@@ -40,12 +40,35 @@ function get_allowed_actions(tree::Tree, leaf::Leaf, m::ShieldingModel)
     return allowed
 end
 
+"""OBS: Use action_index, not action."""
+function get_reachable(tree::Tree, leaf::Leaf{T}, action_index::Int, m::ShieldingModel) where {T}
+    if m.reachability_caching == no_caching
+        action = m.action_space[action_index]
+        reachable = Leaf{T}[]
+        bounds = get_bounds(leaf, m.dimensionality)
+        for (p, r) in all_supporting_points(bounds, m)
+            p′ = m.simulation_function(p, r, action)
+            leaf′ = get_leaf(tree, p′)::Leaf{T}
+            push!(reachable, leaf′)
+        end
+        return reachable
+    else
+        @assert !isnothing(leaf.reachable)
+        return leaf.reachable[action_index]
+    end
+end
+
 skipped::Int64 = 0
 recomputed::Int64 = 0
 const unsafe = actions_to_int([]) 
 
 
-function set_reachable!(tree::Tree{T}, m::ShieldingModel) where {T} 
+function set_reachable!(tree::Tree{T}, m::ShieldingModel) where {T}
+    save_reachable = m.reachability_caching ∈ [one_way, dependency_graph]
+    save_incoming = m.reachability_caching == dependency_graph
+    @assert save_reachable "This function should be called when m.reachability_caching = $(m.reachability_caching)."
+
+    clear_reachable!(tree, m)
     queue = Tree[tree]
     while !isempty(queue)
         t = pop!(queue)
@@ -64,14 +87,13 @@ function set_reachable!(tree::Tree{T}, m::ShieldingModel) where {T}
             end
             
             recomputed += 1
-            clear_reachable!(leaf, m)
             for (p, r) in all_supporting_points(bounds, m)
                 action_index = 1
                 for a in m.action_space
                     p′ = m.simulation_function(p, r, a)
                     dest = get_leaf(tree, p′)::Leaf{T}
                     push!(leaf.reachable[action_index], dest)
-                    push!(dest.incoming, leaf)
+                    if save_incoming; push!(dest.incoming, leaf) end
                     action_index += 1
                 end
             end
@@ -82,15 +104,30 @@ function set_reachable!(tree::Tree{T}, m::ShieldingModel) where {T}
     end
 end
 
+"""
+    clear_reachable!(node::Tree, m::ShieldingModel)
+
+Marks leaf as dirty and initializes `reachable` and `incoming` fields to empty.
+"""
 function clear_reachable!(node::Node, m::ShieldingModel)
     clear_reachable!(node.lt, m)
     clear_reachable!(node.geq, m)
 end
 
 function clear_reachable!(leaf::Leaf{T}, m::ShieldingModel) where {T}
-    leaf.dirty = true # This is redundant as the function is currently used. But things mean things, damnit!
-    empty!(leaf.reachable)
-    empty!(leaf.incoming)
+    leaf.dirty = true
+
+    if isnothing(leaf.reachable)
+        leaf.reachable = Vector{Set{Leaf{T}}}()
+    else
+        empty!(leaf.reachable)
+    end
+
+    if isnothing(leaf.incoming)
+        leaf.incoming = Set{Leaf{T}}()
+    else
+        empty!(leaf.incoming)
+    end
 
     for a in m.action_space
         push!(leaf.reachable, Set{Leaf{T}}())
@@ -103,7 +140,9 @@ function get_updates(tree::Tree, m::ShieldingModel)
     no_actions = actions_to_int([])
     global skipped = 0
     global recomputed = 0
-    set_reachable!(tree, m) # Update reachability for dirty nodes
+    if m.reachability_caching ∈ [ one_way, dependency_graph]
+        set_reachable!(tree, m) # Update reachability for dirty nodes
+    end
     for leaf in Leaves(tree)
         if leaf.value == no_actions
             continue # bad leaves stay bad

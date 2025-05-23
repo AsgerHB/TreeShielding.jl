@@ -48,20 +48,23 @@ include("Synthesize.jl")
 export draw, draw_support_points!, scatter_outcomes!, scatter_supporting_points!, scatter_allowed_actions!, add_actions_to_legend, show_reachable!, show_incoming!
 include("Plotting.jl")
 
+module Environments
 
-module RW
+module RandomWalk
 using Plots
-export rwmechanics, Pace, fast, slow, simulate, draw_next_step!, draw_walk!, take_walk, evaluate
-include("RWExample.jl")
-end#module
+export environment, rwmechanics, Pace, fast, slow, simulate, is_safe, draw_next_step!, draw_walk!, take_walk, evaluate
+include("environments/RandomWalk.jl")
+end#module RW
 
-module BB
+module BouncingBall
 using Plots
 using StatsBase
 using Distributions
 using Measures
-export bbmechanics, Action, hit, nohit, simulate_point, simulate_sequence, evaluate, check_safety, animate_trace, random_policy
-include("BBExample.jl")
-end#module
+export environment, bbmechanics, Action, hit, nohit, simulate_point, is_safe, simulate_sequence, evaluate, check_safety, animate_trace, random_policy
+include("environments/BouncingBall.jl")
+end#module BB
+
+end#module Environments
 
 end#module

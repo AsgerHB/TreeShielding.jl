@@ -36,7 +36,7 @@ end
 @revise using TreeShielding
 
 # ╔═╡ 173db6eb-5937-49c2-bcd2-554df231e2f7
-using TreeShielding.environments.RandomWalk
+using TreeShielding.Environments.RandomWalk
 
 # ╔═╡ 101b3a4a-523c-474c-88f0-dbafaf2f2813
 md"""

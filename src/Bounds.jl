@@ -117,3 +117,8 @@ end
 function magnitude(bounds::Bounds, axis)
     bounds.upper[axis] - bounds.lower[axis]
 end
+
+"""Returns the central point within the bounds"""
+function middle(bounds::Bounds)
+    return bounds.lower + (bounds.upper - bounds.lower)/2
+end

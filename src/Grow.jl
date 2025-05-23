@@ -14,20 +14,20 @@ For each point, use the `simulation_function` to check if it would end up in an 
  - `points` This is the set of points.
 """
 function compute_safety(tree::Tree, bounds::Bounds, m)
-    unsafe_value = actions_to_int([]) # The value for states where no actions are allowed.
+    no_action = actions_to_int([]) # The value for states where no actions are allowed.
     result = []
     for (p, r) in all_supporting_points(bounds, m)
         safe = false
         for a in m.action_space
             p′ = m.simulation_function(p, r, a)
-            safe = safe || (get_value(tree, p′) != unsafe_value)
+            safe = safe || (get_value(tree, p′) != no_action)
         end
-        push!(result, (p, safe))
+        push!(result, (copy(p), safe))
     end
     result
 end
 
-
+const no_action = actions_to_int([])
 """
     grow!(tree::Tree, m::ShieldingModel)
 
@@ -42,12 +42,13 @@ Note that the number of resulting leaves is potentially exponential in the numbe
 **Args:**
  - `tree` Tree to modify.
 """
-
-const no_action = actions_to_int([])
 function grow!(tree::Tree, m::ShieldingModel; animation_callback=nothing)
+    save_reachable = m.reachability_caching ∈ [one_way, dependency_graph]
+    save_incoming = m.reachability_caching == dependency_graph
 
     stack = Tree[tree]
     loop_break = 10000000
+    
     while !isempty(stack) && loop_break > 0
         loop_break -= 1
         node = pop!(stack)
@@ -56,8 +57,11 @@ function grow!(tree::Tree, m::ShieldingModel; animation_callback=nothing)
             push!(stack, node.geq)
         elseif node isa Leaf
             leaf = node
-            leaf.value == no_action && continue
-            homogenous(tree, leaf, m) && continue
+            if save_reachable || save_incoming
+                clear_reachable!(leaf, m)
+            end
+            if leaf.value == no_action; continue end
+            if homogenous(tree, leaf, m); continue end
 
             split_result = leaf
 
@@ -102,10 +106,12 @@ That is, the function returns true if all samples in the partition have the same
 This is used to determine whether it makes sense to split the leaf further.
 """
 function homogenous(tree::Tree, leaf::Tree, m::ShieldingModel)
-	clear_reachable!(leaf, m)
 	no_action = actions_to_int([])
 	bounds = get_bounds(leaf, m.dimensionality)
 	actions_allowed = nothing
+
+    save_reachable = m.reachability_caching ∈ [one_way, dependency_graph]
+    save_incoming = m.reachability_caching == dependency_graph
 
     if !bounded(bounds)
         return true
@@ -117,14 +123,25 @@ function homogenous(tree::Tree, leaf::Tree, m::ShieldingModel)
 		for a in m.action_space
 			action_safe = true
 			
-			for r in SupportingPoints(m.samples_per_axis, 
-				m.random_variable_bounds)
-				
+			for r in SupportingPoints(m.samples_per_axis, m.random_variable_bounds)
 				p′ = m.simulation_function(p, r, a)
-				push!(leaf.reachable[action_index], get_leaf(tree, p′))
 				leaf′ = get_leaf(tree, p′)
 				action_safe = action_safe && get_value(leaf′) != no_action
-				!action_safe && break
+
+                if save_reachable; 
+                    if isnothing(leaf.reachable)
+                        leaf.reachable = [Set() for _ in m.action_space]
+                    end
+                    push!(leaf.reachable[action_index], leaf′) 
+                end
+                if save_incoming; 
+                    if isnothing(leaf′.incoming)
+                        leaf′.incoming = Set()
+                    end
+                    push!(leaf′.incoming, leaf) 
+                end
+
+				# if !action_safe; break end # Daring optimization: If we already know we can reach an unsafe leaf by this action, we don't care which other leaves we can reach.
 			end
 			if action_safe
 				push!(actions_allowed′, a)
@@ -189,9 +206,6 @@ function try_split_plus!(tree::Tree, leaf::Leaf, m::ShieldingModel)
 		end
 		queue = queue′
 	end
-    if result isa Node
-        clear_reachable!(result, m)
-    end
 	return result
 end
 
@@ -253,7 +267,6 @@ function try_split_binary_search!(tree::Tree, leaf::Leaf, m::ShieldingModel)
 
     if threshold !== nothing
         new_tree = split!(leaf, axis, threshold)
-        clear_reachable!(new_tree, m)
 
         m.verbose && @info "Performed split."
 

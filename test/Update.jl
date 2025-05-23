@@ -32,22 +32,32 @@
             Leaf(unsafe) # ]10; ∞[
         )
     )
-    leaf1 = get_leaf(tree, (0.3,))   # Initially safe; close should not be allowed
-    leaf2 = get_leaf(tree, (5,))     # Initially safe; both actions allowed
-    leaf3 = get_leaf(tree, (9.8,))   # Initially safe; open should not be allowed
+    leaf1 = get_leaf(tree, (0.1,))    # Initially safe; close should not be allowed
+    leaf2 = get_leaf(tree, (1.1,))    # Initially safe; both actions allowed
+    leaf3 = get_leaf(tree, (9.1,))    # Initially safe; open should not be allowed
+
     
     dimensionality = 1
     samples_per_axis = 3
     random_variable_bounds = Bounds([], [])
+    reachability_caching = dependency_graph
 
-    m = ShieldingModel(;simulation_function, action_space=PumpState, dimensionality, samples_per_axis, random_variable_bounds)
+    m = ShieldingModel(;simulation_function, action_space=PumpState, dimensionality, samples_per_axis, random_variable_bounds, reachability_caching)
 
     # @show get_bounds(leaf1, m.dimensionality)
     # @show get_bounds(leaf2, m.dimensionality)
     # @show get_bounds(leaf3, m.dimensionality)
 
+
     clear_reachable!(tree, m)
     TreeShielding.set_reachable!(tree, m)
+
+    open_index = 1
+    close_index = 2
+    
+    @test leaf1.reachable[open_index] ∋ leaf2
+    @test leaf2.reachable[open_index] ∋ leaf3
+    @test leaf3.reachable[close_index] ∋ leaf2
 
     #@show leaf1.reachable
     #@show leaf2.reachable
