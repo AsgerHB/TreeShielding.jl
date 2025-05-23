@@ -119,7 +119,7 @@ Bounds define a hyper-rectangle.
 """
 
 # ╔═╡ 8c15e8e6-f4e9-4132-8caf-e8b878e1b8d1
-Bounds((0.5, 3.0, -Inf), (1.0, 10.0, 100))
+Bounds([0.5, 3.0, -Inf], [1.0, 10.0, 100])
 
 # ╔═╡ 2f2c7b76-03b6-4bac-b411-e1fa7d013fc1
 md"""
@@ -144,10 +144,10 @@ Bounds support ∈, == and ≈
 @test Bounds([1, 2], [3, 4]) != Bounds([-1, -2], [-3, -4])
 
 # ╔═╡ a104cf0a-8ec3-4bc5-af3b-99a7583267c0
-@test Bounds([1-eps(), 2], [3, 4]) ≈ Bounds([1, 2], [3, 4])
+@test Bounds([1-eps(), 2.], [3., 4.]) ≈ Bounds([1., 2.], [3., 4.])
 
 # ╔═╡ 7eb6eb8a-bbfd-47d0-a129-3fcc811af416
-@test Bounds([1-0.1, 2], [3, 4]) ≉ Bounds([1, 2], [3, 4])
+@test Bounds([1-0.1, 2.], [3., 4.]) ≉ Bounds([1., 2.], [3., 4.])
 
 # ╔═╡ 407ba3bf-c67f-46ff-bd19-ec98b341b2cc
 md"""
@@ -267,17 +267,17 @@ begin
 	B = 2
 	D = 3
 	E = 4
-	F = 6
-	C = 5
+	F = 5
+	C = 6
 	G = 7
-	h = 11
-	i = 22
-	j = 33
-	k = 44
-	l = 55
-	m = 66
-	n = 77
-	o = 88
+	h = :h
+	i = :i
+	j = :j
+	k = :k
+	l = :l
+	m = :m
+	n = :n
+	o = :o
 end;
 
 # ╔═╡ df236b61-7f19-461c-9f10-9163175393b3
@@ -318,7 +318,7 @@ end
 deserialized_tree = robust_deserialize(file_name)
 
 # ╔═╡ 655f8934-fd3e-48c3-b27c-6fee5f976a87
-tree_to_serialize == deserialized_tree
+@test tree_to_serialize == deserialized_tree
 
 # ╔═╡ Cell order:
 # ╟─7c49171f-86b9-48a3-ade0-08685965833d
