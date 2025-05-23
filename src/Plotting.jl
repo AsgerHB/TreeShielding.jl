@@ -31,16 +31,24 @@ action_color_dict=Dict(
     0 => colorant"#2C2C2C"
 )
 
-# Draw bounds as rectangles
-@recipe function rectangle(bounds::Bounds, pad=0.00) 
-	l, u = bounds.lower, bounds.upper
-	xl, yl = l .- pad
-	xu, yu = u .+ pad
-	Shape(
-		[xl, xl, xu, xu],
-		[yl, yu, yu, yl])
+function rectangle(bounds::Bounds) 
+    l, u = bounds.lower, bounds.upper
+    xl, yl = l
+    xu, yu = u
+    Shape(
+        [xl, xl, xu, xu],
+        [yl, yu, yu, yl])
 end
 
+# Draw bounds as rectangles
+@recipe function rectangle(bounds::Bounds)
+	rectangle(bounds)
+end
+
+# Draw bounds as rectangles for an array of Bounds objects
+@recipe function rectangle(boundss::AbstractVector{<:Bounds})
+    rectangle.(boundss)
+end
 
 function draw(policy::Function, bounds; 
     G = 0.1, 
@@ -73,15 +81,6 @@ function draw(policy::Function, bounds;
     heatmap(x_tics, y_tics, transpose(matrix),
             levels=10;
             params...)
-end
-
-function rectangle(bounds::Bounds) 
-    l, u = bounds.lower, bounds.upper
-    xl, yl = l
-    xu, yu = u
-    Shape(
-        [xl, xl, xu, xu],
-        [yl, yu, yu, yl])
 end
 
 function draw(tree::Tree, global_bounds::Bounds; color_dict=action_color_dict, params...)
@@ -119,15 +118,17 @@ end
 function draw_support_points!(tree::Tree,  bounds::Bounds, action, m::ShieldingModel)
     supporting_points = SupportingPoints(m.samples_per_axis, bounds)
     scatter_supporting_points!(supporting_points)
-    m.simulation_function((1, 1), (1, 1), RW.fast)
 	outcomes = map((p_r) -> m.simulation_function(p_r..., action), TreeShielding.all_supporting_points(bounds, m))
     outcomes = reshape(outcomes, (:,1))
     scatter_outcomes!(outcomes |> unzip)
 
     points_safe = compute_safety(tree, bounds, m)
     
-    unsafe_points = [p for (p, safe) in points_safe if !safe]
-    scatter!(unsafe_points, m=(:x, 5, colors.ALIZARIN), msw=3, label="unsafe")
+    unsafe_points = [Tuple(p) for (p, safe) in points_safe if !safe] |> unique
+    if length(unsafe_points) > 0
+        scatter!(unsafe_points, m=(:x, 5, colors.ALIZARIN), msw=3, label=nothing)
+        scatter!([], m=(:x, 5, colors.ALIZARIN), msw=3, label="unsafe")
+    end
 end
 
 function scatter_allowed_actions!(tree, bounds, m)
@@ -184,4 +185,46 @@ function add_actions_to_legend(action_color_dict, action_space; plotargs...)
 			plotargs...)
 	end
     return plot!()
+end
+
+function show_reachable!(leaf::Leaf, action, m::ShieldingModel; plotargs...)
+	if isnothing(leaf.reachable) || leaf.dirty
+		return plot!()
+	end
+
+	start = Tuple(middle(get_bounds(leaf, m.dimensionality)))
+	scatter!([start], marker=(:circle, 3, :black), label=nothing)
+
+	action_index = indexin([action], m.action_space)[1]
+	for leaf′ in leaf.reachable[action_index]
+		reachable = Tuple(middle(get_bounds(leaf′, m.dimensionality)))
+
+		
+		plot!([start, reachable],
+			  linecolor=:black,
+			  arrow=:head,
+			  label=nothing,
+              plotargs...)
+	end
+	plot!()
+end
+
+function show_incoming!(leaf::Leaf, m::ShieldingModel; plotargs...)
+	if isnothing(leaf.reachable) || leaf.dirty
+		return plot!()
+	end
+
+	start = Tuple(middle(get_bounds(leaf, m.dimensionality)))
+	scatter!([start], marker=(:circle, 3, :black), label=nothing)
+
+	for leaf′ in leaf.incoming
+		reachable = Tuple(middle(get_bounds(leaf′, m.dimensionality)))
+
+		plot!([start, reachable],
+			  linecolor=:gray,
+			  arrow=:tail,
+			  label=nothing,
+              plotargs...)
+	end
+	plot!()
 end

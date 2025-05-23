@@ -110,8 +110,17 @@ function replace_subtree!(tree::Tree, new_tree::Tree)
 end
 
 function split!(leaf::Leaf, axis, threshold, lower=nothing, upper=nothing)
-    for leaf′ in leaf.incoming
-        leaf′.dirty = true
+    if !isnothing(leaf.incoming)
+        for leaf′ in leaf.incoming
+            leaf′.dirty = true
+        end
+    end
+    if !isnothing(leaf.reachable)
+        for reachable′ in leaf.reachable # There's one set for each action but we don't care right now.
+            for leaf′ in reachable′
+                leaf′.dirty = true
+            end
+        end
     end
 
     lower = something(lower, leaf.value)
@@ -238,4 +247,35 @@ function get_root(tree::Tree)
     else
         return get_root(tree.parent)
     end
+end
+
+function no_orphans_in_cache(node::Node{T}) where T
+    return isempty(get_leaves_with_orphans_in_cache(node))
+end
+
+function get_leaves_with_orphans_in_cache(node::Node{T}) where T
+    result = Leaf{T}[]
+    leaves = Set(node |> Leaves)
+
+    for leaf in leaves
+        if leaf.dirty
+            continue
+        end
+
+        # Check reachable
+        for leaf′ in Set(Iterators.flatten(leaf.reachable))
+            if !(leaf′ ∈ leaves)
+                push!(result, leaf)
+            end
+        end
+
+        # Check incoming
+        for leaf′ in leaf.incoming
+            if !(leaf′ in leaves)
+                push!(result, leaf)
+            end
+        end
+    end
+
+    return result
 end

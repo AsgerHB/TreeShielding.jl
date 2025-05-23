@@ -8,10 +8,10 @@ using StaticArrays
 using Serialization
 using AbstractTrees
 
-export Bounds,  get_dim, bounded, magnitude
+export Bounds, get_dim, bounded, magnitude, middle
 include("Bounds.jl")
 
-export Tree, Node,  Leaf,  get_leaf,  get_value,  draw,  replace_subtree!,  split!,  get_bounds, shield, clear_reachable!, well_formed
+export Tree, Node,  Leaf,  get_leaf,  get_value,  draw,  replace_subtree!,  split!,  get_bounds, shield, clear_reachable!, well_formed, no_orphans_in_cache
 include("Trees.jl")
 
 export robust_serialize, robust_deserialize
@@ -45,7 +45,7 @@ include("Prune.jl")
 export synthesize!
 include("Synthesize.jl")
 
-export draw, draw_support_points!, scatter_outcomes!, scatter_supporting_points!, scatter_allowed_actions!, add_actions_to_legend
+export draw, draw_support_points!, scatter_outcomes!, scatter_supporting_points!, scatter_allowed_actions!, add_actions_to_legend, show_reachable!, show_incoming!
 include("Plotting.jl")
 
 
